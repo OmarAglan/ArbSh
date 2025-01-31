@@ -3,14 +3,33 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
 #include <limits.h>
 #include <fcntl.h>
 #include <errno.h>
+
+#ifdef WINDOWS
+#include <windows.h>
+#include <io.h>
+#include <direct.h>
+#include <process.h>
+#define chdir _chdir
+#define getcwd _getcwd
+#define read _read
+#define write _write
+#define isatty _isatty
+#define access _access
+#define F_OK 0
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+typedef int ssize_t;
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#endif
 
 /* for read/write buffers */
 #define READ_BUF_SIZE 1024
@@ -35,7 +54,6 @@
 #define HIST_MAX	4096
 
 extern char **environ;
-
 
 /**
  * struct liststr - singly linked list
@@ -109,7 +127,6 @@ typedef struct builtin
 	char *type;
 	int (*func)(info_t *);
 } builtin_table;
-
 
 /* toem_shloop.c */
 int hsh(info_t *, char **);
