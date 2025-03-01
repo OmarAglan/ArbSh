@@ -12,6 +12,7 @@ A simple UNIX command line interpreter implemented in C, with cross-platform sup
 - Input/output redirection
 - Command line editing
 - Cross-platform compatibility (Windows and Unix/Linux)
+- **Stand-alone operation** - can be installed as your primary shell
 
 ## Building from Source
 
@@ -38,6 +39,63 @@ cmake ..
 cmake --build .
 ```
 
+### Building a Stand-Alone Shell
+
+To build a fully stand-alone shell with minimal dependencies:
+
+#### Unix/Linux
+```bash
+mkdir build && cd build
+cmake .. -DBUILD_STATIC=ON
+make
+```
+
+#### Windows
+```powershell
+# Option 1: Using the provided batch file (recommended)
+.\build_standalone.bat
+
+# Option 2: Manual build
+mkdir build_standalone
+cd build_standalone
+cmake .. -G "MinGW Makefiles" -DBUILD_STATIC=ON -DWIN_GUI=ON
+mingw32-make
+```
+
+The Windows standalone version (`-DWIN_GUI=ON`) creates a true standalone application that:
+- Runs independently without requiring cmd.exe or PowerShell
+- Has its own console window with proper UTF-8 support
+- Supports all shell features including Arabic and RTL text
+
+## Installation
+
+### Unix/Linux
+
+Use the provided installation script:
+
+```bash
+chmod +x install_linux.sh
+./install_linux.sh
+```
+
+Options:
+- `--prefix=DIR`: Install binaries in DIR (default: /usr/local/bin)
+- `--set-default`: Set as default shell for current user
+- `--help`: Display help and exit
+
+### Windows
+
+Run the PowerShell installation script as administrator:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install_windows.ps1
+```
+
+Options:
+- `-InstallDir <path>`: Install binaries in specified directory
+- `-CreateShortcut`: Create desktop shortcut
+- `-Help`: Display help and exit
+
 ## Usage
 
 Run the shell:
@@ -62,6 +120,35 @@ $ echo "/bin/ls" | ./hsh
 hsh main.c shell.c test_ls_2
 $
 ```
+
+## Setting as Default Shell
+
+### Unix/Linux
+
+After installation, you can set the shell as your default login shell:
+
+```bash
+chsh -s /usr/local/bin/hsh
+```
+
+You'll need to log out and log back in for the change to take effect.
+
+### Windows
+
+The shell can be set as the default terminal application by:
+
+1. Creating a shortcut to the shell
+2. Setting it as the default program for command line operations
+3. Alternatively, use the Windows Terminal app and configure it to use hsh.exe
+
+#### Running as Standalone Application
+
+When built with the `-DWIN_GUI=ON` option, the shell will run as a standalone application with its own console window. This version:
+
+- Does not require cmd.exe or PowerShell to be running
+- Has better Unicode and RTL text support
+- Can be launched directly by double-clicking the executable
+- Can be pinned to the taskbar or Start menu
 
 ## Built-in Commands
 
@@ -94,6 +181,8 @@ $
 ├── CMakeLists.txt
 ├── README.md
 ├── CHANGELOG.md
+├── install_linux.sh
+├── install_windows.ps1
 ├── docs/
 │   └── CONTRIBUTING.md
 ├── src/

@@ -7,23 +7,33 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <locale.h>  /* For setlocale() */
 
 #ifdef WINDOWS
 #include <windows.h>
 #include <io.h>
 #include <direct.h>
 #include <process.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #define chdir _chdir
 #define getcwd _getcwd
 #define read _read
 #define write _write
 #define isatty _isatty
 #define access _access
+#define open _open
+#define close _close
+#define fstat _fstat
 #define F_OK 0
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
-typedef int ssize_t;
+/* Only define ssize_t if it's not already defined */
+#if !defined(ssize_t) && !defined(_SSIZE_T_DEFINED)
+typedef long long ssize_t;
+#define _SSIZE_T_DEFINED
+#endif
 #else
 #include <unistd.h>
 #include <sys/types.h>
@@ -53,7 +63,51 @@ typedef int ssize_t;
 #define HIST_FILE	".simple_shell_history"
 #define HIST_MAX	4096
 
+/* Avoid conflict with system environ */
+#ifdef WINDOWS
+/* Use _environ from stdlib.h, don't redeclare it */
+#define shell_environ _environ
+#else
 extern char **environ;
+#define shell_environ environ
+#endif
+
+/* Message IDs for localization */
+enum message_id {
+    MSG_WELCOME,
+    MSG_CMD_NOT_FOUND,
+    MSG_PERMISSION_DENIED,
+    MSG_MEMORY_ERROR,
+    MSG_FILE_NOT_FOUND,
+    MSG_INVALID_ARG,
+    MSG_TOO_MANY_ARGS,
+    MSG_NOT_ENOUGH_ARGS,
+    MSG_CANNOT_OPEN_FILE,
+    MSG_CANNOT_WRITE_FILE,
+    MSG_HELP_HINT,
+    MSG_EXIT,
+    MSG_HISTORY_CLEARED,
+    MSG_ENV_NOT_FOUND,
+    MSG_ENV_SET,
+    MSG_ENV_UNSET,
+    MSG_DIR_CHANGED,
+    MSG_CANNOT_CHANGE_DIR,
+    MSG_ALIAS_CREATED,
+    MSG_ALIAS_NOT_FOUND,
+    MSG_ALIAS_REMOVED,
+    MSG_CMD_EXECUTED,
+    MSG_CMD_FAILED,
+    MSG_SYNTAX_ERROR,
+    MSG_PROMPT,
+    MSG_COUNT
+};
+
+/* Localization functions */
+int set_language(int lang_code);
+int get_language(void);
+const char *get_message(int msg_id);
+int detect_system_language(void);
+int init_locale(void);
 
 /**
  * struct liststr - singly linked list
@@ -80,7 +134,7 @@ typedef struct liststr
  *@linecount_flag: if on count this line of input
  *@fname: the program filename
  *@env: linked list local copy of environ
- *@environ: custom modified copy of environ from LL env
+ *@env_array: custom modified copy of environ from LL env
  *@history: the history node
  *@alias: the alias node
  *@env_changed: on if environ was changed
@@ -103,7 +157,7 @@ typedef struct passinfo
 	list_t *env;
 	list_t *history;
 	list_t *alias;
-	char **environ;
+	char **env_array;  /* Renamed from environ to avoid conflict */
 	int env_changed;
 	int status;
 
@@ -156,7 +210,7 @@ char *_strcat(char *, char *);
 
 /* toem_string1.c */
 char *_strcpy(char *, char *);
-char *_strdup(const char *);
+char *shell_strdup(const char *);  /* Renamed from _strdup to avoid conflict */
 void _puts(char *);
 int _putchar(char);
 
@@ -198,6 +252,8 @@ int _myhelp(info_t *);
 /* toem_builtin1.c */
 int _myhistory(info_t *);
 int _myalias(info_t *);
+int _mylang(info_t *); /* New language command */
+int _mytest(info_t *); /* Test command for UTF-8 and Arabic */
 
 /*toem_getline.c */
 ssize_t get_input(info_t *);
@@ -248,5 +304,20 @@ void check_chain(info_t *, char *, size_t *, size_t, size_t);
 int replace_alias(info_t *);
 int replace_vars(info_t *);
 int replace_string(char **, char *);
+
+/* UTF-8 and Arabic support functions */
+int get_utf8_char_length(char first_byte);
+int read_utf8_char(char *buffer, int max_size);
+int is_rtl_char(int unicode_codepoint);
+int utf8_to_codepoint(char *utf8_char, int length);
+int codepoint_to_utf8(int codepoint, char *utf8_char);
+void configure_terminal_for_utf8(void);
+int set_text_direction(int is_rtl);
+
+/* UTF-8 output functions */
+void _puts_utf8(char *str);
+void _eputs_utf8(char *str);
+int _putsfd_utf8(char *str, int fd);
+void print_prompt_utf8(info_t *info);
 
 #endif

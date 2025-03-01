@@ -90,7 +90,7 @@ int replace_alias(info_t *info)
         p = _strchr(node->str, '=');
         if (!p)
             return (0);
-        p = _strdup(p + 1);
+        p = shell_strdup(p + 1);
         if (!p)
             return (0);
         info->argv[0] = p;
@@ -117,17 +117,17 @@ int replace_vars(info_t *info)
         if (!_strcmp(info->argv[i], "$?"))
         {
             replace_string(&(info->argv[i]),
-                _strdup(convert_number(info->status, 10, 0)));
+                shell_strdup(convert_number(info->status, 10, 0)));
             continue;
         }
         if (!_strcmp(info->argv[i], "$$"))
         {
 #ifdef WINDOWS
             replace_string(&(info->argv[i]),
-                _strdup(convert_number(GetCurrentProcessId(), 10, 0)));
+                shell_strdup(convert_number(GetCurrentProcessId(), 10, 0)));
 #else
             replace_string(&(info->argv[i]),
-                _strdup(convert_number(getpid(), 10, 0)));
+                shell_strdup(convert_number(getpid(), 10, 0)));
 #endif
             continue;
         }
@@ -135,10 +135,10 @@ int replace_vars(info_t *info)
         if (node)
         {
             replace_string(&(info->argv[i]),
-                _strdup(_strchr(node->str, '=') + 1));
+                shell_strdup(_strchr(node->str, '=') + 1));
             continue;
         }
-        replace_string(&info->argv[i], _strdup(""));
+        replace_string(&info->argv[i], shell_strdup(""));
     }
     return (0);
 }

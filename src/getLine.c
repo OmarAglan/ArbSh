@@ -142,6 +142,31 @@ int _getline(info_t *info, char **ptr, size_t *length)
 
     c = _strchr(buf + i, '\n');
     k = c ? 1 + (unsigned int)(c - buf) : len;
+    
+    /* Ensure we don't split UTF-8 characters */
+    if (k < len && (buf[k] & 0x80)) {
+        /* We might be in the middle of a UTF-8 character */
+        int char_length = 0;
+        
+        /* Check if we're in the middle of a UTF-8 sequence */
+        if ((buf[k] & 0xC0) == 0x80) {
+            /* This is a continuation byte, find the start of the character */
+            int j;
+            for (j = k - 1; j >= (int)i && (buf[j] & 0xC0) == 0x80; j--)
+                ;
+            
+            if (j >= (int)i) {
+                char_length = get_utf8_char_length(buf[j]);
+                int bytes_read = k - j;
+                
+                /* If we haven't read the complete character, adjust k */
+                if (bytes_read < char_length && k + (char_length - bytes_read) <= len) {
+                    k += (char_length - bytes_read);
+                }
+            }
+        }
+    }
+    
     new_p = _realloc(p, s, s ? s + k : k + 1);
     if (!new_p) /* MALLOC FAILURE! */
         return (p ? free(p), -1 : -1);

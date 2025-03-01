@@ -84,11 +84,7 @@ int populate_env_list(info_t *info)
 {
     list_t *node = NULL;
     size_t i;
-#ifdef WINDOWS
-    char **env = _environ;
-#else
-    char **env = environ;
-#endif
+    char **env = shell_environ;
 
     for (i = 0; env && env[i]; i++)
         add_node_end(&node, env[i], 0);

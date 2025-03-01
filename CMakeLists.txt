@@ -5,6 +5,12 @@ project(simple_shell C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+# Option for static linking
+option(BUILD_STATIC "Build statically linked executable" OFF)
+
+# Option for Windows GUI mode
+option(WIN_GUI "Build as a Windows GUI application" OFF)
+
 # Add compile options
 if(MSVC)
     # MSVC specific settings
@@ -25,16 +31,43 @@ file(GLOB_RECURSE SOURCES
     "src/*.c"
 )
 
+# Explicitly add the UTF-8 and localization source files
+list(APPEND SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/utf8.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/utf8_output.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/locale.c"
+)
+
 # Define header files
 file(GLOB_RECURSE HEADERS 
     "include/*.h"
 )
 
 # Add executable
-add_executable(hsh ${SOURCES})
+if(WIN32 AND WIN_GUI)
+    # Windows GUI application
+    add_executable(hsh WIN32 ${SOURCES})
+else()
+    # Console application
+    add_executable(hsh ${SOURCES})
+endif()
 
 # Include directories
 target_include_directories(hsh PRIVATE include)
+
+# Static linking if requested
+if(BUILD_STATIC)
+    if(MSVC)
+        # Static linking for Windows
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STATIC")
+    else()
+        # Static linking for Unix/Linux
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    endif()
+    
+    # Define static build
+    target_compile_definitions(hsh PRIVATE STATIC_BUILD)
+endif()
 
 # Add platform-specific definitions and libraries
 if(WIN32)
@@ -43,6 +76,22 @@ if(WIN32)
         _CRT_SECURE_NO_WARNINGS
         _CRT_NONSTDC_NO_WARNINGS
     )
+    
+    # Add Windows-specific libraries
+    target_link_libraries(hsh PRIVATE shell32 user32 gdi32 kernel32)
+    
+    # Add comctl32 for Windows Common Controls
+    if(WIN_GUI)
+        target_link_libraries(hsh PRIVATE comctl32)
+        target_compile_definitions(hsh PRIVATE _WIN32_IE=0x0600)
+    endif()
+    
+    # Add resource file for Windows GUI mode
+    if(WIN_GUI)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/shell.rc")
+            target_sources(hsh PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/shell.rc")
+        endif()
+    endif()
 endif()
 
 # Set output directories

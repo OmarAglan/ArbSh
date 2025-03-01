@@ -60,7 +60,11 @@ int read_history(info_t *info)
     int i, last = 0, linecount = 0;
     ssize_t fd, rdlen, fsize = 0;
     char *buf = NULL, *filename = get_history_file(info);
+#ifdef WINDOWS
+    struct _stat64i32 st;
+#else
     struct stat st;
+#endif
 
     if (!filename)
         return (0);

@@ -7,6 +7,8 @@
     #define isatty _isatty
 #endif
 
+/* The init_locale function is defined in locale.c */
+
 /**
  * main - entry point
  * @ac: arg count
@@ -19,13 +21,18 @@ int main(int ac, char **av)
     info_t info[] = { INFO_INIT };
     int fd = 2;
 
+    // Initialize locale for better internationalization support
+    init_locale();
+    
+    // Display welcome message in the current language
+    if (get_language() == 1) /* LANG_AR */
+        _puts_utf8((char *)get_message(MSG_WELCOME));
+    else
+        _puts((char *)get_message(MSG_WELCOME));
+    _putchar('\n');
+
 #ifdef WINDOWS
-    // Windows specific initialization
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD dwMode = 0;
-    GetConsoleMode(hOut, &dwMode);
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(hOut, dwMode);
+    // Windows specific initialization - already handled in configure_terminal_for_utf8
 #endif
 
 #ifdef WINDOWS
