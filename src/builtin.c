@@ -11,7 +11,7 @@ int _myexit(info_t *info)
 {
     int exitcheck;
 
-    if (info->argv[1])  /* If there is an exit arguement */
+    if (info->argv[1]) /* If there is an exit arguement */
     {
         exitcheck = _erratoi(info->argv[1]);
         if (exitcheck == -1)
@@ -169,6 +169,17 @@ int _myhelp(info_t *info)
         _puts("    Displays various test patterns including ASCII, UTF-8,\n");
         _puts("    Arabic text, mixed text direction, and Arabic numbers.\n");
     }
+    else if (_strcmp(arg_array[1], "layout") == 0)
+    {
+        _puts("layout: layout [OPTION]\n");
+        _puts("    Change keyboard layout or display current layout.\n");
+        _puts("    Without arguments, displays the current keyboard layout.\n");
+        _puts("    Options:\n");
+        _puts("      ar, arabic   - Switch to Arabic keyboard layout\n");
+        _puts("      en, english  - Switch to English keyboard layout\n");
+        _puts("      toggle       - Toggle between Arabic and English layouts\n");
+        _puts("    Shortcut: Ctrl+A to toggle between layouts\n");
+    }
     else
     {
         _puts("No help available for this command.\n");
@@ -187,7 +198,7 @@ int _mylang(info_t *info)
     char **arg_array;
 
     arg_array = info->argv;
-    
+
     if (arg_array[1] == NULL)
     {
         /* Display current language */
@@ -202,18 +213,40 @@ int _mylang(info_t *info)
     if (_strcmp(arg_array[1], "en") == 0 || _strcmp(arg_array[1], "english") == 0)
     {
         set_language(0); /* LANG_EN */
+        set_text_direction(0); /* Explicitly set LTR direction */
         _puts("Language changed to English (left-to-right)\n");
+        
+        /* Reset terminal for clean LTR display */
+        write(STDOUT_FILENO, "\033[2J\033[H", 7); /* Clear screen and reset cursor position */
+        write(STDOUT_FILENO, "\033[0m", 4);       /* Reset text attributes */
+        
+        /* Force LTR paragraph direction */
+        write(STDOUT_FILENO, "\xE2\x80\x8E", 3);  /* LTR mark (U+200E) */
     }
     else if (_strcmp(arg_array[1], "ar") == 0 || _strcmp(arg_array[1], "arabic") == 0)
     {
         set_language(1); /* LANG_AR */
+        set_text_direction(1); /* Explicitly set RTL direction */
+        
+        /* Reset terminal for clean RTL display */
+        write(STDOUT_FILENO, "\033[2J\033[H", 7); /* Clear screen and reset cursor position */
+        write(STDOUT_FILENO, "\033[0m", 4);       /* Reset text attributes */
+        
+        /* Force RTL paragraph direction */
+        write(STDOUT_FILENO, "\xE2\x80\x8F", 3);  /* RTL mark (U+200F) */
+        
+        /* Display language change message in Arabic */
         _puts_utf8("تم تغيير اللغة إلى العربية (من اليمين إلى اليسار)\n");
+        
+        /* Switch keyboard layout to Arabic mode */
+        toggle_keyboard_mode();
     }
     else
     {
-        _puts("Supported languages: en (English), ar (Arabic)\n");
+        _eputs("Error: Unknown language. Available options: 'en' (English) or 'ar' (Arabic)\n");
+        return (1);
     }
-
+    
     return (0);
 }
 
@@ -226,35 +259,35 @@ int _mylang(info_t *info)
 int _mytest(info_t *info)
 {
     (void)info; /* Unused parameter */
-    
+
     /* Test ASCII characters */
     _puts("ASCII Test: Hello, World!\n");
-    
+
     /* Test UTF-8 characters */
     _puts_utf8("UTF-8 Test: こんにちは世界! Привет, мир! 你好，世界！\n");
-    
+
     /* Test Arabic characters */
     _puts_utf8("Arabic Test: مرحبا بالعالم!\n");
-    
+
     /* Test mixed text direction */
     _puts_utf8("Mixed Test: Hello مرحبا World العالم!\n");
-    
+
     /* Test Arabic numbers */
     _puts_utf8("Arabic Numbers: ٠١٢٣٤٥٦٧٨٩\n");
-    
+
     /* Test Arabic punctuation */
     _puts_utf8("Arabic Punctuation: ؟ ، ؛ « »\n");
-    
+
     /* Test text direction markers */
     _puts("Text Direction Test:\n");
-    
+
     /* Force LTR */
     write(STDOUT_FILENO, "\xE2\x80\x8E", 3); /* LTR mark (U+200E) */
     _puts_utf8("LTR: Hello مرحبا بالعالم World!\n");
-    
+
     /* Force RTL */
     write(STDOUT_FILENO, "\xE2\x80\x8F", 3); /* RTL mark (U+200F) */
     _puts_utf8("RTL: Hello مرحبا بالعالم World!\n");
-    
+
     return (0);
 }

@@ -29,26 +29,68 @@ int get_utf8_char_length(char first_byte)
 int set_text_direction(int is_rtl)
 {
 #ifdef _WIN32
-    /* Windows console doesn't natively support RTL, but we can use ANSI escape sequences */
+    /* Windows console support for RTL using Virtual Terminal Sequences */
     if (is_rtl) {
-        /* Set RTL mode using ANSI escape sequence */
-        write(STDOUT_FILENO, "\033[?7l", 5); /* Disable line wrapping */
-        /* Additional RTL setup could be added here */
+        /* Set RTL mode using comprehensive escape sequences */
+        write(STDOUT_FILENO, "\033[?7l", 5);     /* Disable line wrapping */
+        
+        /* Use more reliable RTL rendering sequence */
+        write(STDOUT_FILENO, "\033[2J", 4);      /* Clear screen for clean RTL rendering */
+        write(STDOUT_FILENO, "\033[0m", 4);      /* Reset attributes */
+        
+        /* Set base direction to RTL with multiple techniques for better compatibility */
+        write(STDOUT_FILENO, "\033]8;;bidi=R\a", 12);
+        
+        /* Force RTL paragraph direction */
+        write(STDOUT_FILENO, "\xE2\x80\x8F", 3); /* RTL mark (U+200F) */
+        
+        /* Enable additional RTL mode flags - these are implementation specific but work on newer Windows Terminal */
+        write(STDOUT_FILENO, "\033[=14h", 6);    /* Enable RTL rendering */
+        write(STDOUT_FILENO, "\033[=15h", 6);    /* Enable RTL cursor movement */
+        
+        /* Set console mode through Windows API for better support */
+        #ifdef WINDOWS
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hOut != INVALID_HANDLE_VALUE) {
+            DWORD dwMode = 0;
+            if (GetConsoleMode(hOut, &dwMode)) {
+                /* Set ENABLE_VIRTUAL_TERMINAL_PROCESSING and other relevant flags */
+                dwMode |= 0x0004 | 0x0008; /* ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT */
+                SetConsoleMode(hOut, dwMode);
+            }
+        }
+        #endif
     } else {
-        /* Set LTR mode using ANSI escape sequence */
-        write(STDOUT_FILENO, "\033[?7h", 5); /* Enable line wrapping */
-        /* Additional LTR setup could be added here */
+        /* Set LTR mode using comprehensive escape sequences */
+        write(STDOUT_FILENO, "\033[?7h", 5);     /* Enable line wrapping */
+        write(STDOUT_FILENO, "\033[0m", 4);      /* Reset attributes */
+        
+        /* Set base direction to LTR */
+        write(STDOUT_FILENO, "\033]8;;bidi=L\a", 12);
+        
+        /* Force LTR paragraph direction */
+        write(STDOUT_FILENO, "\xE2\x80\x8E", 3); /* LTR mark (U+200E) */
+        
+        /* Disable RTL mode flags */
+        write(STDOUT_FILENO, "\033[=14l", 6);    /* Disable RTL rendering */
+        write(STDOUT_FILENO, "\033[=15l", 6);    /* Disable RTL cursor movement */
     }
 #else
     /* For Unix/Linux systems with proper terminal support */
     if (is_rtl) {
-        /* Set RTL mode */
-        write(STDOUT_FILENO, "\033[?7l", 5); /* Disable line wrapping */
-        /* Additional RTL setup could be added here */
+        /* Set RTL mode with better compatibility */
+        write(STDOUT_FILENO, "\033[?7l", 5);    /* Disable line wrapping */
+        write(STDOUT_FILENO, "\xE2\x80\x8F", 3); /* RTL mark (U+200F) */
+        
+        /* Use BiDi console mode if available (some modern terminals) */
+        write(STDOUT_FILENO, "\033]8;;bidi=R\a", 12);
     } else {
         /* Set LTR mode */
-        write(STDOUT_FILENO, "\033[?7h", 5); /* Enable line wrapping */
-        /* Additional LTR setup could be added here */
+        write(STDOUT_FILENO, "\033[?7h", 5);    /* Enable line wrapping */
+        write(STDOUT_FILENO, "\xE2\x80\x8E", 3); /* LTR mark (U+200E) */
+        
+        /* Reset BiDi console mode if available */
+        write(STDOUT_FILENO, "\033]8;;bidi=L\a", 12);
     }
 #endif
     return 0;
@@ -106,41 +148,47 @@ int is_rtl_char(int unicode_codepoint)
     
     return 0;
 }
-
 /**
  * utf8_to_codepoint - Converts a UTF-8 character to a Unicode codepoint
  * @utf8_char: The UTF-8 character buffer
- * @length: The length of the UTF-8 character
+ * @codepoint: Pointer to store the resulting codepoint
  *
- * Return: The Unicode codepoint
+ * Return: 1 on success, 0 on failure
  */
-int utf8_to_codepoint(char *utf8_char, int length)
+int utf8_to_codepoint(const char *utf8_char, int *codepoint)
 {
-    int codepoint = 0;
+    if (!utf8_char || !codepoint)
+        return 0;
+    
+    int length = get_utf8_char_length(utf8_char[0]);
     
     if (length == 1)
     {
-        return (unsigned char)utf8_char[0];
+        *codepoint = (unsigned char)utf8_char[0];
     }
     else if (length == 2)
     {
-        codepoint = ((utf8_char[0] & 0x1F) << 6) | (utf8_char[1] & 0x3F);
+        *codepoint = ((utf8_char[0] & 0x1F) << 6) | (utf8_char[1] & 0x3F);
     }
     else if (length == 3)
     {
-        codepoint = ((utf8_char[0] & 0x0F) << 12) | 
+        *codepoint = ((utf8_char[0] & 0x0F) << 12) | 
                     ((utf8_char[1] & 0x3F) << 6) | 
                     (utf8_char[2] & 0x3F);
     }
     else if (length == 4)
     {
-        codepoint = ((utf8_char[0] & 0x07) << 18) | 
+        *codepoint = ((utf8_char[0] & 0x07) << 18) | 
                     ((utf8_char[1] & 0x3F) << 12) | 
                     ((utf8_char[2] & 0x3F) << 6) | 
                     (utf8_char[3] & 0x3F);
     }
+    else
+    {
+        return 0; /* Invalid UTF-8 sequence */
+    }
     
-    return codepoint;
+    return 1;
 }
 
 /**
@@ -199,6 +247,7 @@ void configure_terminal_for_utf8(void)
     SetConsoleCP(65001);       /* CP_UTF8 */
     
     /* Enable VT processing for ANSI escape sequences */
+    #ifdef WINDOWS
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut != INVALID_HANDLE_VALUE)
     {
@@ -228,8 +277,9 @@ void configure_terminal_for_utf8(void)
         SMALL_RECT windowRect = {0, 0, 100, 30}; /* Width: 100, Height: 30 */
         SetConsoleWindowInfo(hOut, TRUE, &windowRect);
     }
+    #endif
 #else
     /* Set locale to use UTF-8 */
     setlocale(LC_ALL, "en_US.UTF-8");
 #endif
-} 
+}

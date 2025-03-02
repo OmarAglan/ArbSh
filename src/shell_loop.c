@@ -64,8 +64,8 @@ int find_builtin(info_t *info)
         {"alias", _myalias},
         {"lang", _mylang},
         {"test", _mytest},
-        {NULL, NULL}
-    };
+        {"layout", _mylayout},
+        {NULL, NULL}};
 
     for (i = 0; builtintbl[i].type; i++)
         if (_strcmp(info->argv[0], builtintbl[i].type) == 0)
@@ -107,8 +107,7 @@ void find_cmd(info_t *info)
     }
     else
     {
-        if ((interactive(info) || _getenv(info, "PATH=")
-                    || info->argv[0][0] == '/') && is_cmd(info, info->argv[0]))
+        if ((interactive(info) || _getenv(info, "PATH=") || info->argv[0][0] == '/') && is_cmd(info, info->argv[0]))
             fork_cmd(info);
         else if (*(info->arg) != '\n')
         {
@@ -137,21 +136,22 @@ void fork_cmd(info_t *info)
 
     // Build command line string
     _snprintf(cmdline, sizeof(cmdline), "%s", info->path);
-    for (i = 1; info->argv[i] != NULL; i++) {
+    for (i = 1; info->argv[i] != NULL; i++)
+    {
         _snprintf(cmdline + strlen(cmdline), sizeof(cmdline) - strlen(cmdline),
-                 " %s", info->argv[i]);
+                  " %s", info->argv[i]);
     }
 
-    if (!CreateProcess(NULL,   // No module name (use command line)
-        cmdline,               // Command line
-        NULL,                  // Process handle not inheritable
-        NULL,                  // Thread handle not inheritable
-        FALSE,                // Set handle inheritance to FALSE
-        0,                    // No creation flags
-        NULL,                // Use parent's environment block
-        NULL,                // Use parent's starting directory
-        &si,                 // Pointer to STARTUPINFO structure
-        &pi))                // Pointer to PROCESS_INFORMATION structure
+    if (!CreateProcess(NULL,    // No module name (use command line)
+                       cmdline, // Command line
+                       NULL,    // Process handle not inheritable
+                       NULL,    // Thread handle not inheritable
+                       FALSE,   // Set handle inheritance to FALSE
+                       0,       // No creation flags
+                       NULL,    // Use parent's environment block
+                       NULL,    // Use parent's starting directory
+                       &si,     // Pointer to STARTUPINFO structure
+                       &pi))    // Pointer to PROCESS_INFORMATION structure
     {
         info->status = GetLastError();
         print_error(info, "Command failed\n");
@@ -160,7 +160,7 @@ void fork_cmd(info_t *info)
 
     // Wait until child process exits
     WaitForSingleObject(pi.hProcess, INFINITE);
-    GetExitCodeProcess(pi.hProcess, (LPDWORD)&(info->status));
+    GetExitCodeProcess(pi.hProcess, (LPDWORD) & (info->status));
 
     // Close process and thread handles
     CloseHandle(pi.hProcess);

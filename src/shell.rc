@@ -34,5 +34,5 @@ END
 // Note: You would need to create an icon file (shell.ico) and place it in the src directory
 1 ICON "shell.ico" 
 
-// Manifest to enable visual styles
-1 24 "shell.manifest" 
+// Manifest is now handled by CMake automatically
+// 1 24 "shell.manifest" 

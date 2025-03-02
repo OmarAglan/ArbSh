@@ -62,3 +62,4 @@ docs/latex/
 .Trashes
 ehthumbs.db
 Thumbs.db
+/build_gui

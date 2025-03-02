@@ -20,7 +20,7 @@ ssize_t input_buf(info_t *info, char **buf, size_t *len)
 
     if (!*len) /* if nothing left in the buffer, fill it */
     {
-        /*bfree((void **)info->cmd_buf);*/
+        /*bfree((void **)buf);*/
         free(*buf);
         *buf = NULL;
         signal(SIGINT, sigintHandler);
@@ -36,6 +36,30 @@ ssize_t input_buf(info_t *info, char **buf, size_t *len)
                 (*buf)[r - 1] = '\0'; /* remove trailing newline */
                 r--;
             }
+            
+            /* Process buffer for RTL if in Arabic mode */
+            if (get_language() == 1) /* LANG_AR */
+            {
+                /* Process the buffer through bidirectional algorithm */
+                char *processed_buf = malloc(r * 4 + 10); /* Extra space for control characters */
+                if (processed_buf)
+                {
+                    int processed_length = process_bidirectional_text(*buf, r, 1, processed_buf);
+                    if (processed_length > 0)
+                    {
+                        /* Replace original buffer with processed one */
+                        free(*buf);
+                        *buf = processed_buf;
+                        r = processed_length;
+                    }
+                    else
+                    {
+                        /* Processing failed, keep original buffer */
+                        free(processed_buf);
+                    }
+                }
+            }
+            
             info->linecount_flag = 1;
             remove_comments(*buf);
             build_history_list(info, *buf, info->histcount++);
@@ -66,9 +90,9 @@ ssize_t get_input(info_t *info)
     r = input_buf(info, &buf, &len);
     if (r == -1) /* EOF */
         return (-1);
-    if (len)    /* we have commands left in the chain buffer */
+    if (len) /* we have commands left in the chain buffer */
     {
-        j = i; /* init new iterator to current buf position */
+        j = i;       /* init new iterator to current buf position */
         p = buf + i; /* get pointer for return */
 
         check_chain(info, buf, &j, i, len);
@@ -79,19 +103,19 @@ ssize_t get_input(info_t *info)
             j++;
         }
 
-        i = j + 1; /* increment past nulled ';'' */
+        i = j + 1;    /* increment past nulled ';'' */
         if (i >= len) /* reached end of buffer? */
         {
             i = len = 0; /* reset position and length */
             info->cmd_buf_type = CMD_NORM;
         }
 
-        *buf_p = p; /* pass back pointer to current command position */
+        *buf_p = p;          /* pass back pointer to current command position */
         return (_strlen(p)); /* return length of current command */
     }
 
     *buf_p = buf; /* else not a chain, pass back buffer from _getline() */
-    return (r); /* return length of buffer from _getline() */
+    return (r);   /* return length of buffer from _getline() */
 }
 
 /**
@@ -130,6 +154,20 @@ int _getline(info_t *info, char **ptr, size_t *length)
     ssize_t r = 0, s = 0;
     char *p = NULL, *new_p = NULL, *c;
 
+    /* Check for keyboard shortcuts before processing input */
+    if (len > 0 && i < len)
+    {
+        /* Process potential keyboard shortcuts */
+        if (handle_keyboard_shortcut(info, buf[i]))
+        {
+            /* Shortcut was handled, consume the character */
+            i++;
+            if (i >= len)
+                i = len = 0;
+            return 0;
+        }
+    }
+
     p = *ptr;
     if (p && length)
         s = *length;
@@ -142,31 +180,35 @@ int _getline(info_t *info, char **ptr, size_t *length)
 
     c = _strchr(buf + i, '\n');
     k = c ? 1 + (unsigned int)(c - buf) : len;
-    
+
     /* Ensure we don't split UTF-8 characters */
-    if (k < len && (buf[k] & 0x80)) {
+    if (k < len && (buf[k] & 0x80))
+    {
         /* We might be in the middle of a UTF-8 character */
         int char_length = 0;
-        
+
         /* Check if we're in the middle of a UTF-8 sequence */
-        if ((buf[k] & 0xC0) == 0x80) {
+        if ((buf[k] & 0xC0) == 0x80)
+        {
             /* This is a continuation byte, find the start of the character */
             int j;
             for (j = k - 1; j >= (int)i && (buf[j] & 0xC0) == 0x80; j--)
                 ;
-            
-            if (j >= (int)i) {
+
+            if (j >= (int)i)
+            {
                 char_length = get_utf8_char_length(buf[j]);
                 int bytes_read = k - j;
-                
+
                 /* If we haven't read the complete character, adjust k */
-                if (bytes_read < char_length && k + (char_length - bytes_read) <= len) {
+                if (bytes_read < char_length && k + (char_length - bytes_read) <= len)
+                {
                     k += (char_length - bytes_read);
                 }
             }
         }
     }
-    
+
     new_p = _realloc(p, s, s ? s + k : k + 1);
     if (!new_p) /* MALLOC FAILURE! */
         return (p ? free(p), -1 : -1);

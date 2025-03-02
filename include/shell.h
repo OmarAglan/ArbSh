@@ -7,7 +7,7 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <locale.h>  /* For setlocale() */
+#include <locale.h> /* For setlocale() */
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -37,7 +37,6 @@ typedef long long ssize_t;
 #else
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <sys/stat.h>
 #endif
 
@@ -47,21 +46,21 @@ typedef long long ssize_t;
 #define BUF_FLUSH -1
 
 /* for command chaining */
-#define CMD_NORM	0
-#define CMD_OR		1
-#define CMD_AND		2
-#define CMD_CHAIN	3
+#define CMD_NORM 0
+#define CMD_OR 1
+#define CMD_AND 2
+#define CMD_CHAIN 3
 
 /* for convert_number() */
-#define CONVERT_LOWERCASE	1
-#define CONVERT_UNSIGNED	2
+#define CONVERT_LOWERCASE 1
+#define CONVERT_UNSIGNED 2
 
 /* 1 if using system getline() */
 #define USE_GETLINE 0
 #define USE_STRTOK 0
 
-#define HIST_FILE	".simple_shell_history"
-#define HIST_MAX	4096
+#define HIST_FILE ".simple_shell_history"
+#define HIST_MAX 4096
 
 /* Avoid conflict with system environ */
 #ifdef WINDOWS
@@ -73,7 +72,8 @@ extern char **environ;
 #endif
 
 /* Message IDs for localization */
-enum message_id {
+enum message_id
+{
     MSG_WELCOME,
     MSG_CMD_NOT_FOUND,
     MSG_PERMISSION_DENIED,
@@ -117,9 +117,9 @@ int init_locale(void);
  */
 typedef struct liststr
 {
-	int num;
-	char *str;
-	struct liststr *next;
+    int num;
+    char *str;
+    struct liststr *next;
 } list_t;
 
 /**
@@ -146,30 +146,30 @@ typedef struct liststr
  */
 typedef struct passinfo
 {
-	char *arg;
-	char **argv;
-	char *path;
-	int argc;
-	unsigned int line_count;
-	int err_num;
-	int linecount_flag;
-	char *fname;
-	list_t *env;
-	list_t *history;
-	list_t *alias;
-	char **env_array;  /* Renamed from environ to avoid conflict */
-	int env_changed;
-	int status;
+    char *arg;
+    char **argv;
+    char *path;
+    int argc;
+    unsigned int line_count;
+    int err_num;
+    int linecount_flag;
+    char *fname;
+    list_t *env;
+    list_t *history;
+    list_t *alias;
+    char **env_array; /* Renamed from environ to avoid conflict */
+    int env_changed;
+    int status;
 
-	char **cmd_buf; /* pointer to cmd ; chain buffer, for memory mangement */
-	int cmd_buf_type; /* CMD_type ||, &&, ; */
-	int readfd;
-	int histcount;
+    char **cmd_buf;   /* pointer to cmd ; chain buffer, for memory mangement */
+    int cmd_buf_type; /* CMD_type ||, &&, ; */
+    int readfd;
+    int histcount;
 } info_t;
 
-#define INFO_INIT \
-{NULL, NULL, NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, \
-	0, 0, 0}
+#define INFO_INIT                                                            \
+    {NULL, NULL, NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, \
+     0, 0, 0}
 
 /**
  *struct builtin - contains a builtin string and related function
@@ -178,8 +178,8 @@ typedef struct passinfo
  */
 typedef struct builtin
 {
-	char *type;
-	int (*func)(info_t *);
+    char *type;
+    int (*func)(info_t *);
 } builtin_table;
 
 /* toem_shloop.c */
@@ -210,7 +210,7 @@ char *_strcat(char *, char *);
 
 /* toem_string1.c */
 char *_strcpy(char *, char *);
-char *shell_strdup(const char *);  /* Renamed from _strdup to avoid conflict */
+char *shell_strdup(const char *); /* Renamed from _strdup to avoid conflict */
 void _puts(char *);
 int _putchar(char);
 
@@ -252,8 +252,9 @@ int _myhelp(info_t *);
 /* toem_builtin1.c */
 int _myhistory(info_t *);
 int _myalias(info_t *);
-int _mylang(info_t *); /* New language command */
-int _mytest(info_t *); /* Test command for UTF-8 and Arabic */
+int _mylang(info_t *);   /* New language command */
+int _mytest(info_t *);   /* Test command for UTF-8 and Arabic */
+int _mylayout(info_t *); /* Keyboard layout command */
 
 /*toem_getline.c */
 ssize_t get_input(info_t *);
@@ -305,12 +306,12 @@ int replace_alias(info_t *);
 int replace_vars(info_t *);
 int replace_string(char **, char *);
 
-/* UTF-8 and Arabic support functions */
+/* UTF-8 and bidirectional text functions */
 int get_utf8_char_length(char first_byte);
 int read_utf8_char(char *buffer, int max_size);
 int is_rtl_char(int unicode_codepoint);
-int utf8_to_codepoint(char *utf8_char, int length);
-int codepoint_to_utf8(int codepoint, char *utf8_char);
+int utf8_to_codepoint(const char *utf8_char, int *codepoint);
+int codepoint_to_utf8(int codepoint, char *utf8_buf);
 void configure_terminal_for_utf8(void);
 int set_text_direction(int is_rtl);
 
@@ -319,5 +320,19 @@ void _puts_utf8(char *str);
 void _eputs_utf8(char *str);
 int _putsfd_utf8(char *str, int fd);
 void print_prompt_utf8(info_t *info);
+
+/* Bidirectional text support functions */
+int process_bidirectional_text(const char *text, int length, int is_rtl, char *output);
+int get_char_type(int codepoint);
+
+/* Arabic input functions */
+int set_keyboard_mode(int mode);
+int get_keyboard_mode(void);
+int toggle_keyboard_mode(void);
+char *map_key_to_arabic(char key);
+char *process_keyboard_input(char key);
+int update_input_mode_indicator(void);
+int handle_keyboard_shortcut(info_t *info, char key);
+int init_arabic_input(void);
 
 #endif
