@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides guidelines for organizing and enhancing the CMake build system for the Simple Shell project. A well-structured build system is essential for cross-platform development, especially when supporting both Windows and Unix/Linux platforms with Arabic language features.
+This document provides guidelines for organizing and enhancing the CMake build system for the ArbSh project. A well-structured build system is essential for cross-platform development, especially when supporting both Windows and Unix/Linux platforms with Arabic language features.
 
 ## Current Build System
 
@@ -187,9 +187,9 @@ Add support for package creation:
 # In top-level CMakeLists.txt
 include(CPack)
 
-set(CPACK_PACKAGE_NAME "simple-shell")
-set(CPACK_PACKAGE_VENDOR "Baa Language Team")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Simple Shell with Arabic Support")
+set(CPACK_PACKAGE_NAME "ArbSh")
+set(CPACK_PACKAGE_VENDOR "ArbSh Project")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ArbSh - Arabic-First Shell")
 set(CPACK_PACKAGE_VERSION ${SHELL_VERSION})
 set(CPACK_PACKAGE_VERSION_MAJOR ${SHELL_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${SHELL_VERSION_MINOR})
@@ -263,4 +263,4 @@ endif()
 
 ## Conclusion
 
-A well-organized CMake build system will significantly improve the maintainability and extensibility of the Simple Shell project. By following these guidelines, the project can achieve better cross-platform compatibility, easier integration of Arabic language features, and a more professional development workflow.
+A well-organized CMake build system will significantly improve the maintainability and extensibility of the ArbSh project. By following these guidelines, the project can achieve better cross-platform compatibility, easier integration of Arabic language features, and a more professional development workflow.

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(simple_shell C)
+project(ArbSh C)
 
 # Set C standard
 set(CMAKE_C_STANDARD 11)
@@ -27,8 +27,11 @@ else()
 endif()
 
 # Define source files
-file(GLOB SOURCES 
-    "src/*.c"
+file(GLOB_RECURSE SOURCES
+    "src/core/*.c"
+    "src/i18n/*.c"
+    "src/utils/*.c"
+    "src/platform/windows/*.c"
 )
 
 # Special handling for entry point files
@@ -40,10 +43,10 @@ list(FILTER SOURCES EXCLUDE REGEX ".*win_gui_common\\.c$")  # Exclude win_gui_co
 
 # Explicitly add the UTF-8 and localization source files
 list(APPEND SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/utf8.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/utf8_output.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/locale.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/shell_entry.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/utf8.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/utf8_output.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/i18n/locale/locale.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/shell_entry.c"
 )
 
 # Define header files
@@ -111,6 +114,54 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Enable testing
 enable_testing()
+
+# Add test targets
+# Test for UTF-8 functions
+add_executable(test_utf8 
+    tests/arabic/text_display/test_utf8.c
+    src/utils/utf8.c
+    src/i18n/locale/locale.c
+)
+target_include_directories(test_utf8 PRIVATE include tests)
+if(WIN32)
+    target_compile_definitions(test_utf8 PRIVATE WINDOWS _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME UTF8Test COMMAND test_utf8)
+
+# Test for bidirectional algorithm
+add_executable(test_bidi 
+    tests/arabic/bidi_algorithm/test_bidi.c
+    src/i18n/bidi/bidi.c
+    src/utils/utf8.c
+)
+target_include_directories(test_bidi PRIVATE include tests)
+if(WIN32)
+    target_compile_definitions(test_bidi PRIVATE WINDOWS _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME BidiTest COMMAND test_bidi)
+
+# Test for Arabic keyboard input
+add_executable(test_keyboard 
+    tests/arabic/text_input/test_keyboard.c
+    tests/arabic/text_input/test_stubs.c
+    src/i18n/arabic_input.c
+    src/i18n/locale/locale.c
+    src/utils/utf8.c
+    src/utils/string.c
+    src/utils/string1.c
+)
+target_include_directories(test_keyboard PRIVATE include tests)
+if(WIN32)
+    target_compile_definitions(test_keyboard PRIVATE WINDOWS _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME KeyboardTest COMMAND test_keyboard)
+
+# Define a custom test target to run all tests
+add_custom_target(run_tests
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    DEPENDS test_utf8 test_bidi test_keyboard
+    COMMENT "Running all tests"
+)
 
 # Install rules
 install(TARGETS hsh

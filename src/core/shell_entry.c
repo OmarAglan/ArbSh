@@ -300,7 +300,7 @@ HWND create_status_bar(HWND hParent)
     /* Set the text for each part */
     SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM) "Ready");
     SendMessage(hStatus, SB_SETTEXT, 1, (LPARAM) "UTF-8");
-    SendMessage(hStatus, SB_SETTEXT, 2, (LPARAM) "Simple Shell");
+    SendMessage(hStatus, SB_SETTEXT, 2, (LPARAM) "ArbSh");
     SendMessage(hStatus, SB_SETTEXT, 3, (LPARAM) "Arabic Support");
 
     return hStatus;
@@ -621,7 +621,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
         case IDM_HELP_ABOUT:
             /* Show about dialog */
-            MessageBox(hWnd, "Simple Shell Terminal\nWith Tabbed Interface", "About", MB_OK | MB_ICONINFORMATION);
+            MessageBox(hWnd, "ArbSh Terminal\nWith Arabic Support and Tabbed Interface", "About", MB_OK | MB_ICONINFORMATION);
             break;
         }
 
@@ -919,7 +919,7 @@ int initialize_console_for_gui(void)
     printf("\033[38;2;255;255;50m"); /* RGB color similar to Windows Terminal accent */
     printf("╔════════════════════════════════════════════════════╗\n");
     printf("║                                                    ║\n");
-    printf("║              SIMPLE SHELL - MODERN UI              ║\n");
+    printf("║                  ArbSh - MODERN UI                 ║\n");
     printf("║         WITH ARABIC AND BAA LANGUAGE SUPPORT       ║\n");
     printf("║                                                    ║\n");
     printf("╚════════════════════════════════════════════════════╝\n");
@@ -927,7 +927,7 @@ int initialize_console_for_gui(void)
 
     /* Test Arabic output */
     printf("\033[38;2;255;200;50m"); /* Gold color for Arabic text */
-    printf("مرحبًا بكم في الصدفة البسيطة - واجهة مستخدم حديثة\n");
+    printf("مرحبًا بكم في ArbSh - واجهة مستخدم حديثة\n");
     printf("\033[0m\n"); /* Reset text formatting */
 
     /* Set the default console color scheme to match Windows Terminal */
@@ -1589,7 +1589,7 @@ int main(int argc, char *argv[])
         printf("\033[38;2;50;255;255m"); /* RGB color similar to Windows Terminal accent */
         printf("╔════════════════════════════════════════════════════╗\n");
         printf("║                                                    ║\n");
-        printf("║              SIMPLE SHELL - CONSOLE MODE           ║\n");
+        printf("║                  ArbSh - CONSOLE MODE              ║\n");
         printf("║         WITH ARABIC AND BAA LANGUAGE SUPPORT       ║\n");
         printf("║                                                    ║\n");
         printf("╚════════════════════════════════════════════════════╝\n");
@@ -1597,7 +1597,7 @@ int main(int argc, char *argv[])
 
         /* Test Arabic output */
         printf("\033[38;2;255;200;50m"); /* Gold color for Arabic text */
-        printf("مرحبًا بكم في الصدفة البسيطة - وضع وحدة التحكم\n");
+        printf("مرحبًا بكم في ArbSh - واجهة مستخدم حديثة\n");
         printf("\033[0m\n"); /* Reset text formatting */
 
 #ifdef WINDOWS
