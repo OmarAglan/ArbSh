@@ -1,6 +1,6 @@
-# Simple Shell Documentation Index
+# ArbSh Documentation Index
 
-This document provides an overview of all available documentation for the Simple Shell project. Use this as your starting point for navigating the project documentation.
+This document provides an overview of all available documentation for the ArbSh project. Use this as your starting point for navigating the project documentation.
 
 ## Core Documentation
 
@@ -112,4 +112,4 @@ The following documentation is planned for future development:
 
 ## Conclusion
 
-This documentation set provides a comprehensive overview of the Simple Shell project, with a focus on its role in supporting the Baa language ecosystem through robust Arabic language support. The documentation will continue to evolve as the project develops.
+This documentation set provides a comprehensive overview of the ArbSh project, with a focus on its role in supporting the Baa language ecosystem through robust Arabic language support. The documentation will continue to evolve as the project develops.

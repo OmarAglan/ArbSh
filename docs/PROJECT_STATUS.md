@@ -1,10 +1,10 @@
-# Simple Shell Project Status
+# ArbSh Project Status
 
-This document provides a comprehensive overview of the current state of the Simple Shell project, its components, and planned development roadmap.
+This document provides a comprehensive overview of the current state of the ArbSh project, its components, and planned development roadmap.
 
 ## Project Overview
 
-The Simple Shell project is a UNIX command line interpreter implemented in C with cross-platform support for both Unix/Linux and Windows systems. The project is specifically designed to support the Baa language ecosystem by providing comprehensive Arabic language support that most standard terminals lack. Key features include:
+The ArbSh project is a UNIX command line interpreter implemented in C with cross-platform support for both Unix/Linux and Windows systems. The project is specifically designed to support the Baa language ecosystem by providing comprehensive Arabic language support that most standard terminals lack. Key features include:
 
 1. **Cross-platform compatibility** - Working on both Windows and Unix/Linux systems
 2. **Full Arabic language support** - Including right-to-left text, UTF-8 handling, and localization that standard terminals don't provide
@@ -188,4 +188,4 @@ This shell is a critical component of the Baa language ecosystem, providing seve
 
 ## Conclusion
 
-The Simple Shell project is a fundamental component of the Baa language ecosystem, addressing the critical limitation of standard terminals in supporting Arabic input and output. The project has made significant progress and is well-positioned to continue development according to the roadmap, with clear priorities for providing a robust environment for the Baa programming language.
+The ArbSh project is a fundamental component of the Baa language ecosystem, addressing the critical limitation of standard terminals in supporting Arabic input and output. The project has made significant progress and is well-positioned to continue development according to the roadmap, with clear priorities for providing a robust environment for the Baa programming language.

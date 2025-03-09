@@ -1,6 +1,6 @@
 # Development Tasks and Priorities
 
-This document outlines the immediate and medium-term development tasks for the Simple Shell project, prioritized by importance for supporting the Baa language ecosystem.
+This document outlines the immediate and medium-term development tasks for the ArbSh project, prioritized by importance for supporting the Baa language ecosystem.
 
 ## Immediate Priorities (1-2 Months)
 
@@ -296,4 +296,4 @@ Priority levels may be adjusted based on feedback from the Baa language team and
 
 ## Conclusion
 
-This document provides a roadmap for immediate and future development of the Simple Shell project, with a focus on supporting the Baa language ecosystem. By addressing these tasks in order of priority, we will create a robust terminal environment that properly supports Arabic text, essential for the Baa language's success.
+This document provides a roadmap for immediate and future development of the ArbSh project, with a focus on supporting the Baa language ecosystem. By addressing these tasks in order of priority, we will create a robust terminal environment that properly supports Arabic text, essential for the Baa language's success.

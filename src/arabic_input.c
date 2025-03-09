@@ -2,7 +2,7 @@
  * arabic_input.c - Arabic keyboard layout and input method support
  *
  * This file implements Arabic keyboard layout support and input method switching
- * for the Simple Shell project, addressing the high-priority task of enhancing
+ * for the ArbSh project, addressing the high-priority task of enhancing
  * Arabic text input as outlined in the development tasks.
  */
 

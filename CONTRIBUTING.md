@@ -1,6 +1,6 @@
-# Contributing to Simple Shell
+# Contributing to ArbSh
 
-We love your input! We want to make contributing to Simple Shell as easy and transparent as possible, whether it's:
+We love your input! We want to make contributing to ArbSh as easy and transparent as possible, whether it's:
 
 - Reporting a bug
 - Discussing the current state of the code

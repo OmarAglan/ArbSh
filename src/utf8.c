@@ -267,8 +267,35 @@ void configure_terminal_for_utf8(void)
     cfi.dwFontSize.Y = 16; /* Default height */
     cfi.FontFamily = FF_DONTCARE;
     cfi.FontWeight = FW_NORMAL;
-    wcscpy(cfi.FaceName, L"Consolas"); /* Use a font with good Unicode support */
-    SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+    
+    /* Try different fonts with better Arabic support in order of preference */
+    BOOL fontSet = FALSE;
+    /* Try Arial first (excellent Arabic support) */
+    wcscpy(cfi.FaceName, L"Arial");
+    fontSet = SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+    
+    if (!fontSet) {
+        /* Try Tahoma (good Arabic support) */
+        wcscpy(cfi.FaceName, L"Tahoma");
+        fontSet = SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+    }
+    
+    if (!fontSet) {
+        /* Fall back to Courier New (acceptable Arabic support) */
+        wcscpy(cfi.FaceName, L"Courier New");
+        fontSet = SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+    }
+    
+    if (!fontSet) {
+        /* Last attempt with Consolas */
+        wcscpy(cfi.FaceName, L"Consolas");
+        SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+    }
+    
+    /* Force bidirectional text handling */
+    write(STDOUT_FILENO, "\033[?7l", 5);     /* Disable line wrapping */
+    write(STDOUT_FILENO, "\033]8;;bidi=R\a", 12); /* Set base direction to RTL for Arabic */
+    write(STDOUT_FILENO, "\xE2\x80\x8F", 3); /* RTL mark (U+200F) */
     
     /* Set console window size */
     CONSOLE_SCREEN_BUFFER_INFO csbi;

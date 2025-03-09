@@ -1,10 +1,10 @@
-# Baa Language Integration Guide
+# Baa Language Integration
 
-This document outlines how the Simple Shell project integrates with the Baa language ecosystem and provides guidance for developers working on both projects.
+This document outlines how the ArbSh project integrates with the Baa language ecosystem and provides guidance for developers working on both projects.
 
-## Purpose of the Simple Shell for Baa
+## Purpose of ArbSh for Baa
 
-The Simple Shell project was created specifically to address a critical limitation in existing terminal environments: the lack of proper support for Arabic language input and output. This limitation presented a significant barrier to the Baa language, which is designed to support Arabic as a first-class programming language.
+The ArbSh project was created specifically to address a critical limitation in existing terminal environments: the lack of proper support for Arabic language input and output. This limitation presents serious challenges for the Baa programming language, which is designed to fully support Arabic as a programming language.
 
 ### Key Integration Points
 
@@ -108,4 +108,4 @@ The integration between the shell and Baa language will be enhanced according to
 
 ## Conclusion
 
-The Simple Shell project is a crucial component of the Baa language ecosystem, providing the terminal environment necessary for proper Arabic language support. By continuing development according to this integration plan, we will ensure that Baa has a solid foundation for growth as a fully-featured programming language with first-class Arabic support.
+The ArbSh project is a crucial component of the Baa language ecosystem, providing the terminal environment necessary for proper Arabic language support. By continuing development according to this integration plan, both projects will benefit from improved functionality and user experience.
