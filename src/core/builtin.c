@@ -42,13 +42,12 @@ int _mycd(info_t *info)
 
     s = _getcwd(buffer, 1024);
     if (!s)
-        _puts("TODO: >>getcwd failure emsg here<<\n");
+        _puts("Error: Could not get current directory\n");
     if (!info->argv[1])
     {
         dir = _getenv(info, "HOME=");
         if (!dir)
-            chdir_ret = /* TODO: what should this be? */
-                chdir((dir = _getenv(info, "PWD=")) ? dir : "/");
+            chdir_ret = chdir((dir = _getenv(info, "PWD=")) ? dir : "/");
         else
             chdir_ret = chdir(dir);
     }
@@ -61,8 +60,7 @@ int _mycd(info_t *info)
             return (1);
         }
         _puts(_getenv(info, "OLDPWD=")), _putchar('\n');
-        chdir_ret = /* TODO: what should this be? */
-            chdir((dir = _getenv(info, "OLDPWD=")) ? dir : "/");
+        chdir_ret = chdir((dir = _getenv(info, "OLDPWD=")) ? dir : "/");
     }
     else
         chdir_ret = chdir(info->argv[1]);
@@ -188,66 +186,63 @@ int _myhelp(info_t *info)
 }
 
 /**
- * _mylang - changes the shell language
- * @info: Structure containing potential arguments. Used to maintain
- *          constant function prototype.
- *  Return: Always 0
+ * _mylang - Implements the 'lang' shell command to change interface language
+ * @info: Shell info structure
+ *
+ * Return: 0 on success, 1 on error
  */
 int _mylang(info_t *info)
 {
-    char **arg_array;
-
-    arg_array = info->argv;
-
-    if (arg_array[1] == NULL)
+    if (info->argv[1])
     {
-        /* Display current language */
-        if (get_language() == 0)
-            _puts("Current language: English (left-to-right)\n");
+        /* Command argument provided */
+        if (_strcmp(info->argv[1], "ar") == 0 || 
+            _strcmp(info->argv[1], "arabic") == 0)
+        {
+            set_language(1); /* LANG_AR */
+            _puts("Language set to Arabic\n");
+            return 0;
+        }
+        else if (_strcmp(info->argv[1], "en") == 0 || 
+                 _strcmp(info->argv[1], "english") == 0)
+        {
+            set_language(0); /* LANG_EN */
+            _puts("Language set to English\n");
+            return 0;
+        }
+        else if (_strcmp(info->argv[1], "toggle") == 0)
+        {
+            /* Toggle between languages */
+            if (get_language() == 0) /* LANG_EN */
+            {
+                set_language(1); /* LANG_AR */
+                _puts("Language set to Arabic\n");
+            }
+            else
+            {
+                set_language(0); /* LANG_EN */
+                _puts("Language set to English\n");
+            }
+            
+            /* Also toggle keyboard layout since they typically go together */
+            toggle_arabic_mode();
+            return 0;
+        }
         else
-            _puts_utf8("اللغة الحالية: العربية (من اليمين إلى اليسار)\n");
-        return (0);
-    }
-
-    /* Change language based on argument */
-    if (_strcmp(arg_array[1], "en") == 0 || _strcmp(arg_array[1], "english") == 0)
-    {
-        set_language(0); /* LANG_EN */
-        set_text_direction(0); /* Explicitly set LTR direction */
-        _puts("Language changed to English (left-to-right)\n");
-        
-        /* Reset terminal for clean LTR display */
-        write(STDOUT_FILENO, "\033[2J\033[H", 7); /* Clear screen and reset cursor position */
-        write(STDOUT_FILENO, "\033[0m", 4);       /* Reset text attributes */
-        
-        /* Force LTR paragraph direction */
-        write(STDOUT_FILENO, "\xE2\x80\x8E", 3);  /* LTR mark (U+200E) */
-    }
-    else if (_strcmp(arg_array[1], "ar") == 0 || _strcmp(arg_array[1], "arabic") == 0)
-    {
-        set_language(1); /* LANG_AR */
-        set_text_direction(1); /* Explicitly set RTL direction */
-        
-        /* Reset terminal for clean RTL display */
-        write(STDOUT_FILENO, "\033[2J\033[H", 7); /* Clear screen and reset cursor position */
-        write(STDOUT_FILENO, "\033[0m", 4);       /* Reset text attributes */
-        
-        /* Force RTL paragraph direction */
-        write(STDOUT_FILENO, "\xE2\x80\x8F", 3);  /* RTL mark (U+200F) */
-        
-        /* Display language change message in Arabic */
-        _puts_utf8("تم تغيير اللغة إلى العربية (من اليمين إلى اليسار)\n");
-        
-        /* Switch keyboard layout to Arabic mode */
-        toggle_keyboard_mode();
+        {
+            _puts("Usage: lang [ar|en|toggle]\n");
+            return 1;
+        }
     }
     else
     {
-        _eputs("Error: Unknown language. Available options: 'en' (English) or 'ar' (Arabic)\n");
-        return (1);
+        /* No argument, show current language */
+        _puts("Current language: ");
+        _puts((get_language() == 1) ? "Arabic\n" : "English\n");
+        _puts("Use 'lang ar' for Arabic, 'lang en' for English, or 'lang toggle' to switch\n");
     }
     
-    return (0);
+    return 0;
 }
 
 /**

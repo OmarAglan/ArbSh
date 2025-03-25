@@ -1,6 +1,6 @@
-# Arabic Support Developer's Guide
+# Arabic Support Developer Guide
 
-This document provides detailed information for developers working on the Arabic language support features of the Simple Shell project.
+This document provides detailed information for developers working on the Arabic language support features of the ArbSh project.
 
 ## Overview
 

@@ -63,3 +63,7 @@ docs/latex/
 ehthumbs.db
 Thumbs.db
 /build_gui
+/build_console
+/build_console_tests
+/build_gui_tests
+/external

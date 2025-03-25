@@ -1,5 +1,15 @@
 #include "shell.h"
 
+/**
+ * init_bidi - Initialize the bidirectional text support
+ *
+ * This function initializes any resources needed for bidirectional text support.
+ */
+void init_bidi(void)
+{
+    /* No initialization needed at this time */
+}
+
 /* Bidirectional character types as per Unicode Bidirectional Algorithm (UAX #9) */
 #define BIDI_TYPE_L 0    /* Left-to-Right */
 #define BIDI_TYPE_R 1    /* Right-to-Left */
@@ -63,7 +73,8 @@ int get_char_type(int codepoint)
         return BIDI_TYPE_EN;
 
     /* Arabic Numbers */
-    if (codepoint >= 0x0660 && codepoint <= 0x0669)
+    if ((codepoint >= 0x0660 && codepoint <= 0x0669) ||   /* Arabic-Indic digits */
+        (codepoint >= 0x06F0 && codepoint <= 0x06F9))     /* Extended Arabic-Indic digits */
         return BIDI_TYPE_AN;
 
     /* Directional Formatting Characters */

@@ -321,18 +321,16 @@ void _eputs_utf8(char *str);
 int _putsfd_utf8(char *str, int fd);
 void print_prompt_utf8(info_t *info);
 
-/* Bidirectional text support functions */
+/* Bidirectional text support */
+void init_bidi(void);
 int process_bidirectional_text(const char *text, int length, int is_rtl, char *output);
 int get_char_type(int codepoint);
 
-/* Arabic input functions */
-int set_keyboard_mode(int mode);
-int get_keyboard_mode(void);
-int toggle_keyboard_mode(void);
-char *map_key_to_arabic(char key);
-char *process_keyboard_input(char key);
-int update_input_mode_indicator(void);
-int handle_keyboard_shortcut(info_t *info, char key);
-int init_arabic_input(void);
+/* Arabic input support */
+void init_arabic_input(void);
+int toggle_arabic_mode(void);
+int is_arabic_mode(void);
+int set_keyboard_layout(int layout);
+int get_keyboard_layout(void);
 
 #endif

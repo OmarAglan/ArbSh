@@ -1,6 +1,6 @@
 # Comprehensive Shell Enhancement Roadmap
 
-This document outlines the detailed plan for transforming our simple shell into a powerful, cross-platform tool with full Arabic language support, integration with the Baa programming language ecosystem, and standalone capabilities similar to PowerShell.
+This document outlines the detailed plan for transforming ArbSh into a powerful, cross-platform tool with full Arabic language support, integration with the Baa programming language ecosystem, and standalone capabilities similar to PowerShell.
 
 ## Phase 1: Arabic Language Support
 

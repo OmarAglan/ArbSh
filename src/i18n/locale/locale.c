@@ -9,7 +9,7 @@ static int current_language = LANG_EN;
 
 /* Message catalog for English */
 static const char *messages_en[] = {
-    "Welcome to Simple Shell",                /* MSG_WELCOME */
+    "Welcome to ArbSh",                       /* MSG_WELCOME */
     "Command not found",                      /* MSG_CMD_NOT_FOUND */
     "Permission denied",                      /* MSG_PERMISSION_DENIED */
     "Cannot allocate memory",                 /* MSG_MEMORY_ERROR */
@@ -38,7 +38,7 @@ static const char *messages_en[] = {
 
 /* Message catalog for Arabic */
 static const char *messages_ar[] = {
-    "مرحبًا بك في الصدفة البسيطة",           /* MSG_WELCOME */
+    "مرحبًا بك في ArbSh",                    /* MSG_WELCOME */
     "الأمر غير موجود",                       /* MSG_CMD_NOT_FOUND */
     "تم رفض الإذن",                          /* MSG_PERMISSION_DENIED */
     "لا يمكن تخصيص الذاكرة",                 /* MSG_MEMORY_ERROR */

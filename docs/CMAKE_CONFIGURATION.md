@@ -1,266 +1,328 @@
 # CMake Configuration Guide
 
+This document provides detailed information about the CMake build system used by the ArbSh project, including available build options, dependencies, and configuration instructions.
+
 ## Overview
 
-This document provides guidelines for organizing and enhancing the CMake build system for the Simple Shell project. A well-structured build system is essential for cross-platform development, especially when supporting both Windows and Unix/Linux platforms with Arabic language features.
+ArbSh uses CMake as its build system, which provides a cross-platform way to generate platform-specific build files. The CMake configuration supports building on both Windows and Unix/Linux platforms, with options for different features such as GUI mode and static linking.
 
-## Current Build System
+## Prerequisites
 
-The current CMake configuration provides basic functionality but can be improved for better organization and maintainability:
+To build ArbSh, you need the following tools:
 
-- Single top-level CMakeLists.txt file
-- Basic source file globbing
-- Platform-specific definitions and libraries
-- Limited testing support
-- Basic installation rules
+- **CMake** (version 3.10 or higher)
+- **C Compiler** with C11 support
+  - Windows: Microsoft Visual C++ (MSVC) or MinGW-w64 GCC
+  - Unix/Linux: GCC or Clang
+- **C++ Compiler** with C++11 support (required for GUI mode)
+- **Development Libraries**
+  - Windows: Platform SDK (usually included with compilers)
+  - Unix/Linux: Standard development packages
 
-## Proposed Improvements
+## Compiler Configuration
 
-### 1. Hierarchical CMake Structure
+### Using GCC with the Toolchain File
 
-Reorganize the build system with hierarchical CMakeLists.txt files:
+The project includes a toolchain file for GCC that can be used to force CMake to use GCC for compilation:
 
-```
-simple-shell/
-├── CMakeLists.txt              # Top-level CMake file
-├── cmake/                      # CMake modules directory
-│   ├── FindDependencies.cmake  # Find external dependencies
-│   ├── CompilerOptions.cmake   # Compiler configuration
-│   └── InstallRules.cmake      # Installation rules
-├── src/
-│   ├── CMakeLists.txt          # Source directory CMake
-│   ├── core/
-│   │   └── CMakeLists.txt      # Core module CMake
-│   ├── platform/
-│   │   ├── CMakeLists.txt      # Platform module CMake
-│   │   ├── unix/
-│   │   │   └── CMakeLists.txt  # Unix-specific CMake
-│   │   └── windows/
-│   │       └── CMakeLists.txt  # Windows-specific CMake
-│   └── i18n/
-│       └── CMakeLists.txt      # Internationalization module CMake
-└── tests/
-    └── CMakeLists.txt          # Tests directory CMake
+```bash
+# Use GCC with the toolchain file
+cmake -DCMAKE_TOOLCHAIN_FILE=../gcc_toolchain.cmake ..
 ```
 
-### 2. Modular Component Organization
+This is useful when you want to ensure that GCC is used regardless of the platform or default compiler.
 
-Organize the build into logical components:
+## Build Options
 
-```cmake
-# In src/CMakeLists.txt
-add_subdirectory(core)
-add_subdirectory(platform)
-add_subdirectory(i18n)
-add_subdirectory(ui)
+The CMake configuration provides several build options that can be enabled or disabled:
 
-# Create the main executable
-add_executable(hsh ${SHELL_ENTRY_SOURCES})
+### GUI Mode
 
-# Link against our components
-target_link_libraries(hsh
-    PRIVATE
-        shell_core
-        shell_platform
-        shell_i18n
-        shell_ui
-)
+The project supports an ImGui-based GUI mode that provides a modern graphical interface for the shell:
+
+```bash
+# Enable GUI mode
+cmake -DGUI_MODE=ON ..
 ```
 
-### 3. Component Libraries
+When GUI mode is enabled:
+- The executable is built as a Windows GUI application (on Windows)
+- ImGui and DirectX dependencies are linked
+- GUI-specific source files are included in the build
 
-Create separate libraries for each component:
+### Test Suite
 
-```cmake
-# In src/core/CMakeLists.txt
-add_library(shell_core
-    parser.c
-    tokenizer.c
-    shell_loop.c
-    # Other core files
-)
+You can enable the test suite build with the ENABLE_TESTS option:
 
-target_include_directories(shell_core
-    PUBLIC
-        ${CMAKE_SOURCE_DIR}/include
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-)
+```bash
+# Enable test suite
+cmake -DENABLE_TESTS=ON ..
 ```
 
-### 4. Platform Abstraction
+When tests are enabled:
+- Test executables are built alongside the main application
+- CMake testing infrastructure is configured
+- Additional test targets are created
 
-Organize platform-specific code:
+### Static Linking
 
-```cmake
-# In src/platform/CMakeLists.txt
-if(WIN32)
-    add_subdirectory(windows)
-    set(PLATFORM_LIB shell_platform_windows)
-else()
-    add_subdirectory(unix)
-    set(PLATFORM_LIB shell_platform_unix)
-endif()
+You can enable static linking to create a standalone executable with minimal external dependencies:
 
-# Create platform abstraction library
-add_library(shell_platform INTERFACE)
-target_link_libraries(shell_platform INTERFACE ${PLATFORM_LIB})
+```bash
+# Enable static linking
+cmake -DBUILD_STATIC=ON ..
 ```
 
-### 5. Improved Testing Support
+This is useful for creating portable applications that don't depend on system-specific shared libraries.
 
-Enhance testing configuration:
+## Build Modes
 
-```cmake
-# In tests/CMakeLists.txt
-enable_testing()
+By combining the GUI_MODE and ENABLE_TESTS options, you can create four distinct build configurations:
 
-# Find testing framework
-find_package(Unity REQUIRED)
+### 1. Console Mode Only (Default)
 
-# Add test directories
-add_subdirectory(unit)
-add_subdirectory(integration)
-add_subdirectory(arabic)
+This is the standard build with no extra features:
 
-# Create test runner
-add_executable(test_runner test_runner.c)
-target_link_libraries(test_runner PRIVATE Unity::Unity)
-
-# Add tests to CTest
-add_test(NAME unit_tests COMMAND test_runner unit)
-add_test(NAME arabic_tests COMMAND test_runner arabic)
+```bash
+mkdir build
+cd build
+cmake ..
+# Or explicitly:
+# cmake -DGUI_MODE=OFF -DENABLE_TESTS=OFF ..
 ```
 
-### 6. Version Information
+### 2. GUI Mode Only
 
-Add proper version handling:
+Build only the GUI version without tests:
 
-```cmake
-# In top-level CMakeLists.txt
-set(SHELL_VERSION_MAJOR 1)
-set(SHELL_VERSION_MINOR 0)
-set(SHELL_VERSION_PATCH 0)
-set(SHELL_VERSION "${SHELL_VERSION_MAJOR}.${SHELL_VERSION_MINOR}.${SHELL_VERSION_PATCH}")
-
-# Generate version header
-configure_file(
-    ${CMAKE_SOURCE_DIR}/include/shell_version.h.in
-    ${CMAKE_BINARY_DIR}/include/shell_version.h
-)
+```bash
+mkdir build
+cd build
+cmake -DGUI_MODE=ON -DENABLE_TESTS=OFF ..
 ```
 
-### 7. Installation Configuration
+### 3. Console Mode with Tests
 
-Improve installation rules:
+Build the console version with the test suite:
 
-```cmake
-# In cmake/InstallRules.cmake
-include(GNUInstallDirs)
-
-install(TARGETS hsh
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-# Install headers
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/shell
-    FILES_MATCHING PATTERN "*.h"
-)
-
-# Install documentation
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/docs/
-    DESTINATION ${CMAKE_INSTALL_DOCDIR}
-    FILES_MATCHING
-    PATTERN "*.md"
-    PATTERN "*.txt"
-)
+```bash
+mkdir build
+cd build
+cmake -DGUI_MODE=OFF -DENABLE_TESTS=ON ..
 ```
 
-### 8. Package Configuration
+### 4. GUI Mode with Tests
 
-Add support for package creation:
+Build the GUI version and include the test suite:
 
-```cmake
-# In top-level CMakeLists.txt
-include(CPack)
-
-set(CPACK_PACKAGE_NAME "simple-shell")
-set(CPACK_PACKAGE_VENDOR "Baa Language Team")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Simple Shell with Arabic Support")
-set(CPACK_PACKAGE_VERSION ${SHELL_VERSION})
-set(CPACK_PACKAGE_VERSION_MAJOR ${SHELL_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${SHELL_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${SHELL_VERSION_PATCH})
-
-# Platform-specific packaging
-if(WIN32)
-    set(CPACK_GENERATOR "NSIS;ZIP")
-    set(CPACK_NSIS_MODIFY_PATH ON)
-else()
-    set(CPACK_GENERATOR "DEB;TGZ")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Baa Language Team")
-endif()
+```bash
+mkdir build
+cd build
+cmake -DGUI_MODE=ON -DENABLE_TESTS=ON ..
 ```
 
-## Implementation Steps
+## Basic Build Instructions
 
-### 1. Create Directory Structure
+### Windows
 
-1. Create the `cmake` directory and module files
-2. Organize source code into subdirectories
-3. Create subdirectory CMakeLists.txt files
+#### Using Visual Studio
 
-### 2. Update Top-Level CMakeLists.txt
+1. Open a Developer Command Prompt for Visual Studio
+2. Navigate to the project directory
+3. Create a build directory and run CMake:
 
-1. Include CMake modules
-2. Set project properties and version
-3. Define global compiler options
-4. Add subdirectories
+```bash
+mkdir build
+cd build
+cmake -G "Visual Studio 16 2019" -A x64 ..
+```
 
-### 3. Create Component Libraries
+4. Build the project:
 
-1. Organize source files by component
-2. Create library targets for each component
-3. Define dependencies between components
+```bash
+cmake --build . --config Release
+```
 
-### 4. Set Up Testing Framework
+Or open the generated `.sln` file in Visual Studio and build from there.
 
-1. Create test directory structure
-2. Configure test discovery and execution
-3. Add test targets to build system
+#### Using MinGW (GCC)
 
-### 5. Configure Installation
+1. Install MinGW-w64 with GCC support
+2. Add MinGW's bin directory to your PATH
+3. Open a command prompt
+4. Navigate to the project directory
+5. Create a build directory and run CMake with the GCC toolchain file:
 
-1. Define installation rules for binaries
-2. Set up documentation installation
-3. Configure package generation
+```bash
+mkdir build
+cd build
+cmake -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=../gcc_toolchain.cmake ..
+```
 
-## Best Practices
+6. Build the project:
 
-1. **Avoid Globbing**: Instead of using `file(GLOB ...)`, explicitly list source files
-2. **Use Target Properties**: Set properties on targets rather than using global variables
-3. **Minimize Cache Variables**: Use local variables where possible
-4. **Document CMake Code**: Add comments explaining non-obvious CMake code
-5. **Use Modern CMake**: Prefer target-based commands over global variables
-6. **Consistent Naming**: Use consistent naming conventions for targets and variables
-7. **Version Compatibility**: Support older CMake versions where needed
+```bash
+mingw32-make
+```
 
-## Cross-Platform Considerations
+### Unix/Linux
 
-1. **Path Handling**: Use CMake path utilities for cross-platform path handling
-2. **Compiler Flags**: Set compiler flags conditionally based on compiler ID
-3. **Dependencies**: Handle dependencies differently on Windows and Unix
-4. **Installation Paths**: Use platform-appropriate installation directories
+1. Open a terminal
+2. Navigate to the project directory
+3. Create a build directory and run CMake:
 
-## Arabic Support Considerations
+```bash
+mkdir build
+cd build
+cmake ..
+```
 
-1. **UTF-8 Configuration**: Ensure proper UTF-8 handling in build system
-2. **Resource Files**: Configure proper handling of Arabic resource files
-3. **Documentation**: Install documentation in both English and Arabic
+4. Build the project:
 
-## Conclusion
+```bash
+make
+```
 
-A well-organized CMake build system will significantly improve the maintainability and extensibility of the Simple Shell project. By following these guidelines, the project can achieve better cross-platform compatibility, easier integration of Arabic language features, and a more professional development workflow.
+## Advanced Configuration
+
+### Specifying Compiler
+
+You can specify which compiler to use by using the toolchain file or by setting the `CC` and `CXX` environment variables before running CMake:
+
+```bash
+# Using the toolchain file (recommended for GCC)
+cmake -DCMAKE_TOOLCHAIN_FILE=../gcc_toolchain.cmake ..
+
+# Or using environment variables
+# GCC
+export CC=gcc
+export CXX=g++
+
+# Clang
+export CC=clang
+export CXX=clang++
+
+# Then run CMake
+cmake ..
+```
+
+### Debug Build
+
+To create a debug build with full debugging information:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+```
+
+### Release Build
+
+To create an optimized release build:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release ..
+```
+
+## Project Structure
+
+The CMake configuration is organized as follows:
+
+- **Main CMakeLists.txt**: Root configuration file that defines the project, options, and targets
+- **gcc_toolchain.cmake**: Toolchain file for building with GCC
+- **Source Files**: Automatically discovered using `file(GLOB_RECURSE ...)` patterns
+- **Tests**: Each test suite is defined as a separate executable target
+- **Output Directories**: Binaries are placed in the `bin` directory, libraries in the `lib` directory
+
+## ImGui Integration
+
+The ImGui-based GUI mode requires additional dependencies and build steps:
+
+1. The ImGui source files are located in `external/imgui`
+2. DirectX 11 is used as the rendering backend on Windows
+3. The core shell functionality is integrated with the ImGui interface
+
+When GUI mode is enabled:
+- ImGui source files are automatically included in the build
+- DirectX libraries are linked
+- The application entry point switches to a Windows GUI application
+
+## Testing Configuration
+
+The project includes several test suites that can be built and run using CMake when ENABLE_TESTS is ON:
+
+- **test_utf8**: Tests for UTF-8 character handling
+- **test_bidi**: Tests for bidirectional text algorithm
+- **test_keyboard**: Tests for Arabic keyboard input
+- **test_imgui**: Tests for ImGui integration (when GUI_MODE is also ON)
+
+All tests can be built and run with a single command:
+
+```bash
+# On Windows with MinGW
+mingw32-make run_tests
+
+# On Unix/Linux
+make run_tests
+```
+
+This will build all test executables and run them in sequence.
+
+## Troubleshooting
+
+### Common Issues
+
+#### "CMake can't find compiler"
+
+Make sure your compiler is installed and in your PATH:
+- On Windows: Use the toolchain file to ensure GCC is used: `-DCMAKE_TOOLCHAIN_FILE=../gcc_toolchain.cmake`
+- On Linux: Install GCC with `sudo apt install build-essential` (Ubuntu/Debian) or equivalent
+
+#### "Missing libraries"
+
+Ensure that all required development libraries are installed. On Unix/Linux, you may need to install specific development packages.
+
+#### "ImGui build fails"
+
+When building with GUI mode on Windows, make sure you have MinGW-w64 with DirectX support installed. The ImGui dependencies should be in the `external/imgui` directory.
+
+#### "Static build fails"
+
+When building with static linking, some platform-specific libraries might be missing. Make sure you have all required static libraries available.
+
+## Example Configurations
+
+### Windows GUI Build with GCC (MinGW)
+
+```bash
+mkdir build
+cd build
+cmake -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=../gcc_toolchain.cmake -DGUI_MODE=ON ..
+mingw32-make
+```
+
+### Linux Static Build
+
+```bash
+mkdir build
+cd build
+cmake -DBUILD_STATIC=ON -DCMAKE_BUILD_TYPE=Release ..
+make
+```
+
+### Debug Build with Tests (GCC)
+
+```bash
+mkdir build
+cd build
+cmake -DCMAKE_TOOLCHAIN_FILE=../gcc_toolchain.cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=ON ..
+mingw32-make run_tests
+```
+
+### GUI Mode with Tests (GCC)
+
+```bash
+mkdir build
+cd build
+cmake -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=../gcc_toolchain.cmake -DGUI_MODE=ON -DENABLE_TESTS=ON ..
+mingw32-make
+mingw32-make run_tests
+```

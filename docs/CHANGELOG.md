@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ImGui-based GUI mode for Windows
+  - Modern GPU-accelerated user interface
+  - Tab-based terminal interface
+  - Customizable appearance with dark mode
+  - Command history and completion
+  - Split testing configuration in CMake build system
+  - Four distinct build modes (console, GUI, console+tests, GUI+tests)
+  - Arabic text support in the GUI interface
 - Unified entry point architecture through `shell_entry.c`
   - Single code path for shell initialization across all platforms
   - Improved maintainability and code organization
@@ -26,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Enhanced UI appearance for ImGui shell
+  - Modern blue color scheme with rounded corners
+  - Improved tab styling and visibility
+  - Better console text display with proper wrapping
+  - Enhanced command input styling
+  - Fullscreen window mode with proper layout
+- Improved build system with GCC toolchain support
+  - Added toolchain file for GCC compilation
+  - Enhanced CMake configuration options
+  - Better cross-platform build support
 - Merged multiple entry point files (`main.c`, `main_gui.c`, `win_main.c`, `win_gui_common.c`) into a single `shell_entry.c`
 - Updated CMakeLists.txt to use the new unified entry point
 - Enhanced README.md with architecture documentation
@@ -36,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- ImGui integration issues
+  - Fixed style push/pop imbalance causing assertion failures
+  - Corrected InputText callback implementation
+  - Properly initialized DirectX resources
+  - Fixed window sizing and positioning
 - Bidirectional text rendering issues with mixed Arabic and Latin text
 - Arabic character input and display problems
 - Cursor positioning in RTL text mode

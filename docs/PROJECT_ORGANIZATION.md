@@ -2,12 +2,12 @@
 
 ## Overview
 
-This document outlines a professional organization structure for the Simple Shell project with Arabic language support. The goal is to create a maintainable, scalable, and well-documented codebase that supports cross-platform development and facilitates contributions.
+This document outlines a professional organization structure for the ArbSh project with Arabic language support. The goal is to create a maintainable, scalable, and well-documented codebase that supports cross-platform development and facilitates contributions.
 
 ## Proposed Directory Structure
 
 ```
-simple-shell/
+arbsh/
 ├── build/              # Build output directory (not in version control)
 ├── cmake/              # CMake modules and configuration files
 ├── docs/               # Documentation
@@ -166,4 +166,4 @@ Each module should follow a consistent structure:
 
 ## Conclusion
 
-This organization plan provides a roadmap for transforming the Simple Shell project into a professionally structured, maintainable codebase. By following these guidelines, the project will be better positioned for future growth, easier to contribute to, and more robust across different platforms and locales.
+This organization plan provides a roadmap for transforming the ArbSh project into a professionally structured, maintainable codebase. By following these guidelines, the project will be better positioned for future growth, easier to contribute to, and more robust across different platforms and locales.

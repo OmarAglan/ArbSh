@@ -144,7 +144,7 @@ ssize_t read_buf(info_t *info, char *buf, size_t *i)
  * @ptr: address of pointer to buffer, preallocated or NULL
  * @length: size of preallocated ptr buffer if not NULL
  *
- * Return: s
+ * Return: size
  */
 int _getline(info_t *info, char **ptr, size_t *length)
 {
@@ -153,20 +153,6 @@ int _getline(info_t *info, char **ptr, size_t *length)
     size_t k;
     ssize_t r = 0, s = 0;
     char *p = NULL, *new_p = NULL, *c;
-
-    /* Check for keyboard shortcuts before processing input */
-    if (len > 0 && i < len)
-    {
-        /* Process potential keyboard shortcuts */
-        if (handle_keyboard_shortcut(info, buf[i]))
-        {
-            /* Shortcut was handled, consume the character */
-            i++;
-            if (i >= len)
-                i = len = 0;
-            return 0;
-        }
-    }
 
     p = *ptr;
     if (p && length)
@@ -180,35 +166,6 @@ int _getline(info_t *info, char **ptr, size_t *length)
 
     c = _strchr(buf + i, '\n');
     k = c ? 1 + (unsigned int)(c - buf) : len;
-
-    /* Ensure we don't split UTF-8 characters */
-    if (k < len && (buf[k] & 0x80))
-    {
-        /* We might be in the middle of a UTF-8 character */
-        int char_length = 0;
-
-        /* Check if we're in the middle of a UTF-8 sequence */
-        if ((buf[k] & 0xC0) == 0x80)
-        {
-            /* This is a continuation byte, find the start of the character */
-            int j;
-            for (j = k - 1; j >= (int)i && (buf[j] & 0xC0) == 0x80; j--)
-                ;
-
-            if (j >= (int)i)
-            {
-                char_length = get_utf8_char_length(buf[j]);
-                int bytes_read = k - j;
-
-                /* If we haven't read the complete character, adjust k */
-                if (bytes_read < char_length && k + (char_length - bytes_read) <= len)
-                {
-                    k += (char_length - bytes_read);
-                }
-            }
-        }
-    }
-
     new_p = _realloc(p, s, s ? s + k : k + 1);
     if (!new_p) /* MALLOC FAILURE! */
         return (p ? free(p), -1 : -1);
@@ -231,10 +188,12 @@ int _getline(info_t *info, char **ptr, size_t *length)
 /**
  * sigintHandler - blocks ctrl-C
  * @sig_num: the signal number
+ *
+ * Return: void
  */
-void sigintHandler(int sig_num)
+void sigintHandler(__attribute__((unused))int sig_num)
 {
-    (void)sig_num;
-    _puts("\n$ ");
+    _puts("\n");
+    _puts("> ");
     _putchar(BUF_FLUSH);
 }

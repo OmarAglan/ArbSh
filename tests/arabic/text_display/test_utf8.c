@@ -57,7 +57,14 @@ int test_utf8_codepoint_conversion(void) {
     char utf8_buf[4] = {0};
     int utf8_len = codepoint_to_utf8(0x0645, utf8_buf);
     ASSERT_INT_EQUAL(utf8_len, 2, "Codepoint 0x0645 should convert to 2 bytes in UTF-8");
-    ASSERT_TRUE(utf8_buf[0] == 0xD9 && utf8_buf[1] == 0x85, 
+    
+    /* Print the actual bytes for debugging */
+    printf("Converted 0x0645 to bytes: 0x%02X 0x%02X\n", 
+           (unsigned char)utf8_buf[0], (unsigned char)utf8_buf[1]);
+           
+    /* Check the bytes in a way that works with signed char */
+    ASSERT_TRUE(((unsigned char)utf8_buf[0] == 0xD9) && 
+                ((unsigned char)utf8_buf[1] == 0x85),
                 "Codepoint 0x0645 should convert to 0xD9 0x85 in UTF-8");
     
     TEST_REPORT(TEST_PASS, "UTF-8 codepoint conversion tests passed");

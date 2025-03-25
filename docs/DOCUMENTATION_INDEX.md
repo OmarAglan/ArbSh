@@ -1,6 +1,6 @@
-# Simple Shell Documentation Index
+# ArbSh Documentation Index
 
-This document provides an overview of all available documentation for the Simple Shell project. Use this as your starting point for navigating the project documentation.
+This document provides an overview of all available documentation for the ArbSh project. Use this as your starting point for navigating the project documentation.
 
 ## Core Documentation
 
@@ -19,6 +19,9 @@ This document provides an overview of all available documentation for the Simple
 |----------|-------------|-----------------|
 | [ARABIC_SUPPORT_GUIDE.md](ARABIC_SUPPORT_GUIDE.md) | Technical details of Arabic language support | Developers |
 | [BAA_INTEGRATION.md](BAA_INTEGRATION.md) | Guide for integrating with Baa language ecosystem | Developers, Baa Language Team |
+| [CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md) | Detailed build system configuration options | Developers |
+| [TESTING_FRAMEWORK.md](TESTING_FRAMEWORK.md) | Comprehensive testing strategy and implementation | Developers, QA Engineers |
+| [PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md) | Professional project structure and organization | Developers, Project Managers |
 
 ## Documentation Highlights
 
@@ -35,8 +38,10 @@ If you're a developer looking to contribute, focus on these documents:
 
 1. **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - See current prioritized tasks
 2. **[ARABIC_SUPPORT_GUIDE.md](ARABIC_SUPPORT_GUIDE.md)** - Understand the technical implementation
-3. **[BAA_INTEGRATION.md](BAA_INTEGRATION.md)** - Learn about integration with the Baa language
-4. **[CONTRIBUTING.md](CONTRIBUTING.md)** - Understand the contribution process
+3. **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Learn about build configuration options
+4. **[TESTING_FRAMEWORK.md](TESTING_FRAMEWORK.md)** - Understand the testing approach
+5. **[BAA_INTEGRATION.md](BAA_INTEGRATION.md)** - Learn about integration with the Baa language
+6. **[CONTRIBUTING.md](CONTRIBUTING.md)** - Understand the contribution process
 
 ### For Project Managers
 
@@ -45,12 +50,7 @@ For those managing the project, these documents are most relevant:
 1. **[ROADMAP.md](ROADMAP.md)** - Comprehensive development plan
 2. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current implementation status
 3. **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Immediate priorities and tasks
-
-## Project Organization
-
-- **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - Professional project structure and organization plan
-- **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Guidelines for enhancing the CMake build system
-- **[TESTING_FRAMEWORK.md](TESTING_FRAMEWORK.md)** - Comprehensive testing strategy and implementation plan
+4. **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - Project structure and organization
 
 ## Key Features Documentation
 
@@ -68,6 +68,21 @@ This includes information on:
 - Bidirectional text algorithm
 - Arabic character shaping
 - Localization system
+
+### ImGui GUI Mode
+
+The ImGui-based GUI mode is documented in:
+
+- **[README.md](../README.md)** - Basic build instructions for GUI mode
+- **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Detailed build options for GUI mode
+- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current status of GUI features
+- **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Upcoming GUI enhancement tasks
+
+This includes information on:
+- Building with GUI mode enabled
+- ImGui integration architecture
+- GUI features and customization
+- Platform-specific considerations
 
 ### Baa Language Integration
 
@@ -87,8 +102,24 @@ This includes information on:
 The shell's cross-platform capabilities are documented in:
 
 - **[README.md](../README.md)** - Platform-specific build instructions
+- **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Build system configuration for different platforms
 - **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Status of platform support
 - **[ROADMAP.md](ROADMAP.md)** - Plans for enhanced cross-platform support
+
+## Testing Framework
+
+The comprehensive testing framework is documented in:
+
+- **[TESTING_FRAMEWORK.md](TESTING_FRAMEWORK.md)** - Overall testing strategy
+- **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Building and running tests
+- **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Testing-related tasks
+
+This includes information on:
+- Test suite organization
+- Running and writing tests
+- Testing bidirectional text and Arabic support
+- GUI mode testing
+- Continuous integration
 
 ## Documentation Maintenance
 
@@ -107,9 +138,9 @@ The following documentation is planned for future development:
 
 1. **User Guide** - Comprehensive guide for end users
 2. **API Reference** - Detailed reference for programmatic interfaces
-3. **Testing Guide** - Guidelines for testing the shell
-4. **Performance Tuning** - Guide for optimizing performance
+3. **Performance Tuning** - Guide for optimizing performance
+4. **ImGui GUI Mode User Guide** - Detailed guide for using the GUI features
 
 ## Conclusion
 
-This documentation set provides a comprehensive overview of the Simple Shell project, with a focus on its role in supporting the Baa language ecosystem through robust Arabic language support. The documentation will continue to evolve as the project develops.
+This documentation set provides a comprehensive overview of the ArbSh project, with a focus on its role in supporting the Baa language ecosystem through robust Arabic language support and modern GUI features. The documentation will continue to evolve as the project develops.

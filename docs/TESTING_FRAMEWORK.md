@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines a comprehensive testing strategy for the Simple Shell project, with special focus on Arabic language support and bidirectional text handling. The goal is to create a robust testing framework that ensures the shell works correctly across different platforms and with various Arabic text scenarios.
+This document outlines a comprehensive testing strategy for the ArbSh project, with special focus on Arabic language support and bidirectional text handling. The goal is to create a robust testing framework that ensures the shell works correctly across different platforms and with various Arabic text scenarios.
 
 ## Testing Structure
 
@@ -302,4 +302,4 @@ Pass Criteria: Arabic text appears right-to-left, English left-to-right
 
 ## Conclusion
 
-A comprehensive testing framework is essential for ensuring the reliability and correctness of the Simple Shell project, especially for its Arabic language support features. By implementing the testing strategy outlined in this document, we can ensure that the shell provides a robust environment for Arabic text processing and meets the needs of the Baa language ecosystem.
+A comprehensive testing framework is essential for ensuring the reliability and correctness of the ArbSh project, especially for its Arabic language support features. By implementing the testing strategy outlined in this document, we can ensure that the shell provides a robust environment for Arabic text processing and meets the needs of the Baa language ecosystem.
