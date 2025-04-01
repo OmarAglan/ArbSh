@@ -19,7 +19,7 @@ int utf8_to_codepoint(char *utf8_char, int length);
 int codepoint_to_utf8(int codepoint, char *utf8_char);
 ```
 
-#### Key Implementation Details:
+#### Key Implementation Details
 
 1. **Character Length Detection**: The `get_utf8_char_length` function detects the number of bytes in a UTF-8 character by examining the bit pattern of the first byte.
 
@@ -36,7 +36,7 @@ int is_rtl_char(int unicode_codepoint);
 int set_text_direction(int is_rtl);
 ```
 
-#### Key Implementation Details:
+#### Key Implementation Details
 
 1. **RTL Character Detection**: The `is_rtl_char` function identifies RTL characters by checking Unicode code point ranges (Arabic: 0x0600-0x06FF, Arabic Supplement: 0x0750-0x077F, etc.).
 
@@ -54,7 +54,7 @@ The shell configures the terminal environment for proper UTF-8 and RTL support:
 void configure_terminal_for_utf8(void);
 ```
 
-#### Key Implementation Details:
+#### Key Implementation Details
 
 1. **Windows Configuration**:
    - Sets console code page to UTF-8 (CP_UTF8, 65001)
@@ -77,7 +77,7 @@ int detect_system_language(void);
 int init_locale(void);
 ```
 
-#### Key Implementation Details:
+#### Key Implementation Details
 
 1. **Message Catalogs**: Predefined message catalogs for both English and Arabic stored in arrays.
 
@@ -91,7 +91,7 @@ int init_locale(void);
 
 The shell implements a comprehensive bidirectional text algorithm based on the Unicode Bidirectional Algorithm (UAX #9). This implementation handles the complexities of mixed right-to-left and left-to-right text, which is essential for proper Arabic text display.
 
-#### Key Features:
+#### Key Features
 
 1. **Directional Formatting Characters**: Full support for control characters that affect text direction:
    - LRM/RLM (Left-to-Right/Right-to-Left Marks)
@@ -104,11 +104,13 @@ The shell implements a comprehensive bidirectional text algorithm based on the U
    - PDI (Pop Directional Isolate)
 
 2. **Bidirectional Run Processing**: Text is processed into runs with consistent directional properties:
+
    ```c
    BidiRun *process_runs(const char *text, int length, int base_level);
    ```
 
 3. **Embedding Level Management**: Proper handling of nested directional contexts with embedding stack:
+
    ```c
    /* Stack for embedding levels */
    int stack[MAX_DEPTH];
@@ -116,11 +118,13 @@ The shell implements a comprehensive bidirectional text algorithm based on the U
    ```
 
 4. **Character Type Classification**: Comprehensive classification of characters according to their bidirectional properties:
+
    ```c
    static int get_char_type(int codepoint);
    ```
 
 5. **Text Reordering**: Reordering of text segments based on their embedding levels for proper display:
+
    ```c
    int reorder_runs(BidiRun *runs, const char *text, int length, char *output);
    ```
@@ -129,7 +133,7 @@ The shell implements a comprehensive bidirectional text algorithm based on the U
 
 Arabic requires proper letter joining behavior, where letters take different forms (initial, medial, final, isolated) depending on their position in words:
 
-1. **Current Implementation**: 
+1. **Current Implementation**:
    - Basic joining handled via platform rendering
    - Character position analysis to determine joining forms
    - Support for special ligatures like Lam-Alef (لا)
@@ -142,6 +146,7 @@ Arabic requires proper letter joining behavior, where letters take different for
    - Fallback mechanisms for platforms with limited rendering capabilities
 
 3. **Implementation Details**:
+
    ```c
    /* Determine Arabic letter form based on context */
    int get_arabic_letter_form(int codepoint, int prev_char, int next_char);
@@ -183,6 +188,7 @@ SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 ```
 
 Consider also supporting these fonts which have excellent Arabic support:
+
 - Cascadia Code (preferred for modern Windows)
 - Courier New (widely available)
 - Arabic Typesetting (specialized for Arabic)
@@ -205,22 +211,26 @@ SetConsoleMode(hOut, dwMode);
 
 Use these test strings to verify correct handling:
 
-#### Basic Arabic Text:
+#### Basic Arabic Text
+
 ```
 مرحبا بالعالم
 ```
 
-#### Mixed Directional Text:
+#### Mixed Directional Text
+
 ```
 هذا النص يحتوي English words في وسطه
 ```
 
-#### Arabic with Numbers:
+#### Arabic with Numbers
+
 ```
 العدد ١٢٣٤٥ والعدد 67890
 ```
 
-#### Text with Diacritics:
+#### Text with Diacritics
+
 ```
 العَرَبِيَّة مَعَ تَشْكِيل كَامِل
 ```
@@ -242,7 +252,7 @@ Arabic text processing can be more resource-intensive than Latin text:
 2. **Bidirectional Resolution**: Bidirectional algorithm adds complexity
 3. **Rendering Complexity**: Letter shaping and joining add rendering overhead
 
-### Optimization Approaches:
+### Optimization Approaches
 
 1. **Buffered Processing**: Process text in chunks rather than character-by-character
 2. **Caching**: Cache directional properties of frequently used text
@@ -261,14 +271,17 @@ Priority areas for improving Arabic support:
 ## Resources
 
 ### Unicode Standards
+
 - [Unicode Bidirectional Algorithm](https://unicode.org/reports/tr9/)
 - [Unicode Arabic Presentation Forms](https://unicode.org/charts/PDF/UFB50.pdf)
 
 ### Testing Tools
+
 - [Bidirectional Checker](https://unicode.org/cldr/utility/bidi.jsp)
 - [Arabic Shaping Tester](https://www.w3.org/International/tests/repo/results/arabic-shaping)
 
 ### Libraries
+
 - [ICU (International Components for Unicode)](http://site.icu-project.org/)
 - [FriBidi](https://github.com/fribidi/fribidi) - Implementation of the Unicode Bidirectional Algorithm
 

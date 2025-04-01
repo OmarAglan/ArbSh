@@ -46,6 +46,7 @@ cmake -DGUI_MODE=ON ..
 ```
 
 When GUI mode is enabled:
+
 - The executable is built as a Windows GUI application (on Windows)
 - ImGui and DirectX dependencies are linked
 - GUI-specific source files are included in the build
@@ -60,6 +61,7 @@ cmake -DENABLE_TESTS=ON ..
 ```
 
 When tests are enabled:
+
 - Test executables are built alongside the main application
 - CMake testing infrastructure is configured
 - Additional test targets are created
@@ -241,6 +243,7 @@ The ImGui-based GUI mode requires additional dependencies and build steps:
 3. The core shell functionality is integrated with the ImGui interface
 
 When GUI mode is enabled:
+
 - ImGui source files are automatically included in the build
 - DirectX libraries are linked
 - The application entry point switches to a Windows GUI application
@@ -273,6 +276,7 @@ This will build all test executables and run them in sequence.
 #### "CMake can't find compiler"
 
 Make sure your compiler is installed and in your PATH:
+
 - On Windows: Use the toolchain file to ensure GCC is used: `-DCMAKE_TOOLCHAIN_FILE=../gcc_toolchain.cmake`
 - On Linux: Install GCC with `sudo apt install build-essential` (Ubuntu/Debian) or equivalent
 

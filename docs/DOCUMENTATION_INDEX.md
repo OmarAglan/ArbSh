@@ -63,6 +63,7 @@ The shell's Arabic language support is documented in:
 - **[BAA_INTEGRATION.md](BAA_INTEGRATION.md)** - Integration with the Baa language ecosystem
 
 This includes information on:
+
 - UTF-8 character handling
 - Right-to-left text support
 - Bidirectional text algorithm
@@ -79,6 +80,7 @@ The ImGui-based GUI mode is documented in:
 - **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Upcoming GUI enhancement tasks
 
 This includes information on:
+
 - Building with GUI mode enabled
 - ImGui integration architecture
 - GUI features and customization
@@ -92,6 +94,7 @@ The integration with the Baa language ecosystem is documented in:
 - **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Upcoming integration tasks
 
 This includes information on:
+
 - Current integration status
 - Integration testing
 - Future development plans
@@ -115,6 +118,7 @@ The comprehensive testing framework is documented in:
 - **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Testing-related tasks
 
 This includes information on:
+
 - Test suite organization
 - Running and writing tests
 - Testing bidirectional text and Arabic support

@@ -4,14 +4,14 @@ project(ArbSh C CXX)
 # Set C and C++ standards
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Option for static linking
 option(BUILD_STATIC "Build statically linked executable" OFF)
 
 # Option for GUI mode (now only ImGui)
-option(GUI_MODE "Build with GUI support using ImGui" OFF)
+option(GUI_MODE "Build with GUI support using ImGui" ON)
 
 # Option for enabling tests
 option(ENABLE_TESTS "Build the test suite" OFF)
@@ -103,11 +103,20 @@ else()
     add_executable(hsh ${SOURCES})
 endif()
 
+    # Add process manager and terminal tab sources
+    list(APPEND SOURCES 
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/process_manager.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/terminal_tab.c"
+    )
+
 # Include directories
 target_include_directories(hsh PRIVATE 
     include 
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
+    # Add include directory for platform if process_manager.h is there
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/platform" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui" # For terminal_tab.h
 )
 
 # Static linking if requested
