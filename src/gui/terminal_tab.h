@@ -8,9 +8,11 @@
 #ifndef _TERMINAL_TAB_H_
 #define _TERMINAL_TAB_H_
 
-#include "../platform/process_manager.h"
+// Include dependencies FIRST
+#include "../platform/process_manager.h" // Assumes relative path from src/gui/
 #include <stdbool.h>
 
+// Add extern "C" guards for C++ compatibility
 #ifdef __cplusplus
 extern "C"
 {
@@ -23,47 +25,47 @@ extern "C"
     {
         // Tab information
         char *title;
-        bool is_active;
+        bool is_active; // Note: is_active relates to UI, process.is_running relates to child process
 
         // Process information
-        shell_process_t process;
+        shell_process_t process; // Embed the process struct
 
-        // Terminal state
+        // Terminal state & Buffer (Managed by tab)
         int width;
         int height;
-        char *buffer;
+        char *buffer; // Display buffer for this tab
         int buffer_size;
         int buffer_used;
 
         // Scroll state
-        int scroll_position;
-        bool scroll_to_bottom;
+        int scroll_position;   // Tracks current scroll position
+        bool scroll_to_bottom; // Flag for auto-scrolling
 
-        // Input state
-        char *input_buffer;
-        int input_buffer_size;
-        int input_buffer_used;
-        int cursor_position;
+        // Input state (Managed by UI, maybe move inputBuffer from TabData here later)
+        // char *input_buffer; // Maybe manage input buffer here?
+        // int input_buffer_size;
+        // int input_buffer_used;
+        int cursor_position; // Logical cursor position
 
         // Selection state
         bool has_selection;
-        int selection_start;
+        int selection_start; // Indices within the *buffer*
         int selection_end;
 
-        // Command history
+        // Command history (UI might manage this better)
         char **command_history;
         int history_count;
         int history_capacity;
-        int history_position;
+        int history_position; // Current position when navigating history
 
-        // Visual state
-        bool is_focused;
+        // Visual state (Managed by UI)
+        bool is_focused; // If the ImGui widget has focus
         bool show_scrollbar;
 
-        // Custom settings
+        // Custom settings (Terminal appearance)
         char *font_name;
         int font_size;
-        unsigned int foreground_color;
+        unsigned int foreground_color; // Example: 0xAARRGGBB
         unsigned int background_color;
         unsigned int selection_color;
         unsigned int cursor_color;
@@ -94,46 +96,48 @@ extern "C"
 
     /**
      * Process terminal tab events (read output, update state)
+     * Should be called periodically (e.g., each frame).
      *
      * @param tab Terminal tab to process
-     * @return true if the tab is still active, false if it should be closed
+     * @return true if the underlying process is still active, false otherwise (or on error)
      */
     bool terminal_tab_process(terminal_tab_t *tab);
 
     /**
-     * Send input to the terminal tab
+     * Send input string to the terminal tab's process stdin.
      *
      * @param tab Terminal tab to send input to
-     * @param input Input to send
-     * @param size Size of the input
+     * @param input Input string to send
+     * @param size Size of the input string
      * @return true if input was sent successfully, false otherwise
      */
     bool terminal_tab_send_input(terminal_tab_t *tab, const char *input, int size);
 
     /**
-     * Send a command to the terminal tab
+     * Send a command (input string + newline) to the terminal tab.
      *
      * @param tab Terminal tab to send command to
-     * @param command Command to send
+     * @param command Command string to send (newline will be added)
      * @return true if command was sent successfully, false otherwise
      */
     bool terminal_tab_send_command(terminal_tab_t *tab, const char *command);
 
     /**
-     * Resize the terminal tab
+     * Resize the logical size of the terminal tab and notify the child process.
+     * (Child process notification is currently a placeholder).
      *
      * @param tab Terminal tab to resize
      * @param width New width in characters
      * @param height New height in characters
-     * @return true if terminal was resized successfully, false otherwise
+     * @return true if resize notification was attempted successfully, false otherwise
      */
     bool terminal_tab_resize(terminal_tab_t *tab, int width, int height);
 
     /**
-     * Close the terminal tab
+     * Close the terminal tab and terminate its associated process.
      *
      * @param tab Terminal tab to close
-     * @param force If true, forcefully terminate the process
+     * @param force If true, forcefully terminate the process (e.g., TerminateProcess)
      * @return true if terminal was closed successfully, false otherwise
      */
     bool terminal_tab_close(terminal_tab_t *tab, bool force);
@@ -142,7 +146,7 @@ extern "C"
      * Get the title of the terminal tab
      *
      * @param tab Terminal tab
-     * @return Title of the tab
+     * @return Title of the tab (pointer to internal string, do not free)
      */
     const char *terminal_tab_get_title(terminal_tab_t *tab);
 
@@ -150,21 +154,21 @@ extern "C"
      * Set the title of the terminal tab
      *
      * @param tab Terminal tab
-     * @param title New title of the tab
+     * @param title New title for the tab (will be copied)
      * @return true if title was set successfully, false otherwise
      */
     bool terminal_tab_set_title(terminal_tab_t *tab, const char *title);
 
     /**
-     * Get the buffer of the terminal tab
+     * Get the display buffer content of the terminal tab.
      *
      * @param tab Terminal tab
-     * @return Buffer of the tab
+     * @return Pointer to the internal display buffer (do not free). Returns "" if buffer is NULL.
      */
     const char *terminal_tab_get_buffer(terminal_tab_t *tab);
 
     /**
-     * Clear the buffer of the terminal tab
+     * Clear the display buffer of the terminal tab.
      *
      * @param tab Terminal tab
      * @return true if buffer was cleared successfully, false otherwise
@@ -172,7 +176,8 @@ extern "C"
     bool terminal_tab_clear_buffer(terminal_tab_t *tab);
 
     /**
-     * Append data directly to the terminal buffer (for GUI messages).
+     * Append data directly to the terminal display buffer (for GUI messages).
+     * Use with caution, prefer reading process output via terminal_tab_process.
      *
      * @param tab Terminal tab
      * @param data Data to append
@@ -182,12 +187,13 @@ extern "C"
     bool terminal_tab_append_buffer(terminal_tab_t *tab, const char *data, int size);
 
     /**
-     * Free resources associated with the terminal tab
+     * Free resources associated with the terminal tab, including terminating the process.
      *
      * @param tab Terminal tab to free
      */
     void terminal_tab_free(terminal_tab_t *tab);
 
+// End extern "C" guards
 #ifdef __cplusplus
 }
 #endif

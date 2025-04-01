@@ -372,9 +372,9 @@ bool terminal_tab_clear_buffer(terminal_tab_t *tab)
 }
 
 /**
- * Append data to the terminal buffer
+ * Append data to the terminal buffer (No longer static)
  */
-bool terminal_tab_append_buffer(terminal_tab_t *tab, const char *data, int size)
+bool terminal_tab_append_buffer(terminal_tab_t *tab, const char *data, int size) // Ensure no 'static' here
 {
     if (!tab || !tab->buffer || !data || size <= 0)
     {
@@ -384,17 +384,40 @@ bool terminal_tab_append_buffer(terminal_tab_t *tab, const char *data, int size)
     // Check if we need to resize the buffer
     if (tab->buffer_used + size + 1 > tab->buffer_size)
     {
-        // Grow buffer by doubling its size
-        int new_size = tab->buffer_size * 2;
+        // Grow buffer (consider a max size limit?)
+        int new_size = tab->buffer_size + DEFAULT_BUFFER_SIZE; // Grow linearly or double?
         if (new_size < tab->buffer_used + size + 1)
         {
             new_size = tab->buffer_used + size + 1;
         }
 
+        // Add a safety limit to prevent excessive allocation
+        const int MAX_BUFFER_SIZE = 1024 * 1024 * 4; // Example: 4MB limit
+        if (new_size > MAX_BUFFER_SIZE)
+        {
+            fprintf(stderr, "Warning: Terminal buffer limit reached for tab '%s'. Discarding old data.\n", tab->title ? tab->title : "");
+            // Option 1: Truncate from the beginning
+            int bytes_to_keep = tab->buffer_size / 2; // Keep half
+            int bytes_to_discard = tab->buffer_used - bytes_to_keep;
+            if (bytes_to_discard < 0)
+                bytes_to_discard = 0;
+            memmove(tab->buffer, tab->buffer + bytes_to_discard, bytes_to_keep);
+            tab->buffer_used = bytes_to_keep;
+            // Now try appending again with available space
+            if (tab->buffer_used + size + 1 > tab->buffer_size)
+            {
+                fprintf(stderr, "Error: Cannot append data even after truncating buffer.\n");
+                return false; // Still won't fit
+            }
+            // Option 2: Just fail allocation (handled below)
+            // Option 3: Use a ring buffer (more complex)
+        }
+
         char *new_buffer = (char *)realloc(tab->buffer, new_size);
         if (!new_buffer)
         {
-            return false;
+            fprintf(stderr, "Error: Failed to reallocate terminal buffer to size %d.\n", new_size);
+            return false; // Realloc failed
         }
 
         tab->buffer = new_buffer;
@@ -404,13 +427,10 @@ bool terminal_tab_append_buffer(terminal_tab_t *tab, const char *data, int size)
     // Append data to buffer
     memcpy(tab->buffer + tab->buffer_used, data, size);
     tab->buffer_used += size;
-    tab->buffer[tab->buffer_used] = '\0';
+    tab->buffer[tab->buffer_used] = '\0'; // Ensure null termination
 
-    // Auto-scroll to bottom if enabled
-    if (tab->scroll_to_bottom)
-    {
-        tab->scroll_position = tab->buffer_used;
-    }
+    // Mark for auto-scroll
+    tab->scroll_to_bottom = true; // Always scroll when new data is appended
 
     return true;
 }
