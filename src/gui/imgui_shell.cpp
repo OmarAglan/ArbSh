@@ -15,7 +15,8 @@
 #include <vector>
 #include <sstream>
 #include <stdio.h>
-#include <filesystem>     // For path manipulation
+#include <filesystem> // For path manipulation
+#include <algorithm>
 #include "terminal_tab.h" // For terminal_tab_t and related functions
 
 // Define UNUSED macro for parameter suppression
@@ -223,12 +224,12 @@ int imgui_main(HINSTANCE hInstance, HINSTANCE hPrevInstance, [[maybe_unused]] LP
                 else
                 {
                     // Check if it just finished to update display buffer once
-                    if (is_shell_process_running(active_term) == false && active_term->exit_code != -999)
-                    { // Use a flag/special code
+                    if (is_shell_process_running(&active_term->process) == false && active_term->process.exit_code != -999) // Pass the process member
+                    {                                                                                                       // Use a flag/special code
                         char exitMsg[128];
-                        snprintf(exitMsg, sizeof(exitMsg), "\r\n[Process ended with code %d]\r\n", active_term->exit_code);
+                        snprintf(exitMsg, sizeof(exitMsg), "\r\n[Process ended with code %d]\r\n", active_term->process.exit_code); // Access process.exit_code
                         terminal_tab_append_buffer(active_term, exitMsg, strlen(exitMsg));
-                        active_term->exit_code = -999; // Mark as message shown
+                        active_term->process.exit_code = -999; // Mark on the process struct
                     }
                 }
             }
@@ -720,9 +721,9 @@ void RenderShell()
                     {
                         // Process ended or terminal not active
                         if (current_term)
-                        {   // If term exists but not active
-                            // Avoid repeatedly appending message
-                            // We handle this better in the main loop now
+                        { // If term exists but not active
+                          // Avoid repeatedly appending message
+                          // We handle this better in the main loop now
                         }
                         g_tabs[i].inputBuffer[0] = '\0'; // Clear input anyway
                     }
@@ -762,8 +763,8 @@ void RenderShell()
                 else
                 {
                     if (g_activeTab >= (int)i)
-                    {                                            // If closed tab was active or before active
-                        g_activeTab = ImMax(0, g_activeTab - 1); // Select previous or first
+                    {                                               // If closed tab was active or before active
+                        g_activeTab = std::max(0, g_activeTab - 1); // Select previous or first
                     }
                     // No need to explicitly set isActive here, the next loop iteration handles it
                 }
