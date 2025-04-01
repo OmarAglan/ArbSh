@@ -25,22 +25,28 @@
 extern "C" int shell_main(int argc, char *argv[]);
 
 // Global variables for DirectX (defined here since we need them in this file)
-ID3D11Device* g_pd3dDevice = NULL;
-ID3D11DeviceContext* g_pd3dDeviceContext = NULL;
-IDXGISwapChain* g_pSwapChain = NULL;
-ID3D11RenderTargetView* g_mainRenderTargetView = NULL;
+ID3D11Device *g_pd3dDevice = NULL;
+ID3D11DeviceContext *g_pd3dDeviceContext = NULL;
+IDXGISwapChain *g_pSwapChain = NULL;
+ID3D11RenderTargetView *g_mainRenderTargetView = NULL;
 
 // Forward declaration of ImGui_ImplWin32_WndProcHandler
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Forward declarations of Direct3D functions
-void CleanupRenderTarget() {
-    if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = NULL; }
+void CleanupRenderTarget()
+{
+    if (g_mainRenderTargetView)
+    {
+        g_mainRenderTargetView->Release();
+        g_mainRenderTargetView = NULL;
+    }
 }
 
-void CreateRenderTarget() {
-    ID3D11Texture2D* pBackBuffer;
-    g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
+void CreateRenderTarget()
+{
+    ID3D11Texture2D *pBackBuffer;
+    g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID *)&pBackBuffer);
     g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_mainRenderTargetView);
     pBackBuffer->Release();
 }
@@ -84,48 +90,53 @@ LRESULT CALLBACK ImGuiWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 #endif /* WINDOWS */
 
 // Main entry point for ImGui-based GUI
-extern "C" int imgui_main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    UNUSED(hPrevInstance);
-    UNUSED(lpCmdLine);
-    UNUSED(nCmdShow);
-    
+// FIX: Added [[maybe_unused]] to nCmdShow for consistency (C++ style)
+extern "C" int imgui_main(HINSTANCE hInstance, HINSTANCE hPrevInstance, [[maybe_unused]] LPSTR lpCmdLine, [[maybe_unused]] int nCmdShow)
+{
+    UNUSED(hPrevInstance); // Using UNUSED macro for hPrevInstance as before
+    // UNUSED(lpCmdLine); // Keeping previous style for lpCmdLine
+    // UNUSED(nCmdShow);  // Using [[maybe_unused]] now in declaration
+
     // Register window class
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, ImGuiWndProc, 0L, 0L, hInstance, NULL, NULL, NULL, NULL, _T("ArbSh ImGui"), NULL };
+    WNDCLASSEX wc = {sizeof(WNDCLASSEX), CS_CLASSDC, ImGuiWndProc, 0L, 0L, hInstance, NULL, NULL, NULL, NULL, _T("ArbSh ImGui"), NULL};
     RegisterClassEx(&wc);
-    
+
     // Create window
     HWND hwnd = CreateWindow(wc.lpszClassName, _T("ArbSh Terminal"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 720, NULL, NULL, wc.hInstance, NULL);
-    
+
     // Initialize ImGui
-    if (!imgui_init(hInstance, &hwnd, 1280, 720, "ArbSh Terminal")) {
+    if (!imgui_init(hInstance, &hwnd, 1280, 720, "ArbSh Terminal"))
+    {
         DestroyWindow(hwnd);
         UnregisterClass(wc.lpszClassName, wc.hInstance);
         return 1;
     }
-    
+
     // Main loop
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
-    
+
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
-    while (msg.message != WM_QUIT) {
-        if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
+    while (msg.message != WM_QUIT)
+    {
+        if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+        {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
             continue;
         }
-        
+
         if (!imgui_main_loop(hwnd))
             break;
     }
-    
+
     // Shutdown ImGui
     imgui_shutdown();
-    
+
     // Cleanup
     DestroyWindow(hwnd);
     UnregisterClass(wc.lpszClassName, wc.hInstance);
-    
+
     return (int)msg.wParam;
-} 
+}

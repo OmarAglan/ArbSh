@@ -38,25 +38,25 @@ extern "C"
         int buffer_used;
 
         // Scroll state
-        int scroll_position;   // Tracks current scroll position
+        int scroll_position;   // Tracks current scroll position (pixels or lines?) - Currently unused
         bool scroll_to_bottom; // Flag for auto-scrolling
 
-        // Input state (Managed by UI, maybe move inputBuffer from TabData here later)
-        // char *input_buffer; // Maybe manage input buffer here?
+        // FIX: Removed input buffer members, managed by UI (ImGui's InputText)
+        // char *input_buffer;
         // int input_buffer_size;
         // int input_buffer_used;
-        int cursor_position; // Logical cursor position
+        int cursor_position; // Logical cursor position within terminal (for future emulation)
 
         // Selection state
         bool has_selection;
         int selection_start; // Indices within the *buffer*
         int selection_end;
 
-        // Command history (UI might manage this better)
+        // Command history
         char **command_history;
         int history_count;
         int history_capacity;
-        int history_position; // Current position when navigating history
+        int history_position; // Current position when navigating history (index in command_history)
 
         // Visual state (Managed by UI)
         bool is_focused; // If the ImGui widget has focus
@@ -65,7 +65,7 @@ extern "C"
         // Custom settings (Terminal appearance)
         char *font_name;
         int font_size;
-        unsigned int foreground_color; // Example: 0xAARRGGBB
+        unsigned int foreground_color; // Example: 0xAARRGGBB or 0xBBGGRRAA (ImGui uses 0xAABBGGRR)
         unsigned int background_color;
         unsigned int selection_color;
         unsigned int cursor_color;
@@ -115,6 +115,7 @@ extern "C"
 
     /**
      * Send a command (input string + newline) to the terminal tab.
+     * Handles adding the command to history.
      *
      * @param tab Terminal tab to send command to
      * @param command Command string to send (newline will be added)
@@ -124,7 +125,7 @@ extern "C"
 
     /**
      * Resize the logical size of the terminal tab and notify the child process.
-     * (Child process notification is currently a placeholder).
+     * (Child process notification via resize_shell_terminal is currently a placeholder).
      *
      * @param tab Terminal tab to resize
      * @param width New width in characters
@@ -138,7 +139,7 @@ extern "C"
      *
      * @param tab Terminal tab to close
      * @param force If true, forcefully terminate the process (e.g., TerminateProcess)
-     * @return true if terminal was closed successfully, false otherwise
+     * @return true if terminal was closed successfully or was already closed, false if termination failed.
      */
     bool terminal_tab_close(terminal_tab_t *tab, bool force);
 
@@ -146,7 +147,7 @@ extern "C"
      * Get the title of the terminal tab
      *
      * @param tab Terminal tab
-     * @return Title of the tab (pointer to internal string, do not free)
+     * @return Title of the tab (pointer to internal string, do not free). Returns "Terminal" if NULL.
      */
     const char *terminal_tab_get_title(terminal_tab_t *tab);
 
@@ -176,20 +177,20 @@ extern "C"
     bool terminal_tab_clear_buffer(terminal_tab_t *tab);
 
     /**
-     * Append data directly to the terminal display buffer (for GUI messages).
-     * Use with caution, prefer reading process output via terminal_tab_process.
+     * Append data directly to the terminal display buffer.
+     * Handles buffer resizing and potential truncation if the buffer limit is reached.
      *
      * @param tab Terminal tab
      * @param data Data to append
      * @param size Size of the data
-     * @return true if successful, false otherwise
+     * @return true if successful, false otherwise (e.g., allocation failure)
      */
     bool terminal_tab_append_buffer(terminal_tab_t *tab, const char *data, int size);
 
     /**
      * Free resources associated with the terminal tab, including terminating the process.
      *
-     * @param tab Terminal tab to free
+     * @param tab Terminal tab to free. Safe to call with NULL.
      */
     void terminal_tab_free(terminal_tab_t *tab);
 

@@ -161,7 +161,8 @@ void imgui_update_console_text([[maybe_unused]] const char *text) // Mark text a
  *
  * Return: Exit code
  */
-int imgui_main(HINSTANCE hInstance, HINSTANCE hPrevInstance, [[maybe_unused]] LPSTR lpCmdLine, int nCmdShow)
+// FIX: Applied [[maybe_unused]] to nCmdShow here as well for consistency with imgui_main.cpp
+int imgui_main(HINSTANCE hInstance, HINSTANCE hPrevInstance, [[maybe_unused]] LPSTR lpCmdLine, [[maybe_unused]] int nCmdShow)
 {
     UNUSED(hPrevInstance); // Parameter is unused
     // UNUSED(lpCmdLine); // lpCmdLine might be useful later if needed

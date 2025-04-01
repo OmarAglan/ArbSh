@@ -12,7 +12,7 @@
 
 #define DEFAULT_BUFFER_SIZE 8192
 #define DEFAULT_HISTORY_CAPACITY 100
-#define DEFAULT_INPUT_BUFFER_SIZE 1024
+// #define DEFAULT_INPUT_BUFFER_SIZE 1024 // No longer needed here
 
 /**
  * Create a new terminal tab
@@ -76,25 +76,25 @@ bool terminal_tab_init(terminal_tab_t *tab, const char *title, const char *comma
     tab->buffer[0] = '\0';
     tab->buffer_used = 0;
 
-    // Allocate input buffer
-    tab->input_buffer_size = DEFAULT_INPUT_BUFFER_SIZE;
-    tab->input_buffer = (char *)malloc(tab->input_buffer_size);
-    if (!tab->input_buffer)
-    {
-        free(tab->buffer);
-        free(tab->title);
-        return false;
-    }
-    tab->input_buffer[0] = '\0';
-    tab->input_buffer_used = 0;
-    tab->cursor_position = 0;
+    // FIX: Remove allocation and initialization of input_buffer members
+    // tab->input_buffer_size = DEFAULT_INPUT_BUFFER_SIZE;
+    // tab->input_buffer = (char *)malloc(tab->input_buffer_size);
+    // if (!tab->input_buffer)
+    // {
+    //     free(tab->buffer);
+    //     free(tab->title);
+    //     return false;
+    // }
+    // tab->input_buffer[0] = '\0';
+    // tab->input_buffer_used = 0;
+    tab->cursor_position = 0; // Keep cursor position if relevant for terminal emulation
 
     // Initialize command history
     tab->history_capacity = DEFAULT_HISTORY_CAPACITY;
     tab->command_history = (char **)malloc(sizeof(char *) * tab->history_capacity);
     if (!tab->command_history)
     {
-        free(tab->input_buffer);
+        // FIX: Remove free(tab->input_buffer);
         free(tab->buffer);
         free(tab->title);
         return false;
@@ -131,7 +131,7 @@ bool terminal_tab_init(terminal_tab_t *tab, const char *title, const char *comma
     if (!create_shell_process(&tab->process, command, args, env))
     {
         free(tab->command_history);
-        free(tab->input_buffer);
+        // FIX: Remove free(tab->input_buffer);
         free(tab->buffer);
         free(tab->title);
         return false;
@@ -163,7 +163,7 @@ bool terminal_tab_process(terminal_tab_t *tab)
         int exit_code = get_shell_process_exit_code(&tab->process);
         char exit_message[128];
         snprintf(exit_message, sizeof(exit_message),
-                 "\r\nProcess exited with code %d.\r\nPress any key to close this terminal...",
+                 "\r\nProcess exited with code %d.\r\n", // Removed "Press any key..." as GUI handles closing
                  exit_code);
 
         // Append exit message to buffer
@@ -174,12 +174,22 @@ bool terminal_tab_process(terminal_tab_t *tab)
 
     // Read output from process
     char read_buffer[1024];
-    int bytes_read = read_shell_output(&tab->process, read_buffer, sizeof(read_buffer), 0);
+    // Use a small timeout (e.g., 0) for non-blocking reads suitable for GUI loops
+    int bytes_read = read_shell_output(&tab->process, read_buffer, sizeof(read_buffer) - 1, 0);
 
     // If we have data, append it to the buffer
     if (bytes_read > 0)
     {
+        read_buffer[bytes_read] = '\0'; // Null-terminate for safety if used as string
         terminal_tab_append_buffer(tab, read_buffer, bytes_read);
+    }
+    else if (bytes_read < 0)
+    {
+        // Handle read error
+        fprintf(stderr, "Error reading from shell process for tab '%s'.\n", tab->title ? tab->title : "");
+        // Optionally close the tab or mark as inactive on error
+        tab->is_active = false;
+        return false;
     }
 
     return true;
@@ -195,8 +205,24 @@ bool terminal_tab_send_input(terminal_tab_t *tab, const char *input, int size)
         return false;
     }
 
+    // Check if process is still running before writing
+    if (!is_shell_process_running(&tab->process))
+    {
+        tab->is_active = false; // Update state if found terminated here
+        return false;
+    }
+
     // Write input to process
     int bytes_written = write_shell_input(&tab->process, input, size);
+
+    if (bytes_written < 0)
+    {
+        fprintf(stderr, "Error writing to shell process for tab '%s'.\n", tab->title ? tab->title : "");
+        // Process might have terminated between check and write, or other error
+        is_shell_process_running(&tab->process); // Update process state
+        tab->is_active = false;
+        return false;
+    }
 
     return (bytes_written == size);
 }
@@ -215,8 +241,10 @@ bool terminal_tab_send_command(terminal_tab_t *tab, const char *command)
     char *cmd_with_newline = NULL;
     int command_len = strlen(command);
 
-    // Allocate buffer for command + newline
-    cmd_with_newline = (char *)malloc(command_len + 2);
+    // Allocate buffer for command + newline (\n for Unix-like shells, \r\n for cmd.exe might be better)
+    // Let's stick with \n for now, assuming cmd.exe handles it okay.
+    size_t full_len = command_len + 1;               // Just \n
+    cmd_with_newline = (char *)malloc(full_len + 1); // +1 for null terminator
     if (!cmd_with_newline)
     {
         return false;
@@ -224,29 +252,49 @@ bool terminal_tab_send_command(terminal_tab_t *tab, const char *command)
 
     // Copy command and add newline
     memcpy(cmd_with_newline, command, command_len);
-    cmd_with_newline[command_len] = '\n';
+    cmd_with_newline[command_len] = '\n'; // Add newline
     cmd_with_newline[command_len + 1] = '\0';
 
     // Send command to process
-    bool result = terminal_tab_send_input(tab, cmd_with_newline, command_len + 1);
+    bool result = terminal_tab_send_input(tab, cmd_with_newline, full_len);
 
-    // Add command to history
-    if (result && tab->history_count < tab->history_capacity)
+    // Add command to history only if it was successfully sent and not empty
+    if (result && command_len > 0 && tab->history_count < tab->history_capacity)
     {
-        tab->command_history[tab->history_count] = strdup(command);
-        if (tab->command_history[tab->history_count])
+        // Avoid adding duplicates? (Optional)
+        bool add = true;
+        if (tab->history_count > 0 && strcmp(tab->command_history[tab->history_count - 1], command) == 0)
         {
-            tab->history_count++;
+            add = false; // Don't add if same as last command
+        }
+
+        if (add)
+        {
+            // Shift existing history up if full (simple circular buffer or just discard oldest)
+            if (tab->history_count == tab->history_capacity)
+            {
+                free(tab->command_history[0]);
+                // Shift elements down
+                memmove(&tab->command_history[0], &tab->command_history[1], (tab->history_capacity - 1) * sizeof(char *));
+                tab->command_history[tab->history_capacity - 1] = NULL; // Clear last slot
+                tab->history_count--;                                   // Decrement count before adding new one
+            }
+
+            tab->command_history[tab->history_count] = strdup(command);
+            if (tab->command_history[tab->history_count])
+            {
+                tab->history_count++;
+            }
         }
     }
 
-    // Reset history position
-    tab->history_position = -1;
+    // Reset history position for next navigation attempt
+    tab->history_position = tab->history_count; // Point *after* the last entry
 
-    // Clear input buffer
-    tab->input_buffer[0] = '\0';
-    tab->input_buffer_used = 0;
-    tab->cursor_position = 0;
+    // FIX: Clear input buffer is handled by the UI (imgui_shell.cpp)
+    // tab->input_buffer[0] = '\0';
+    // tab->input_buffer_used = 0;
+    // tab->cursor_position = 0;
 
     // Free temporary buffer
     free(cmd_with_newline);
@@ -264,16 +312,17 @@ bool terminal_tab_resize(terminal_tab_t *tab, int width, int height)
         return false;
     }
 
-    // Update terminal size
+    // Update terminal size stored in the tab
     tab->width = width;
     tab->height = height;
 
-    // Resize the process terminal
-    if (tab->is_active)
+    // Resize the process terminal (inform the child process)
+    if (tab->is_active && is_shell_process_running(&tab->process))
     {
         return resize_shell_terminal(&tab->process, width, height);
     }
 
+    // If process isn't active/running, just update our state
     return true;
 }
 
@@ -287,19 +336,21 @@ bool terminal_tab_close(terminal_tab_t *tab, bool force)
         return false;
     }
 
-    // If process is running, terminate it
-    if (tab->is_active)
+    bool success = true;
+    // If process is running according to our state, try terminating it
+    if (tab->is_active && is_shell_process_running(&tab->process))
     {
         if (!terminate_shell_process(&tab->process, force))
         {
-            return false;
+            fprintf(stderr, "Warning: Failed to terminate process for tab '%s' during close.\n", tab->title ? tab->title : "");
+            success = false; // Indicate termination might have failed
         }
     }
 
-    // Mark as inactive
+    // Mark as inactive regardless of termination success
     tab->is_active = false;
 
-    return true;
+    return success;
 }
 
 /**
@@ -329,6 +380,7 @@ bool terminal_tab_set_title(terminal_tab_t *tab, const char *title)
     if (tab->title)
     {
         free(tab->title);
+        tab->title = NULL; // Avoid double free if strdup fails
     }
 
     // Set new title
@@ -344,7 +396,7 @@ const char *terminal_tab_get_buffer(terminal_tab_t *tab)
 {
     if (!tab || !tab->buffer)
     {
-        return "";
+        return ""; // Return empty string literal if no buffer
     }
 
     return tab->buffer;
@@ -366,7 +418,7 @@ bool terminal_tab_clear_buffer(terminal_tab_t *tab)
 
     // Reset scroll position
     tab->scroll_position = 0;
-    tab->scroll_to_bottom = true;
+    tab->scroll_to_bottom = true; // Scroll to bottom after clear might be desired
 
     return true;
 }
@@ -384,44 +436,52 @@ bool terminal_tab_append_buffer(terminal_tab_t *tab, const char *data, int size)
     // Check if we need to resize the buffer
     if (tab->buffer_used + size + 1 > tab->buffer_size)
     {
-        // Grow buffer (consider a max size limit?)
-        int new_size = tab->buffer_size + DEFAULT_BUFFER_SIZE; // Grow linearly or double?
+        // Option 1: Grow buffer (double size, check against max)
+        int new_size = tab->buffer_size * 2;
         if (new_size < tab->buffer_used + size + 1)
         {
-            new_size = tab->buffer_used + size + 1;
+            new_size = tab->buffer_used + size + 1; // Ensure enough space if doubling isn't enough
         }
 
         // Add a safety limit to prevent excessive allocation
-        const int MAX_BUFFER_SIZE = 1024 * 1024 * 4; // Example: 4MB limit
+        const int MAX_BUFFER_SIZE = 1024 * 1024 * 8; // Example: 8MB limit
+        bool truncated = false;
         if (new_size > MAX_BUFFER_SIZE)
         {
-            fprintf(stderr, "Warning: Terminal buffer limit reached for tab '%s'. Discarding old data.\n", tab->title ? tab->title : "");
-            // Option 1: Truncate from the beginning
-            int bytes_to_keep = tab->buffer_size / 2; // Keep half
-            int bytes_to_discard = tab->buffer_used - bytes_to_keep;
-            if (bytes_to_discard < 0)
-                bytes_to_discard = 0;
-            memmove(tab->buffer, tab->buffer + bytes_to_discard, bytes_to_keep);
-            tab->buffer_used = bytes_to_keep;
-            // Now try appending again with available space
-            if (tab->buffer_used + size + 1 > tab->buffer_size)
-            {
-                fprintf(stderr, "Error: Cannot append data even after truncating buffer.\n");
-                return false; // Still won't fit
-            }
-            // Option 2: Just fail allocation (handled below)
-            // Option 3: Use a ring buffer (more complex)
+            new_size = MAX_BUFFER_SIZE;
+            truncated = true; // Signal that we might truncate
         }
 
-        char *new_buffer = (char *)realloc(tab->buffer, new_size);
-        if (!new_buffer)
+        // If resizing still doesn't provide enough space (even at max size), truncate existing data
+        if (truncated && tab->buffer_used + size + 1 > new_size)
         {
-            fprintf(stderr, "Error: Failed to reallocate terminal buffer to size %d.\n", new_size);
-            return false; // Realloc failed
+            fprintf(stderr, "Warning: Terminal buffer limit reached for tab '%s'. Discarding old data.\n", tab->title ? tab->title : "");
+            int needed_space = size + 1;
+            int space_to_free = tab->buffer_used - (new_size - needed_space);
+            if (space_to_free <= 0)
+            {
+                // Should not happen if new_size is MAX_BUFFER_SIZE, but handle defensively
+                fprintf(stderr, "Error: Cannot free enough space in terminal buffer.\n");
+                return false;
+            }
+            memmove(tab->buffer, tab->buffer + space_to_free, tab->buffer_used - space_to_free);
+            tab->buffer_used -= space_to_free;
         }
 
-        tab->buffer = new_buffer;
-        tab->buffer_size = new_size;
+        // Only reallocate if we're not truncating *and* need more space,
+        // or if we truncated and new_size is different from buffer_size
+        if ((!truncated && tab->buffer_used + size + 1 > tab->buffer_size) || (new_size != tab->buffer_size))
+        {
+            char *new_buffer = (char *)realloc(tab->buffer, new_size);
+            if (!new_buffer)
+            {
+                fprintf(stderr, "Error: Failed to reallocate terminal buffer to size %d.\n", new_size);
+                // Keep old buffer, data cannot be appended
+                return false;
+            }
+            tab->buffer = new_buffer;
+            tab->buffer_size = new_size;
+        }
     }
 
     // Append data to buffer
@@ -445,36 +505,38 @@ void terminal_tab_free(terminal_tab_t *tab)
         return;
     }
 
-    // Close process if it's still running
-    if (tab->is_active)
-    {
-        terminal_tab_close(tab, true);
-    }
+    // Close process if it's still running (force=true during final free)
+    terminal_tab_close(tab, true);
 
-    // Cleanup process resources
+    // Cleanup process resources (pipes, handles, etc.)
     cleanup_shell_process(&tab->process);
 
     // Free buffers
     if (tab->buffer)
     {
         free(tab->buffer);
+        tab->buffer = NULL;
     }
 
-    if (tab->input_buffer)
-    {
-        free(tab->input_buffer);
-    }
+    // FIX: Remove freeing of input_buffer
+    // if (tab->input_buffer)
+    // {
+    //     free(tab->input_buffer);
+    //     tab->input_buffer = NULL;
+    // }
 
     // Free title
     if (tab->title)
     {
         free(tab->title);
+        tab->title = NULL;
     }
 
     // Free font name
     if (tab->font_name)
     {
         free(tab->font_name);
+        tab->font_name = NULL;
     }
 
     // Free command history
@@ -485,11 +547,13 @@ void terminal_tab_free(terminal_tab_t *tab)
             if (tab->command_history[i])
             {
                 free(tab->command_history[i]);
+                tab->command_history[i] = NULL;
             }
         }
         free(tab->command_history);
+        tab->command_history = NULL;
     }
 
-    // Free tab structure
+    // Free tab structure itself
     free(tab);
 }

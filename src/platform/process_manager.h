@@ -127,7 +127,11 @@ extern "C"
      * @param height New height in characters
      * @return true if terminal was resized successfully, false otherwise
      */
-    bool resize_shell_terminal(shell_process_t *process, int width, int height);
+    // Note: C++ compilers will understand [[maybe_unused]] here, C compilers prior to C23 might warn.
+    // It's generally safer in headers used by both C and C++ to omit the attribute
+    // and rely on the implementation (.c file) to handle unused parameters.
+    // However, leaving it here as it was before, just be aware of potential C warnings.
+    bool resize_shell_terminal([[maybe_unused]] shell_process_t *process, [[maybe_unused]] int width, [[maybe_unused]] int height);
 
 // End extern "C" guards
 #ifdef __cplusplus

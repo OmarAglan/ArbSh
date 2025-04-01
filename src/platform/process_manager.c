@@ -517,7 +517,8 @@ BOOL CALLBACK FindProcessWindowProc(HWND hwnd, LPARAM lParam)
     DWORD currentPid = 0;
 
     // Get the process ID associated with the window handle
-    GetWindowThreadProcessId(hwnd, ¤tPid);
+    // FIX: Use '¤tPid' instead of the invalid character
+    GetWindowThreadProcessId(hwnd, currentPid);
 
     if (currentPid == pData->targetPid)
     {
@@ -594,7 +595,8 @@ bool terminate_shell_process(shell_process_t *process, bool force)
 
         if (hwnd)
         {
-            printf("Attempting graceful shutdown via WM_CLOSE for PID %d (HWND %p).\n", (int)current_pid, hwnd);
+            // FIX: Cast HWND to void* for %p format specifier
+            printf("Attempting graceful shutdown via WM_CLOSE for PID %d (HWND %p).\n", (int)current_pid, (void *)hwnd);
             // Use PostMessage to avoid blocking GUI if child is unresponsive
             PostMessage(hwnd, WM_CLOSE, 0, 0);
 
@@ -773,9 +775,13 @@ void cleanup_shell_process(shell_process_t *process)
 /**
  * Resize the terminal of the shell process (Placeholder)
  */
-bool resize_shell_terminal([[maybe_unused]] shell_process_t *process, [[maybe_unused]] int width, [[maybe_unused]] int height)
+// FIX: Remove C++ style [[maybe_unused]] attribute incompatible with C standards before C23
+// Use C-style (void) cast inside function if needed
+bool resize_shell_terminal(shell_process_t *process, int width, int height)
 {
-    // Mark parameters as unused until implemented
+    // Mark parameters as unused using standard C cast if function body is empty
+    // (Function body already contains code using these, so cast isn't strictly needed,
+    // but removing the attribute is necessary for compilation)
     // (void)process;
     // (void)width;
     // (void)height;
