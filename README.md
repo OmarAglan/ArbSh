@@ -127,6 +127,10 @@ For more detailed information about the project, refer to the documentation in t
 - [Testing Framework](docs/TESTING_FRAMEWORK.md)
 - [CMake Configuration](docs/CMAKE_CONFIGURATION.md)
 - [BAA Integration](docs/BAA_INTEGRATION.md)
+- [User Guide](docs/USER_GUIDE.md)
+- [Developer Guide](docs/DEVELOPER_GUIDE.md)
+- [Changelog](docs/CHANGELOG.md)
+- [Terminal Emulation Roadmap](docs/TERMINAL_EMULATION_ROADMAP.md)
 
 ## License
 

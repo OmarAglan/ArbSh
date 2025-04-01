@@ -2,6 +2,8 @@
 
 This document outlines the detailed plan for transforming ArbSh into a powerful, cross-platform tool with full Arabic language support, integration with the Baa programming language ecosystem, and standalone capabilities similar to PowerShell.
 
+> **Note**: For a detailed implementation plan specifically focused on the Terminal Emulation with Arabic support, see the [Terminal Emulation Roadmap](TERMINAL_EMULATION_ROADMAP.md).
+
 ## Phase 1: Arabic Language Support
 
 ### Step 1: Unicode/UTF-8 Support (2 weeks)
