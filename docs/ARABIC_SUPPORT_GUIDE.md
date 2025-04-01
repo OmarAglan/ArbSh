@@ -4,287 +4,120 @@ This document provides detailed information for developers working on the Arabic
 
 ## Overview
 
-The shell's Arabic language support is a critical component that addresses limitations in standard terminals. This guide explains the technical implementation, current capabilities, and guidelines for further development. The implementation focuses on providing robust support for Arabic text in both input and output operations, which is essential for the Baa language ecosystem.
+The shell's Arabic language support is a critical component addressing limitations in standard terminals. This guide explains the technical implementation of UTF-8 handling, Right-to-Left (RTL) support, the Bidirectional Algorithm, localization, and platform considerations. This support is essential for the Baa language ecosystem.
 
 ## Technical Implementation
 
-### UTF-8 Character Handling
+### UTF-8 Character Handling (`src/utils/utf8.c`)
 
-The shell implements custom UTF-8 character handling rather than relying on standard terminal capabilities:
+Custom UTF-8 handling ensures correct processing independent of terminal capabilities:
 
-```c
-int get_utf8_char_length(char first_byte);
-int read_utf8_char(char *buffer, int max_size);
-int utf8_to_codepoint(char *utf8_char, int length);
-int codepoint_to_utf8(int codepoint, char *utf8_char);
-```
+- `int get_utf8_char_length(char first_byte)`: Detects byte length (1-4) of a UTF-8 character from its first byte.
+- `int read_utf8_char(char *buffer, int max_size)`: Reads and validates a full UTF-8 character from a buffer.
+- `int utf8_to_codepoint(const char *utf8_char, int *codepoint)`: Converts a validated UTF-8 sequence to its Unicode codepoint.
+- `int codepoint_to_utf8(int codepoint, char *utf8_char)`: Converts a Unicode codepoint back to its UTF-8 sequence.
 
-#### Key Implementation Details
+### Right-to-Left (RTL) Text Support
 
-1. **Character Length Detection**: The `get_utf8_char_length` function detects the number of bytes in a UTF-8 character by examining the bit pattern of the first byte.
+RTL support is managed through character detection and terminal configuration:
 
-2. **Character Validation**: The `read_utf8_char` function validates that continuation bytes follow the correct pattern (10xxxxxx).
+- `int is_rtl_char(int unicode_codepoint)`: Identifies RTL characters (Arabic, Hebrew ranges) by Unicode codepoint.
+- `int set_text_direction(int is_rtl)`: Configures the *console* terminal for RTL or LTR display using platform-specific VT escape sequences (e.g., `\xE2\x80\x8F` for RTL mark, `\033]8;;bidi=R\a`).
 
-3. **Codepoint Conversion**: The functions `utf8_to_codepoint` and `codepoint_to_utf8` handle conversion between UTF-8 byte sequences and Unicode codepoints.
+### Terminal Configuration (`src/utils/utf8.c`)
 
-### Right-to-Left Text Support
+The `configure_terminal_for_utf8()` function sets up the terminal environment:
 
-RTL support is implemented in multiple layers:
+- **Windows:**
+  - Sets console input/output code pages to UTF-8 (65001).
+  - Enables `ENABLE_VIRTUAL_TERMINAL_PROCESSING` for ANSI/VT escape sequence support.
+  - Attempts to set a console font with good Unicode/Arabic support (e.g., Consolas, Arial, Tahoma).
+- **Unix/Linux:**
+  - Relies on standard locale settings (e.g., `en_US.UTF-8`) being configured externally. ArbSh itself calls `setlocale(LC_ALL, "en_US.UTF-8")` as a fallback/default.
 
-```c
-int is_rtl_char(int unicode_codepoint);
-int set_text_direction(int is_rtl);
-```
+### Localization System (`src/i18n/locale/locale.c`)
 
-#### Key Implementation Details
+A simple localization system provides English and Arabic messages:
 
-1. **RTL Character Detection**: The `is_rtl_char` function identifies RTL characters by checking Unicode code point ranges (Arabic: 0x0600-0x06FF, Arabic Supplement: 0x0750-0x077F, etc.).
+- `int set_language(int lang_code)`: Switches the active language (LANG_EN=0, LANG_AR=1) and calls `set_text_direction`.
+- `int get_language(void)`: Returns the current language code.
+- `const char *get_message(int msg_id)`: Retrieves a message string based on ID and current language.
+- `int detect_system_language(void)`: Basic detection via `LANG` environment variable.
+- `int init_locale(void)`: Initializes locale, detects language, configures terminal.
 
-2. **Direction Setting**: The `set_text_direction` function configures the terminal for either RTL or LTR text display using platform-specific mechanisms.
+### Arabic Input (`src/i18n/arabic_input.c`)
 
-3. **Platform-Specific Implementation**:
-   - Windows: Uses console-specific APIs and ANSI escape sequences
-   - Unix/Linux: Uses appropriate terminal control sequences
+Handles keyboard layout switching:
 
-### Terminal Configuration
-
-The shell configures the terminal environment for proper UTF-8 and RTL support:
-
-```c
-void configure_terminal_for_utf8(void);
-```
-
-#### Key Implementation Details
-
-1. **Windows Configuration**:
-   - Sets console code page to UTF-8 (CP_UTF8, 65001)
-   - Enables VT processing for ANSI escape sequences
-   - Configures an appropriate font with good Unicode support
-
-2. **Unix/Linux Configuration**:
-   - Sets locale to UTF-8
-   - Configures terminal settings as needed
-
-### Localization System
-
-The shell includes a complete localization system:
-
-```c
-int set_language(int lang_code);
-int get_language(void);
-const char *get_message(int msg_id);
-int detect_system_language(void);
-int init_locale(void);
-```
-
-#### Key Implementation Details
-
-1. **Message Catalogs**: Predefined message catalogs for both English and Arabic stored in arrays.
-
-2. **Language Detection**: Detects system language settings via environment variables.
-
-3. **Language Switching**: Allows runtime switching between languages with automatic direction adjustment.
+- `int toggle_arabic_mode(void)`: Toggles the internal Arabic mode flag.
+- `int is_arabic_mode(void)`: Checks the flag.
+- `int set_keyboard_layout(int layout)`: Sets internal layout state (0=EN, 1=AR).
+- `int get_keyboard_layout(void)`: Gets the state.
+- `int _mylayout(info_t *info)`: Built-in command (`layout ar|en|toggle`) to change layout.
+- *Note:* Actual keyboard mapping relies on the OS keyboard layout settings. This module primarily tracks the *intended* layout state for the shell.
 
 ## Arabic Text Handling Considerations
 
-### Bidirectional Text Algorithm
+### Bidirectional Text Algorithm (`src/i18n/bidi/bidi.c`)
 
-The shell implements a comprehensive bidirectional text algorithm based on the Unicode Bidirectional Algorithm (UAX #9). This implementation handles the complexities of mixed right-to-left and left-to-right text, which is essential for proper Arabic text display.
+ArbSh implements a comprehensive bidirectional text algorithm based on the **Unicode Bidirectional Algorithm (UAX #9)**. This handles the complexities of displaying mixed right-to-left (e.g., Arabic, Hebrew) and left-to-right (e.g., English, numbers) text.
 
-#### Key Features
+**Key Implementation Features:**
 
-1. **Directional Formatting Characters**: Full support for control characters that affect text direction:
-   - LRM/RLM (Left-to-Right/Right-to-Left Marks)
-   - LRE/RLE (Left-to-Right/Right-to-Left Embedding)
-   - LRO/RLO (Left-to-Right/Right-to-Left Override)
-   - PDF (Pop Directional Format)
-   - LRI/RLI/FSI (Left-to-Right/Right-to-Left/First Strong Isolate)
-   - PDI (Pop Directional Isolate)
-   - LRI/RLI/FSI (Left-to-Right/Right-to-Left/First Strong Isolate)
-   - PDI (Pop Directional Isolate)
+1. **UAX #9 Compliance:** Aims to follow the rules specified in the Unicode standard.
+2. **Character Type Classification:** `get_char_type(int codepoint)` classifies characters based on their BiDi properties (L, R, AL, EN, AN, WS, ON, B, S, ET, ES, CS, NSM, and directional formatting characters).
+3. **Directional Formatting Characters:** Supports explicit control characters:
+    - Marks: LRM (U+200E), RLM (U+200F)
+    - Embeddings: LRE (U+202A), RLE (U+202B), PDF (U+202C)
+    - Overrides: LRO (U+202D), RLO (U+202E), PDF (U+202C)
+    - Isolates: LRI (U+2066), RLI (U+2067), FSI (U+2068), PDI (U+2069)
+4. **Run Processing:** `process_runs(const char *text, int length, int base_level)` segments the text into runs of characters with the same embedding level. It manages an embedding level stack (`stack[MAX_DEPTH]`) to handle nested directional contexts.
+5. **Level Resolution:** Implicitly resolves embedding levels based on character types and explicit formatting codes according to UAX #9 rules within `process_runs`.
+6. **Text Reordering:** `reorder_runs(BidiRun *runs, const char *text, int length, char *output)` reorders the runs based on their resolved embedding levels for correct visual display. RTL runs have their characters reversed internally during this process. Directional formatting characters are typically removed during reordering.
+7. **Main Function:** `process_bidirectional_text(const char *text, int length, int is_rtl, char *output)` orchestrates the process: calls `process_runs`, then `reorder_runs`.
 
-2. **Bidirectional Run Processing**: Text is processed into runs with consistent directional properties:
-
-   ```c
-   BidiRun *process_runs(const char *text, int length, int base_level);
-   ```
-
-3. **Embedding Level Management**: Proper handling of nested directional contexts with embedding stack:
-
-   ```c
-   /* Stack for embedding levels */
-   int stack[MAX_DEPTH];
-   int stack_top = 0;
-   ```
-
-4. **Character Type Classification**: Comprehensive classification of characters according to their bidirectional properties:
-
-   ```c
-   static int get_char_type(int codepoint);
-   ```
-
-5. **Text Reordering**: Reordering of text segments based on their embedding levels for proper display:
-
-   ```c
-   int reorder_runs(BidiRun *runs, const char *text, int length, char *output);
-   ```
+This implementation allows ArbSh to handle complex strings like `"Hello مرحبا (World) بالعالم 123"` correctly, displaying each segment in its proper direction.
 
 ### Arabic Letter Joining and Text Shaping
 
-Arabic requires proper letter joining behavior, where letters take different forms (initial, medial, final, isolated) depending on their position in words:
+**Current Status:** ArbSh **does not** implement its own Arabic text shaping (letter joining, ligatures) logic.
 
-1. **Current Implementation**:
-   - Basic joining handled via platform rendering
-   - Character position analysis to determine joining forms
-   - Support for special ligatures like Lam-Alef (لا)
-   - Proper handling of non-joining characters
-
-2. **Text Shaping Algorithm**:
-   - Character classification (joining vs. non-joining)
-   - Context analysis for determining character form
-   - Special case handling for mandatory ligatures
-   - Fallback mechanisms for platforms with limited rendering capabilities
-
-3. **Implementation Details**:
-
-   ```c
-   /* Determine Arabic letter form based on context */
-   int get_arabic_letter_form(int codepoint, int prev_char, int next_char);
-   
-   /* Apply Arabic text shaping to a string */
-   int shape_arabic_text(const char *input, int length, char *output);
-   ```
+- **Reliance on Renderer:** It relies entirely on the underlying rendering engine to perform text shaping:
+  - **Console Mode:** Depends on the capabilities of the terminal emulator and the selected console font. Modern terminals (like Windows Terminal, gnome-terminal) with appropriate fonts handle shaping well.
+  - **ImGui GUI Mode:** Depends on the font rendering capabilities used by ImGui (typically FreeType) and the loaded font file containing the necessary OpenType shaping tables (GSUB, GPOS).
+- **Future Work (Optional):** Implementing shaping within ArbSh (e.g., using HarfBuzz) would provide consistent shaping independent of the renderer but adds significant complexity and dependencies. The functions `get_arabic_letter_form` and `shape_arabic_text` mentioned previously are *not* currently implemented.
 
 ### Arabic Numbers and Punctuation
 
-Arabic text may use either Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩) or Western Arabic digits (0123456789):
-
-1. **Current Status**: Both digit types supported
-2. **Needed Improvements**: Number formatting according to locale (thousands separators, decimal points)
+- Both Western (0-9) and Arabic-Indic (٠-٩) digits are handled correctly by the UTF-8 and BiDi algorithms.
+- Display and context rules (e.g., whether numbers within Arabic text flow RTL or LTR) are determined by the BiDi algorithm (`get_char_type` classifies them as EN or AN).
+- Punctuation handling also follows BiDi rules.
 
 ## Windows-Specific Implementation
 
-Windows requires special handling for proper Arabic support:
+Windows requires special handling:
 
-### Console Configuration
+- **Console Configuration:** `configure_terminal_for_utf8` uses `SetConsoleOutputCP`, `SetConsoleCP`, `SetConsoleMode` (for VT processing), and `SetCurrentConsoleFontEx`.
+- **Font Selection:** Attempts to select fonts like Consolas, Arial, Tahoma known for good Unicode/Arabic support.
+- **GUI Mode:** Uses ImGui with DirectX, relying on ImGui's font rendering (which often uses FreeType) for shaping.
 
-```c
-/* Windows console configuration */
-SetConsoleOutputCP(65001); /* CP_UTF8 */
-SetConsoleCP(65001);       /* CP_UTF8 */
-```
+## Testing Arabic Support (`tests/arabic/`)
 
-### Font Selection
+Specific tests verify Arabic functionality:
 
-The shell selects fonts with good Unicode and Arabic support:
+- `test_utf8.c`: Tests UTF-8 encoding/decoding and RTL character detection.
+- `test_bidi.c`: Tests the `process_bidirectional_text` function with various mixed strings.
+- `test_keyboard.c`: Tests the logic related to the `layout` command and internal state tracking (not actual OS keyboard switching).
 
-```c
-/* Configure console font */
-CONSOLE_FONT_INFOEX cfi;
-cfi.cbSize = sizeof(cfi);
-// ...
-wcscpy(cfi.FaceName, L"Consolas"); /* Use a font with good Unicode support */
-SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
-```
-
-Consider also supporting these fonts which have excellent Arabic support:
-
-- Cascadia Code (preferred for modern Windows)
-- Courier New (widely available)
-- Arabic Typesetting (specialized for Arabic)
-
-### ANSI Escape Sequences
-
-Windows 10+ supports ANSI escape sequences when properly enabled:
-
-```c
-/* Enable VT processing for ANSI escape sequences */
-DWORD dwMode = 0;
-GetConsoleMode(hOut, &dwMode);
-dwMode |= 0x0004; /* ENABLE_VIRTUAL_TERMINAL_PROCESSING */
-SetConsoleMode(hOut, dwMode);
-```
-
-## Testing Arabic Support
-
-### Test Strings
-
-Use these test strings to verify correct handling:
-
-#### Basic Arabic Text
-
-```
-مرحبا بالعالم
-```
-
-#### Mixed Directional Text
-
-```
-هذا النص يحتوي English words في وسطه
-```
-
-#### Arabic with Numbers
-
-```
-العدد ١٢٣٤٥ والعدد 67890
-```
-
-#### Text with Diacritics
-
-```
-العَرَبِيَّة مَعَ تَشْكِيل كَامِل
-```
-
-### Test Process
-
-1. **Input Testing**: Verify that Arabic text can be entered correctly
-2. **Output Testing**: Verify that Arabic text is displayed properly
-3. **Cursor Movement**: Test cursor navigation through Arabic text
-4. **Text Selection**: Test selection of Arabic text
-5. **Copy/Paste**: Test copy and paste of Arabic text
-6. **Command History**: Verify that Arabic commands are properly stored and recalled
+Use complex test strings including mixed directions, numbers, punctuation, and formatting codes to validate the BiDi implementation.
 
 ## Performance Considerations
 
-Arabic text processing can be more resource-intensive than Latin text:
-
-1. **Character Processing Overhead**: Multi-byte characters require more processing
-2. **Bidirectional Resolution**: Bidirectional algorithm adds complexity
-3. **Rendering Complexity**: Letter shaping and joining add rendering overhead
-
-### Optimization Approaches
-
-1. **Buffered Processing**: Process text in chunks rather than character-by-character
-2. **Caching**: Cache directional properties of frequently used text
-3. **Avoid Redundant Processing**: Only re-process text when necessary
-
-## Future Work
-
-Priority areas for improving Arabic support:
-
-1. **Complete Bidirectional Algorithm**: Implement full Unicode Bidirectional Algorithm
-2. **Enhanced Text Editor**: More sophisticated text editing with proper Arabic support
-3. **Input Method Enhancement**: Better keyboard layout and input method support
-4. **Text Shaping**: Improved letter shaping and ligature handling
-5. **Right-to-Left UI Elements**: Adapt UI for RTL orientation when using Arabic
-
-## Resources
-
-### Unicode Standards
-
-- [Unicode Bidirectional Algorithm](https://unicode.org/reports/tr9/)
-- [Unicode Arabic Presentation Forms](https://unicode.org/charts/PDF/UFB50.pdf)
-
-### Testing Tools
-
-- [Bidirectional Checker](https://unicode.org/cldr/utility/bidi.jsp)
-- [Arabic Shaping Tester](https://www.w3.org/International/tests/repo/results/arabic-shaping)
-
-### Libraries
-
-- [ICU (International Components for Unicode)](http://site.icu-project.org/)
-- [FriBidi](https://github.com/fribidi/fribidi) - Implementation of the Unicode Bidirectional Algorithm
+- The BiDi algorithm (`bidi.c`) involves character-by-character analysis and run processing, which can add overhead compared to simple LTR text.
+- Reordering text (`reorder_runs`) involves memory manipulation.
+- Performance impact is most noticeable on very long lines or large blocks of text processed at once.
+- Optimization strategies could include caching BiDi properties or processing text incrementally.
 
 ## Conclusion
 
-The Arabic support in our shell is a critical component for the Baa language ecosystem. By following this guide and continuing to enhance the implementation, developers can ensure that the shell provides a robust environment for Arabic text processing, essential for the Baa language's success.
+ArbSh provides a strong foundation for Arabic language support through custom UTF-8 handling and a comprehensive implementation of the Unicode Bidirectional Algorithm. While text shaping relies on the rendering engine, the core logic ensures correct directional handling essential for the Baa language ecosystem.
