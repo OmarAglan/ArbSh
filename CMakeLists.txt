@@ -162,6 +162,7 @@ else()
     # --- Console Application Configuration ---
     add_executable(hsh
          ${PLATFORM_EXE_SOURCES} # Add platform sources needed specifically by the EXE
+         src/core/shell_entry.c
     )
     # Link the core library (which transitively links utils, i18n, and platform)
     target_link_libraries(hsh PRIVATE arbsh_core)
