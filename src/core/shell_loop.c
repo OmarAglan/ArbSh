@@ -65,6 +65,7 @@ int find_builtin(info_t *info)
         {"lang", _mylang},
         {"test", _mytest},
         {"layout", _mylayout},
+        {"config", _myconfig},
         {NULL, NULL}};
 
     for (i = 0; builtintbl[i].type; i++)
@@ -134,6 +135,9 @@ void fork_cmd(info_t *info)
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
+    // Set GUI environment variable for child process
+    set_gui_env_for_child();
+
     // Build command line string
     _snprintf(cmdline, sizeof(cmdline), "%s", info->path);
     for (i = 1; info->argv[i] != NULL; i++)
@@ -168,6 +172,9 @@ void fork_cmd(info_t *info)
 #else
     pid_t child_pid;
     int status;
+
+    // Set GUI environment variable for child process
+    set_gui_env_for_child();
 
     child_pid = fork();
     if (child_pid == -1)

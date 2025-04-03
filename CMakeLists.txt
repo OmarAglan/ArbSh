@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(BUILD_STATIC "Build statically linked executable" OFF)
 
 # Option for GUI mode (now only ImGui)
-option(GUI_MODE "Build with GUI support using ImGui" ON) # Default to ON if that's your main target
+option(GUI_MODE "Build with GUI support using ImGui" OFF) # Default to ON if that's your main target
 
 # Option for enabling tests
 option(ENABLE_TESTS "Build the test suite" OFF)

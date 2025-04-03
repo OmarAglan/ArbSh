@@ -9,6 +9,10 @@
 #include <errno.h>
 #include <locale.h> /* For setlocale() */
 
+/* Language constants */
+#define LANG_EN 0
+#define LANG_AR 1
+
 #ifdef WINDOWS
 #include <windows.h>
 #include <io.h>
@@ -143,6 +147,8 @@ typedef struct liststr
  *@cmd_buf_type: CMD_type ||, &&, ;
  *@readfd: the fd from which to read line input
  *@histcount: the history line number count
+ *@history_file_path: path to the history file (configurable)
+ *@default_layout: keyboard layout setting (0=EN, 1=AR)
  */
 typedef struct passinfo
 {
@@ -165,11 +171,13 @@ typedef struct passinfo
     int cmd_buf_type; /* CMD_type ||, &&, ; */
     int readfd;
     int histcount;
+    char *history_file_path; /* Path to the history file (configurable) */
+    int default_layout;      /* Keyboard layout setting (0=EN, 1=AR) */
 } info_t;
 
 #define INFO_INIT                                                            \
     {NULL, NULL, NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, \
-     0, 0, 0}
+     0, 0, 0, NULL, 0}
 
 /**
  *struct builtin - contains a builtin string and related function
@@ -255,6 +263,15 @@ int _myalias(info_t *);
 int _mylang(info_t *);   /* New language command */
 int _mytest(info_t *);   /* Test command for UTF-8 and Arabic */
 int _mylayout(info_t *); /* Keyboard layout command */
+int load_aliases(info_t *);  /* Load aliases from file */
+int save_aliases(info_t *);  /* Save aliases to file */
+char *get_alias_file(info_t *);  /* Get alias file path */
+int set_alias(info_t *, char *);  /* Set alias from string */
+int unset_alias(info_t *, char *);  /* Unset alias */
+
+/* toem_config.c */
+int _myconfig(info_t *); /* Configuration management command */
+void load_configuration(info_t *); /* Load settings from config file */
 
 /*toem_getline.c */
 ssize_t get_input(info_t *);
@@ -332,5 +349,9 @@ int toggle_arabic_mode(void);
 int is_arabic_mode(void);
 int set_keyboard_layout(int layout);
 int get_keyboard_layout(void);
+
+/* GUI host detection */
+int is_hosted_by_gui(void);
+void set_gui_env_for_child(void);
 
 #endif

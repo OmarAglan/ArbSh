@@ -1,7 +1,112 @@
 #include "shell.h"
 
+#ifdef WINDOWS
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#endif
+
 /* _mylayout function is now defined in arabic_input.c */
 
+/**
+ * get_alias_file - gets the alias file path
+ * @info: parameter struct
+ * Return: allocated string containing alias file path
+ */
+char *get_alias_file(info_t *info)
+{
+    char *buf, *dir;
+
+    dir = _getenv(info, "HOME=");
+    if (!dir)
+        return (NULL);
+    buf = malloc(sizeof(char) * (_strlen(dir) + 20)); /* Allow space for path + filename */
+    if (!buf)
+        return (NULL);
+    buf[0] = 0;
+    _strcpy(buf, dir);
+    _strcat(buf, "/");
+    _strcat(buf, ".arbsh_aliases");
+    return (buf);
+}
+
+/**
+ * load_aliases - loads aliases from file at startup
+ * @info: the parameter struct
+ * Return: 1 on success, 0 on failure
+ */
+int load_aliases(info_t *info)
+{
+    char *filename = get_alias_file(info);
+    FILE *file;
+    char line[512];
+    
+    if (!filename)
+        return (0);
+
+    file = fopen(filename, "r");
+    free(filename);
+
+    if (!file)
+        return (0); /* File doesn't exist or can't be opened - this is fine */
+
+    while (fgets(line, sizeof(line), file))
+    {
+        char *newline = strchr(line, '\n');
+        if (newline)
+            *newline = '\0'; /* Remove trailing newline */
+
+        /* Skip empty lines and comments */
+        if (line[0] == '\0' || line[0] == '#')
+            continue;
+
+        set_alias(info, line);
+    }
+
+    fclose(file);
+    return (1);
+}
+
+/**
+ * save_aliases - saves all aliases to a file
+ * @info: the parameter struct
+ * Return: 1 on success, 0 on failure
+ */
+int save_aliases(info_t *info)
+{
+    char *filename = get_alias_file(info);
+    FILE *file;
+    list_t *node;
+
+    if (!filename)
+        return (0);
+
+    file = fopen(filename, "w");
+    free(filename);
+
+    if (!file)
+    {
+        _puts("Error: Could not save aliases\n");
+        return (0);
+    }
+
+    fprintf(file, "# ArbSh Aliases\n");
+    fprintf(file, "# Format: name=value\n\n");
+
+    node = info->alias;
+    while (node)
+    {
+        fprintf(file, "%s\n", node->str);
+        node = node->next;
+    }
+
+    fclose(file);
+    return (1);
+}
 
 /**
  * _myhistory - displays the history list, one command by line, preceded
@@ -105,6 +210,26 @@ int _myalias(info_t *info)
         }
         return (0);
     }
+
+    /* Check for save/load commands */
+    if (info->argc == 2 && _strcmp(info->argv[1], "-s") == 0)
+    {
+        if (save_aliases(info))
+            _puts("Aliases saved successfully\n");
+        else
+            _puts("Error saving aliases\n");
+        return (0);
+    }
+    
+    if (info->argc == 2 && _strcmp(info->argv[1], "-l") == 0)
+    {
+        if (load_aliases(info))
+            _puts("Aliases loaded successfully\n");
+        else
+            _puts("No aliases file found or error loading aliases\n");
+        return (0);
+    }
+
     for (i = 1; info->argv[i]; i++)
     {
         p = _strchr(info->argv[i], '=');

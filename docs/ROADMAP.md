@@ -7,6 +7,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
 ## Phase 1: Arabic Language Support
 
 ### Step 1: Unicode/UTF-8 Support (2 weeks)
+
 1. **Modify input handling**
    - Update `get_input` function in `src/getline.c` to properly handle UTF-8 encoded characters
    - Implement UTF-8 validation functions to ensure input integrity
@@ -29,6 +30,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Create helper functions for terminal feature detection
 
 ### Step 2: Right-to-Left (RTL) Text Support (3 weeks)
+
 1. **Implement bidirectional text algorithm**
    - Add support for mixing LTR and RTL text following Unicode Bidirectional Algorithm
    - Implement proper text segmentation for bidirectional text
@@ -51,6 +53,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Implement proper handling of combined key sequences
 
 ### Step 3: Arabic Localization (2 weeks)
+
 1. **Create localization framework**
    - Implement a system for storing and retrieving localized strings
    - Create message catalogs for all shell messages
@@ -75,6 +78,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
 ## Phase 2: Baa Language Integration
 
 ### Step 1: Baa-Specific Environment (3 weeks)
+
 1. **Create Baa language detection**
    - Implement automatic detection of Baa source files
    - Add Baa file association and recognition
@@ -97,6 +101,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Implement Baa documentation generation
 
 ### Step 2: Baa Development Tools (4 weeks)
+
 1. **Implement syntax highlighting**
    - Add support for Baa syntax highlighting in command output
    - Implement Baa keyword recognition
@@ -119,6 +124,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Create visualization for performance metrics
 
 ### Step 3: Arabic Programming Support (3 weeks)
+
 1. **Enhance handling of Arabic identifiers**
    - Add support for Arabic variable and function names in Baa
    - Implement proper sorting and searching of Arabic identifiers
@@ -143,6 +149,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
 ## Phase 3: Standalone Shell Application
 
 ### Step 1: Application Framework (3 weeks)
+
 1. **Create proper executable**
    - Modify build system to create standalone executable
    - Add proper application entry points for different platforms
@@ -165,6 +172,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Add dynamic configuration reloading
 
 ### Step 2: Enhanced UI Features (4 weeks)
+
 1. **Implement advanced console features**
    - Add support for colors and text formatting
    - Implement command highlighting and syntax coloring
@@ -194,6 +202,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Implement graphical elements (charts, tables) with RTL support
 
 ### Step 3: PowerShell-like Features (6 weeks)
+
 1. **Implement object pipeline**
    - Create a system for passing structured data between commands
    - Implement object serialization and deserialization
@@ -225,6 +234,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
 ## Phase 4: Cross-Platform Compatibility
 
 ### Step 1: Platform Abstraction (4 weeks)
+
 1. **Create platform abstraction layer**
    - Abstract OS-specific calls behind common interfaces
    - Implement platform-specific code for Windows, Linux, macOS
@@ -247,6 +257,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Add system tray integration
 
 ### Step 2: Build System Enhancement (3 weeks)
+
 1. **Improve CMake configuration**
    - Add proper platform detection
    - Configure appropriate compiler flags for each platform
@@ -271,6 +282,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
 ## Phase 5: Baa Ecosystem Integration
 
 ### Step 1: Baa Language Server Integration (3 weeks)
+
 1. **Implement Language Server Protocol**
    - Add LSP client capabilities to the shell
    - Create integration with Baa language server
@@ -293,6 +305,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Implement documentation search
 
 ### Step 2: Baa Development Environment (4 weeks)
+
 1. **Project management**
    - Implement Baa project templates
    - Add project creation and initialization
@@ -315,6 +328,7 @@ This document outlines the detailed plan for transforming ArbSh into a powerful,
    - Add conditional breakpoints and watch expressions
 
 ### Step 3: Community and Collaboration (2 weeks)
+
 1. **Package sharing**
    - Create Baa package repository integration
    - Implement package search and discovery

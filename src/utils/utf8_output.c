@@ -179,6 +179,16 @@ void print_prompt_utf8(info_t *info)
         /* Get localized prompt */
         prompt = get_message(MSG_PROMPT);
         
+        /* Check if we're hosted by GUI - if so, use simpler prompt */
+        if (is_hosted_by_gui())
+        {
+            if (get_language() == 1) /* LANG_AR */
+                _puts_utf8((char *)prompt);
+            else
+                _puts((char *)prompt);
+            return;
+        }
+        
         /* Check if we're using Arabic */
         if (get_language() == 1) /* LANG_AR */
         {

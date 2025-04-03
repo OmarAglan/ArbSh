@@ -10,6 +10,8 @@ void clear_info(info_t *info)
     info->argv = NULL;
     info->path = NULL;
     info->argc = 0;
+    info->history_file_path = NULL;
+    info->default_layout = 0; // Default to English layout
 }
 
 /**
@@ -67,6 +69,11 @@ void free_info(info_t *info, int all)
         {
             ffree(info->env_array);
             info->env_array = NULL;
+        }
+        if (info->history_file_path)
+        {
+            free(info->history_file_path);
+            info->history_file_path = NULL;
         }
         ffree(info->cmd_buf);
         if (info->readfd > 2)

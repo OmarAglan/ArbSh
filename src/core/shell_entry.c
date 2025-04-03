@@ -102,6 +102,43 @@ int gui_putchar(char c)
 }
 
 /**
+ * is_hosted_by_gui - Check if the shell is running under a GUI
+ * Return: 1 if hosted by GUI, 0 otherwise
+ */
+int is_hosted_by_gui(void)
+{
+    static int hosted = -1;
+    
+    // Only check once per process
+    if (hosted == -1)
+    {
+        const char *env_var = getenv("ARBSH_HOSTED_BY_GUI");
+        hosted = (env_var && *env_var == '1') ? 1 : 0;
+    }
+    
+    return hosted;
+}
+
+/**
+ * set_gui_env_for_child - Sets environment variable for child processes
+ * This lets child processes know they're hosted by the GUI
+ */
+void set_gui_env_for_child(void)
+{
+#ifdef WINDOWS
+    if (g_GuiMode)
+        _putenv("ARBSH_HOSTED_BY_GUI=1");
+    else
+        _putenv("ARBSH_HOSTED_BY_GUI=0");
+#else
+    if (g_GuiMode)
+        setenv("ARBSH_HOSTED_BY_GUI", "1", 1);
+    else
+        setenv("ARBSH_HOSTED_BY_GUI", "0", 1);
+#endif
+}
+
+/**
  * shell_main - Main shell logic (formerly in main.c)
  * @argc: argument count
  * @argv: argument vector
@@ -118,6 +155,9 @@ int shell_main(int argc, char *argv[])
 
     // Initialize Arabic input support
     init_arabic_input();
+
+    // Load configuration from file
+    load_configuration(info);
 
     // Display welcome message in the current language
     if (get_language() == 1) /* LANG_AR */
@@ -162,6 +202,7 @@ int shell_main(int argc, char *argv[])
     }
     populate_env_list(info);
     read_history(info);
+    load_aliases(info);  // Load aliases at startup
     hsh(info, argv);
     return (EXIT_SUCCESS);
 }

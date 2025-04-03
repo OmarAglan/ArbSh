@@ -432,10 +432,12 @@ BOOL imgui_init(HINSTANCE hInstance, HWND *hWnd, int width, int height, const ch
         int initialTabIndex = 0; // Index of the newly added tab
 
         std::string hsh_path = get_hsh_executable_path();
-        if (!hsh_path.empty())
-        {
-            // Attempt to create the terminal tab process
-            g_tabs[initialTabIndex].term_tab = terminal_tab_create(tabName.c_str(), hsh_path.c_str(), NULL, NULL);
+        // Test launching cmd.exe by default
+        // std::string hsh_path = get_hsh_executable_path();
+        // if (!hsh_path.empty())
+        // {
+            // Attempt to create the terminal tab process using default (cmd.exe)
+            g_tabs[initialTabIndex].term_tab = terminal_tab_create(tabName.c_str(), NULL /*hsh_path.c_str()*/, NULL, NULL);
             if (g_tabs[initialTabIndex].term_tab)
             {
                 // Success: Set this tab as active
@@ -450,14 +452,7 @@ BOOL imgui_init(HINSTANCE hInstance, HWND *hWnd, int width, int height, const ch
                 g_tabs.pop_back(); // Remove the tab we failed to initialize
                 g_activeTab = -1;  // No active tab
             }
-        }
-        else
-        {
-            // hsh executable path not found
-            fprintf(stderr, "Error: Could not find hsh.exe path for initial tab!\n");
-            g_tabs.pop_back(); // Remove the tab
-            g_activeTab = -1;  // No active tab
-        }
+        // }
     }
     else
     {
@@ -540,18 +535,20 @@ void RenderShell()
                 g_tabs.emplace_back(tabName); // Use emplace_back for direct construction
                 int newTabIndex = g_tabs.size() - 1;
 
-                std::string hsh_path = get_hsh_executable_path(); // Get path to hsh.exe
-                if (hsh_path.empty())
-                {
-                    fprintf(stderr, "Error: Could not find hsh.exe path for new tab!\n");
-                    g_tabs.pop_back(); // Remove the tab we just added
-                }
-                else
-                {
-                    g_tabs[newTabIndex].term_tab = terminal_tab_create(tabName.c_str(), hsh_path.c_str(), NULL, NULL);
+                // Test launching cmd.exe by default
+                // std::string hsh_path = get_hsh_executable_path(); // Get path to hsh.exe
+                // if (hsh_path.empty())
+                // {
+                //     fprintf(stderr, "Error: Could not find hsh.exe path for new tab!\n");
+                //     g_tabs.pop_back(); // Remove the tab we just added
+                // }
+                // else
+                // {
+                    // Use NULL command to default to cmd.exe for testing
+                    g_tabs[newTabIndex].term_tab = terminal_tab_create(tabName.c_str(), NULL /*hsh_path.c_str()*/, NULL, NULL);
                     if (!g_tabs[newTabIndex].term_tab)
                     {
-                        fprintf(stderr, "Error: Failed to create terminal tab process for %s!\n", hsh_path.c_str());
+                        fprintf(stderr, "Error: Failed to create terminal tab process for %s!\n", "cmd.exe"); // Updated error message
                         g_tabs.pop_back(); // Remove the tab
                     }
                     else
@@ -564,7 +561,7 @@ void RenderShell()
                         }
                         printf("Created new terminal tab: %s\n", tabName.c_str());
                     }
-                }
+                // }
             }
             ImGui::Separator();
             if (ImGui::MenuItem("Exit", "Alt+F4")) // Added shortcut hint
@@ -701,12 +698,13 @@ void RenderShell()
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));          // More padding
                 ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 
-                // ImGui::Text(">"); ImGui::SameLine(); // Simple prompt indicator
+                ImGui::Text(">"); ImGui::SameLine(); // Add simple prompt indicator
                 std::string input_label = "##CommandInput_" + std::to_string(i); // Unique label per tab
 
+                // Removed _CallbackHistory and _CallbackCharFilter flags as callbacks are NULL
                 if (ImGui::InputText(input_label.c_str(), g_tabs[i].inputBuffer, IM_ARRAYSIZE(g_tabs[i].inputBuffer),
-                                     ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCharFilter,
-                                     NULL, NULL)) // Add callbacks later for history/completion
+                                     ImGuiInputTextFlags_EnterReturnsTrue,
+                                     NULL, NULL))
                 {
                     if (current_term && current_term->is_active)
                     {
@@ -746,6 +744,26 @@ void RenderShell()
                 ImGui::PopStyleVar(2);   // FramePadding, FrameRounding
                 ImGui::PopStyleColor(2); // FrameBg, Text
                 ImGui::PopItemWidth();
+
+                // Handle Ctrl+C for the active tab
+                // Check if the tab's content area is focused or the input was just active
+                if (g_tabs[i].isActive && ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+                {
+                    ImGuiIO &io = ImGui::GetIO();
+                    // Use ImGuiKey_C and check for Ctrl modifier. 'false' means don't allow repeats if key is held.
+                    if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C, false))
+                    {
+                        if (current_term && current_term->is_active)
+                        {
+                            printf("Ctrl+C detected for active tab %zu.\n", i); // Debug print
+                            const char ctrl_c_char = '\x03';                   // ETX character
+                            terminal_tab_send_input(current_term, &ctrl_c_char, 1);
+                            // Prevent InputText from processing 'C' if Ctrl is down
+                            // (May not be strictly necessary depending on ImGui behavior, but safer)
+                            // io.ClearInputKeys(); // Maybe too aggressive? Test without first.
+                        }
+                    }
+                }
 
                 ImGui::EndTabItem();
             }

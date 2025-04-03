@@ -100,6 +100,8 @@ int _myhelp(info_t *info)
         _puts("  history  - Show command history\n");
         _puts("  alias    - Manage command aliases\n");
         _puts("  lang     - Change shell language\n");
+        _puts("  layout   - Change keyboard layout\n");
+        _puts("  config   - Manage shell configuration\n");
         _puts("  test     - Test UTF-8 and Arabic support\n");
         return (0);
     }
@@ -146,10 +148,13 @@ int _myhelp(info_t *info)
     }
     else if (_strcmp(arg_array[1], "alias") == 0)
     {
-        _puts("alias: alias [name[='value'] ...]\n");
+        _puts("alias: alias [name[='value'] ...] [-s] [-l]\n");
         _puts("    Define or display aliases.\n");
         _puts("    Without arguments, prints a list of all aliases.\n");
         _puts("    Otherwise, defines an alias for each name with an assigned value.\n");
+        _puts("    Options:\n");
+        _puts("      -s        Save all current aliases to ~/.arbsh_aliases file\n");
+        _puts("      -l        Load aliases from ~/.arbsh_aliases file\n");
         _puts("    Example: alias ls='ls -la'\n");
     }
     else if (_strcmp(arg_array[1], "lang") == 0)
@@ -177,6 +182,18 @@ int _myhelp(info_t *info)
         _puts("      en, english  - Switch to English keyboard layout\n");
         _puts("      toggle       - Toggle between Arabic and English layouts\n");
         _puts("    Shortcut: Ctrl+A to toggle between layouts\n");
+    }
+    else if (_strcmp(arg_array[1], "config") == 0)
+    {
+        _puts("config: config [OPTION]\n");
+        _puts("    Manage shell configuration.\n");
+        _puts("    Without arguments, displays help for the config command.\n");
+        _puts("    Options:\n");
+        _puts("      init       - Create a default configuration file\n");
+        _puts("      path       - Show the configuration file path\n");
+        _puts("    Configuration file locations:\n");
+        _puts("      Windows:   %APPDATA%\\ArbSh\\config.ini\n");
+        _puts("      Unix-like: ~/.arbshrc\n");
     }
     else
     {
