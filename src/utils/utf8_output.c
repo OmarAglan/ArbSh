@@ -171,26 +171,52 @@ int _putsfd_utf8(char *str, int fd)
  */
 void print_prompt_utf8(info_t *info)
 {
-    const char *prompt;
+    char prompt_buffer[256] = {0};
+    char *username = NULL;
+    char cwd[256] = {0};
+    char status_indicator[8] = {0};
+    const char *prompt_base;
     
     /* Check if we're in interactive mode */
     if (interactive(info))
     {
-        /* Get localized prompt */
-        prompt = get_message(MSG_PROMPT);
+        /* Get localized prompt base */
+        prompt_base = get_message(MSG_PROMPT);
         
         /* Check if we're hosted by GUI - if so, use simpler prompt */
         if (is_hosted_by_gui())
         {
-            if (get_language() == 1) /* LANG_AR */
-                _puts_utf8((char *)prompt);
+            if (get_language() == LANG_AR)
+                _puts_utf8((char *)prompt_base);
             else
-                _puts((char *)prompt);
+                _puts((char *)prompt_base);
             return;
         }
         
+        /* Get current working directory */
+        if (getcwd(cwd, sizeof(cwd)) == NULL)
+            _strcpy(cwd, "?");
+            
+        /* Get username from environment */
+        username = _getenv(info, "USER=");
+        if (!username)
+            username = _getenv(info, "USERNAME=");
+        if (!username)
+            username = "user";
+            
+        /* Create status indicator based on previous command success/failure */
+        if (info->status == 0)
+            _strcpy(status_indicator, "✓");  /* Success */
+        else
+            _strcpy(status_indicator, "✗");  /* Failure */
+            
+        /* Format the prompt with the collected information */
+        _snprintf(prompt_buffer, sizeof(prompt_buffer), 
+                 "[%s %s] %s %s > ", 
+                 username, cwd, status_indicator, prompt_base);
+        
         /* Check if we're using Arabic */
-        if (get_language() == 1) /* LANG_AR */
+        if (get_language() == LANG_AR)
         {
             /* Force text direction to RTL */
             set_text_direction(1);
@@ -206,7 +232,7 @@ void print_prompt_utf8(info_t *info)
             #endif
             
             /* Write the actual prompt content */
-            _puts_utf8((char *)prompt);
+            _puts_utf8(prompt_buffer);
             
             /* Add finishing RTL controls to maintain direction */
             write(STDOUT_FILENO, "\xE2\x80\x8F", 3);   /* Another RTL mark to reinforce direction */
@@ -226,11 +252,41 @@ void print_prompt_utf8(info_t *info)
             
             #ifdef WINDOWS
             /* Add highlighting for visibility */
-            write(STDOUT_FILENO, "\033[1;32m", 7);     /* Make prompt visible with green color */
+            write(STDOUT_FILENO, "\033[1;32m", 7);     /* Username in green */
             #endif
             
-            /* Write the prompt */
-            _puts((char *)prompt);
+            /* Write the prompt with color formatting */
+            write(STDOUT_FILENO, "[", 1);
+            
+            #ifdef WINDOWS
+            write(STDOUT_FILENO, "\033[1;32m", 7);     /* Username in green */
+            #endif
+            write(STDOUT_FILENO, username, _strlen(username));
+            
+            #ifdef WINDOWS
+            write(STDOUT_FILENO, "\033[1;34m", 7);     /* Directory in blue */
+            #endif
+            write(STDOUT_FILENO, " ", 1);
+            write(STDOUT_FILENO, cwd, _strlen(cwd));
+            write(STDOUT_FILENO, "] ", 2);
+            
+            #ifdef WINDOWS
+            /* Status indicator with color based on success/failure */
+            if (info->status == 0)
+                write(STDOUT_FILENO, "\033[1;32m", 7); /* Success in green */
+            else
+                write(STDOUT_FILENO, "\033[1;31m", 7); /* Failure in red */
+            #endif
+            
+            write(STDOUT_FILENO, status_indicator, _strlen(status_indicator));
+            write(STDOUT_FILENO, " ", 1);
+            
+            #ifdef WINDOWS
+            write(STDOUT_FILENO, "\033[1;35m", 7);     /* Prompt base in magenta */
+            #endif
+            
+            write(STDOUT_FILENO, prompt_base, _strlen(prompt_base));
+            write(STDOUT_FILENO, " > ", 3);
             
             #ifdef WINDOWS
             /* Reset color formatting */

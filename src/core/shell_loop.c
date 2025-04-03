@@ -15,12 +15,23 @@ int hsh(info_t *info, char **av)
     {
         clear_info(info);
         if (interactive(info))
+        {
+            /* Use modern enhanced prompt instead of simple prompt */
             print_prompt_utf8(info);
+        }
         _eputchar(BUF_FLUSH);
         r = get_input(info);
         if (r != -1)
         {
             set_info(info, av);
+            
+            /* Display the command with syntax highlighting for better readability */
+            if (interactive(info) && info->arg && *(info->arg))
+            {
+                write(STDOUT_FILENO, "\r", 1); /* Move cursor to start of line */
+                print_highlighted_input(info->arg);
+            }
+            
             builtin_ret = find_builtin(info);
             if (builtin_ret == -1)
                 find_cmd(info);
@@ -66,6 +77,9 @@ int find_builtin(info_t *info)
         {"test", _mytest},
         {"layout", _mylayout},
         {"config", _myconfig},
+        {"clear", _myclear},
+        {"pwd", _mypwd},
+        {"ls", _myls},
         {NULL, NULL}};
 
     for (i = 0; builtintbl[i].type; i++)

@@ -78,127 +78,159 @@ int _mycd(info_t *info)
 }
 
 /**
- * _myhelp - displays help information
- * @info: Structure containing potential arguments. Used to maintain
- *          constant function prototype.
- *  Return: Always 0
+ * _myhelp - displays help information for shell built-in commands
+ * @info: Structure containing potential arguments
+ * Return: Always 0
  */
 int _myhelp(info_t *info)
 {
     char **arg_array;
+    int i = 0;
 
     arg_array = info->argv;
-    if (info->argc == 1)
+    
+    /* If no specific help topic, show general help */
+    if (!arg_array[1])
     {
-        _puts("Help menu - type 'help' followed by a command for more info.\n");
-        _puts("  cd       - Change directory\n");
+        _puts("ArbSh shell - Help\n");
+        _puts("Type 'help <command>' for detailed information on a specific command.\n\n");
+        
+        _puts("Built-in commands:\n");
+        _puts("  alias    - Define or display aliases\n");
+        _puts("  cd       - Change the current directory\n");
+        _puts("  clear    - Clear the terminal screen\n");
+        _puts("  config   - Configure shell settings\n");
+        _puts("  env      - Display environment variables\n");
         _puts("  exit     - Exit the shell\n");
-        _puts("  env      - Show environment variables\n");
-        _puts("  setenv   - Set environment variable\n");
-        _puts("  unsetenv - Remove environment variable\n");
-        _puts("  help     - Display help information\n");
-        _puts("  history  - Show command history\n");
-        _puts("  alias    - Manage command aliases\n");
-        _puts("  lang     - Change shell language\n");
-        _puts("  layout   - Change keyboard layout\n");
-        _puts("  config   - Manage shell configuration\n");
-        _puts("  test     - Test UTF-8 and Arabic support\n");
+        _puts("  help     - Display this help information\n");
+        _puts("  history  - Display command history\n");
+        _puts("  lang     - Change or display the current language (en/ar)\n");
+        _puts("  layout   - Change or display the current keyboard layout\n");
+        _puts("  ls       - List directory contents\n");
+        _puts("  pwd      - Print working directory\n");
+        _puts("  setenv   - Set an environment variable\n");
+        _puts("  test     - Test command for debugging purposes\n");
+        _puts("  unsetenv - Unset an environment variable\n");
+        
+        _puts("\nArabic support features:\n");
+        _puts("  - Arabic text display with proper bidirectional rendering\n");
+        _puts("  - Arabic keyboard input support (use 'layout' command)\n");
+        _puts("  - Right-to-left text alignment\n");
+        _puts("  - Enhanced prompt with colors and symbols\n");
+        
         return (0);
     }
-    if (_strcmp(arg_array[1], "cd") == 0)
+
+    /* Help for specific commands */
+    if (_strcmp(arg_array[1], "alias") == 0)
     {
-        _puts("cd: cd [DIRECTORY]\n");
-        _puts("    Change the current directory to DIRECTORY.\n");
-        _puts("    If no argument is given, changes to HOME directory.\n");
+        _puts("alias: alias [name[=value] ...]\n");
+        _puts("    Define or display aliases.\n");
+        _puts("    Options:\n");
+        _puts("      -s    Save aliases to file\n");
+        _puts("      -l    Load aliases from file\n");
+        _puts("    With no arguments, 'alias' prints the list of aliases.\n");
+        _puts("    With name=value arguments, sets each name to the value.\n");
+    }
+    else if (_strcmp(arg_array[1], "cd") == 0)
+    {
+        _puts("cd: cd [directory]\n");
+        _puts("    Change the current directory to the specified directory.\n");
+        _puts("    If no directory is specified, change to the HOME directory.\n");
         _puts("    'cd -' changes to the previous directory.\n");
     }
-    else if (_strcmp(arg_array[1], "exit") == 0)
+    else if (_strcmp(arg_array[1], "clear") == 0)
     {
-        _puts("exit: exit [STATUS]\n");
-        _puts("    Exit the shell with a status of STATUS.\n");
-        _puts("    If no status is given, the exit status is that of the last command.\n");
+        _puts("clear: clear\n");
+        _puts("    Clear the terminal screen.\n");
+    }
+    else if (_strcmp(arg_array[1], "config") == 0)
+    {
+        _puts("config: config [option] [value]\n");
+        _puts("    Configure shell settings.\n");
+        _puts("    Without arguments, displays current configuration.\n");
+        _puts("    Options:\n");
+        _puts("      history_file=PATH - Set the path to the history file\n");
+        _puts("      prompt=STRING    - Set the prompt string\n");
     }
     else if (_strcmp(arg_array[1], "env") == 0)
     {
         _puts("env: env\n");
-        _puts("    Print the current environment variables.\n");
+        _puts("    Display all environment variables.\n");
     }
-    else if (_strcmp(arg_array[1], "setenv") == 0)
+    else if (_strcmp(arg_array[1], "exit") == 0)
     {
-        _puts("setenv: setenv VARIABLE VALUE\n");
-        _puts("    Set environment variable VARIABLE to VALUE.\n");
-        _puts("    If the variable exists, the VALUE will be updated.\n");
-    }
-    else if (_strcmp(arg_array[1], "unsetenv") == 0)
-    {
-        _puts("unsetenv: unsetenv VARIABLE\n");
-        _puts("    Remove environment variable VARIABLE.\n");
+        _puts("exit: exit [status]\n");
+        _puts("    Exit the shell with a status of N.\n");
+        _puts("    If N is omitted, the exit status is that of the last command.\n");
     }
     else if (_strcmp(arg_array[1], "help") == 0)
     {
-        _puts("help: help [COMMAND]\n");
-        _puts("    Display information about builtin commands.\n");
+        _puts("help: help [command]\n");
+        _puts("    Display information about built-in commands.\n");
         _puts("    If COMMAND is specified, gives detailed help on that command.\n");
-        _puts("    Otherwise, a list of commands is displayed.\n");
+        _puts("    Otherwise, it lists the available commands.\n");
     }
     else if (_strcmp(arg_array[1], "history") == 0)
     {
         _puts("history: history\n");
         _puts("    Display the command history list with line numbers.\n");
     }
-    else if (_strcmp(arg_array[1], "alias") == 0)
-    {
-        _puts("alias: alias [name[='value'] ...] [-s] [-l]\n");
-        _puts("    Define or display aliases.\n");
-        _puts("    Without arguments, prints a list of all aliases.\n");
-        _puts("    Otherwise, defines an alias for each name with an assigned value.\n");
-        _puts("    Options:\n");
-        _puts("      -s        Save all current aliases to ~/.arbsh_aliases file\n");
-        _puts("      -l        Load aliases from ~/.arbsh_aliases file\n");
-        _puts("    Example: alias ls='ls -la'\n");
-    }
     else if (_strcmp(arg_array[1], "lang") == 0)
     {
-        _puts("lang: lang [LANGUAGE]\n");
-        _puts("    Change the shell language or display current language.\n");
+        _puts("lang: lang [en|ar]\n");
+        _puts("    Change or display the current language.\n");
         _puts("    Without arguments, displays the current language.\n");
-        _puts("    Supported languages: en (English), ar (Arabic)\n");
-        _puts("    Example: lang ar\n");
-    }
-    else if (_strcmp(arg_array[1], "test") == 0)
-    {
-        _puts("test: test\n");
-        _puts("    Test UTF-8 and Arabic support in the shell.\n");
-        _puts("    Displays various test patterns including ASCII, UTF-8,\n");
-        _puts("    Arabic text, mixed text direction, and Arabic numbers.\n");
+        _puts("    Options:\n");
+        _puts("      en - Set language to English\n");
+        _puts("      ar - Set language to Arabic\n");
     }
     else if (_strcmp(arg_array[1], "layout") == 0)
     {
-        _puts("layout: layout [OPTION]\n");
-        _puts("    Change keyboard layout or display current layout.\n");
-        _puts("    Without arguments, displays the current keyboard layout.\n");
+        _puts("layout: layout [en|ar]\n");
+        _puts("    Change or display the current keyboard layout.\n");
+        _puts("    Without arguments, displays the current layout.\n");
         _puts("    Options:\n");
-        _puts("      ar, arabic   - Switch to Arabic keyboard layout\n");
-        _puts("      en, english  - Switch to English keyboard layout\n");
-        _puts("      toggle       - Toggle between Arabic and English layouts\n");
-        _puts("    Shortcut: Ctrl+A to toggle between layouts\n");
+        _puts("      en - Set keyboard layout to English\n");
+        _puts("      ar - Set keyboard layout to Arabic\n");
     }
-    else if (_strcmp(arg_array[1], "config") == 0)
+    else if (_strcmp(arg_array[1], "ls") == 0)
     {
-        _puts("config: config [OPTION]\n");
-        _puts("    Manage shell configuration.\n");
-        _puts("    Without arguments, displays help for the config command.\n");
+        _puts("ls: ls [-a] [-l] [directory]\n");
+        _puts("    List directory contents.\n");
         _puts("    Options:\n");
-        _puts("      init       - Create a default configuration file\n");
-        _puts("      path       - Show the configuration file path\n");
-        _puts("    Configuration file locations:\n");
-        _puts("      Windows:   %APPDATA%\\ArbSh\\config.ini\n");
-        _puts("      Unix-like: ~/.arbshrc\n");
+        _puts("      -a    Do not hide entries starting with .\n");
+        _puts("      -l    Use a long listing format\n");
+    }
+    else if (_strcmp(arg_array[1], "pwd") == 0)
+    {
+        _puts("pwd: pwd\n");
+        _puts("    Print the current working directory.\n");
+    }
+    else if (_strcmp(arg_array[1], "setenv") == 0)
+    {
+        _puts("setenv: setenv VARIABLE VALUE\n");
+        _puts("    Set environment variable VARIABLE to VALUE.\n");
+        _puts("    If the variable exists, its value is updated.\n");
+    }
+    else if (_strcmp(arg_array[1], "test") == 0)
+    {
+        _puts("test: test [option]\n");
+        _puts("    Run test commands for debugging purposes.\n");
+        _puts("    Options vary depending on the current implementation.\n");
+    }
+    else if (_strcmp(arg_array[1], "unsetenv") == 0)
+    {
+        _puts("unsetenv: unsetenv VARIABLE\n");
+        _puts("    Remove environment variable VARIABLE.\n");
     }
     else
     {
-        _puts("No help available for this command.\n");
+        _puts("No help available for ");
+        _puts(arg_array[1]);
+        _puts("\n");
     }
+
     return (0);
 }
 

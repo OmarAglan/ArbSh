@@ -33,6 +33,7 @@ file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
     "src/utils/string1.c"
     "src/utils/utf8.c"
     "src/utils/utf8_output.c"
+    "src/utils/highlight/highlight.c"  # Add our new highlighting module
 )
 # Explicitly add shell_entry.c if not caught by glob
 # list(APPEND CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/core/shell_entry.c") # Already covered by src/core/*.c

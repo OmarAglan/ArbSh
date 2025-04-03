@@ -260,18 +260,24 @@ int _myhelp(info_t *);
 /* toem_builtin1.c */
 int _myhistory(info_t *);
 int _myalias(info_t *);
-int _mylang(info_t *);   /* New language command */
-int _mytest(info_t *);   /* Test command for UTF-8 and Arabic */
-int _mylayout(info_t *); /* Keyboard layout command */
-int load_aliases(info_t *);  /* Load aliases from file */
-int save_aliases(info_t *);  /* Save aliases to file */
-char *get_alias_file(info_t *);  /* Get alias file path */
-int set_alias(info_t *, char *);  /* Set alias from string */
-int unset_alias(info_t *, char *);  /* Unset alias */
+int _mylang(info_t *);
+int _mylayout(info_t *);
+int _mytest(info_t *);
+int _myconfig(info_t *);
+int _myclear(info_t *);
+int _mypwd(info_t *);
+int _myls(info_t *);
 
 /* toem_config.c */
 int _myconfig(info_t *); /* Configuration management command */
 void load_configuration(info_t *); /* Load settings from config file */
+
+/* Alias management functions */
+int set_alias(info_t *, char *);
+int unset_alias(info_t *, char *);
+int load_aliases(info_t *);
+int save_aliases(info_t *);
+char *get_alias_file(info_t *);
 
 /*toem_getline.c */
 ssize_t get_input(info_t *);
@@ -322,6 +328,13 @@ void check_chain(info_t *, char *, size_t *, size_t, size_t);
 int replace_alias(info_t *);
 int replace_vars(info_t *);
 int replace_string(char **, char *);
+
+/* Command highlighting and advanced input functions */
+char *highlight_command(const char *input);
+void print_highlighted_input(char *input);
+int is_command(const char *cmd);
+int is_builtin(const char *cmd);
+char *get_highlighted_prompt(info_t *info);
 
 /* UTF-8 and bidirectional text functions */
 int get_utf8_char_length(char first_byte);

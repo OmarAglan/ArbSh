@@ -8,9 +8,39 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <dirent.h>
+#include <time.h>
 #endif
 
 /* _mylayout function is now defined in arabic_input.c */
+
+/**
+ * is_executable_file - Checks if a file has an executable extension (Windows)
+ * @filename: The filename to check
+ * Return: 1 if executable, 0 otherwise
+ */
+int is_executable_file(const char *filename)
+{
+    const char *extension = strrchr(filename, '.');
+    if (!extension)
+        return 0;
+    
+    /* Convert to lowercase for case-insensitive comparison */
+    char ext_lower[10] = {0};
+    int i;
+    for (i = 0; extension[i] && i < 9; i++)
+        ext_lower[i] = (extension[i] >= 'A' && extension[i] <= 'Z') ? 
+                       extension[i] + 32 : extension[i];
+    
+    /* Check for common executable extensions */
+    return (strcmp(ext_lower, ".exe") == 0 ||
+            strcmp(ext_lower, ".bat") == 0 ||
+            strcmp(ext_lower, ".cmd") == 0 ||
+            strcmp(ext_lower, ".com") == 0 ||
+            strcmp(ext_lower, ".ps1") == 0 ||
+            strcmp(ext_lower, ".vbs") == 0 ||
+            strcmp(ext_lower, ".msi") == 0);
+}
 
 /**
  * get_alias_file - gets the alias file path
@@ -239,5 +269,265 @@ int _myalias(info_t *info)
             print_alias(node_starts_with(info->alias, info->argv[i], '='));
     }
 
+    return (0);
+}
+
+/**
+ * _myclear - clears the terminal screen
+ * @info: Structure containing potential arguments
+ * Return: Always 0
+ */
+int _myclear(info_t *info)
+{
+    /* Unused parameter */
+    (void)info;
+    
+#ifdef WINDOWS
+    /* Windows-specific clear screen using ANSI escape codes */
+    _puts("\033[2J\033[H");
+#else
+    /* UNIX clear screen using ANSI escape codes */
+    _puts("\033[2J\033[H");
+#endif
+    return (0);
+}
+
+/**
+ * _mypwd - prints the current working directory
+ * @info: Structure containing potential arguments
+ * Return: Always 0
+ */
+int _mypwd(info_t *info)
+{
+    char cwd[1024];
+    char *pwd_str;
+    
+    /* Unused parameter */
+    (void)info;
+    
+    /* First try getcwd */
+    if (getcwd(cwd, sizeof(cwd)) != NULL)
+    {
+        _puts(cwd);
+        _putchar('\n');
+        return (0);
+    }
+    
+    /* If getcwd fails, try getting PWD from environment */
+    pwd_str = _getenv(info, "PWD=");
+    if (pwd_str)
+    {
+        _puts(pwd_str);
+        _putchar('\n');
+        return (0);
+    }
+    
+    /* If both methods fail */
+    _puts("Error: Could not determine current working directory\n");
+    return (1);
+}
+
+/**
+ * _myls - simple implementation of ls command
+ * @info: Structure containing potential arguments
+ * Return: 0 on success, 1 on error
+ */
+int _myls(info_t *info)
+{
+    char *dir_path = ".";
+    int show_hidden = 0;
+    int long_format = 0;
+    int i;
+    
+    /* Parse arguments */
+    for (i = 1; i < info->argc; i++)
+    {
+        if (info->argv[i][0] == '-')
+        {
+            int j = 1;
+            while (info->argv[i][j] != '\0')
+            {
+                if (info->argv[i][j] == 'a')
+                    show_hidden = 1;
+                else if (info->argv[i][j] == 'l')
+                    long_format = 1;
+                j++;
+            }
+        }
+        else
+        {
+            /* Non-flag argument is treated as directory path */
+            dir_path = info->argv[i];
+        }
+    }
+    
+#ifdef WINDOWS
+    /* Windows implementation using FindFirstFile/FindNextFile */
+    WIN32_FIND_DATA find_data;
+    HANDLE find_handle;
+    char search_path[1024];
+    SYSTEMTIME system_time;
+    FILETIME local_file_time;
+    
+    /* Create search path pattern */
+    snprintf(search_path, sizeof(search_path), "%s\\*", dir_path);
+    
+    /* Start file enumeration */
+    find_handle = FindFirstFile(search_path, &find_data);
+    if (find_handle == INVALID_HANDLE_VALUE)
+    {
+        _puts("Cannot access directory: ");
+        _puts(dir_path);
+        _putchar('\n');
+        return (1);
+    }
+    
+    do
+    {
+        /* Skip hidden files if not showing hidden */
+        if (!show_hidden && find_data.cFileName[0] == '.')
+            continue;
+        
+        if (long_format)
+        {
+            /* Print file type */
+            if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                _puts("d");
+            else
+                _puts("-");
+            
+            /* Print attributes (simplified) */
+            _puts((find_data.dwFileAttributes & FILE_ATTRIBUTE_READONLY) ? "r-" : "rw");
+            _puts((find_data.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) ? "s " : "- ");
+            
+            /* Convert file time to local time and format */
+            FileTimeToLocalFileTime(&(find_data.ftLastWriteTime), &local_file_time);
+            FileTimeToSystemTime(&local_file_time, &system_time);
+            
+            /* Print size */
+            char size_str[32];
+            ULARGE_INTEGER file_size;
+            file_size.LowPart = find_data.nFileSizeLow;
+            file_size.HighPart = find_data.nFileSizeHigh;
+            snprintf(size_str, sizeof(size_str), "%12llu ", file_size.QuadPart);
+            _puts(size_str);
+            
+            /* Print date/time (basic format) */
+            char time_str[64];
+            snprintf(time_str, sizeof(time_str), "%02d-%02d-%04d %02d:%02d ",
+                    system_time.wMonth, system_time.wDay, system_time.wYear,
+                    system_time.wHour, system_time.wMinute);
+            _puts(time_str);
+        }
+        
+        /* Print file name with color coding */
+        if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        {
+            /* Directory - blue */
+            _puts("\033[1;34m");
+            _puts(find_data.cFileName);
+            _puts("\033[0m");
+        }
+        else if (is_executable_file(find_data.cFileName))
+        {
+            /* Executable - green */
+            _puts("\033[1;32m");
+            _puts(find_data.cFileName);
+            _puts("\033[0m");
+        }
+        else
+        {
+            /* Regular file - normal color */
+            _puts(find_data.cFileName);
+        }
+        _putchar('\n');
+        
+    } while (FindNextFile(find_handle, &find_data));
+    
+    FindClose(find_handle);
+#else
+    /* UNIX implementation using opendir/readdir */
+    DIR *dir;
+    struct dirent *entry;
+    struct stat file_stat;
+    char file_path[1024];
+    
+    dir = opendir(dir_path);
+    if (!dir)
+    {
+        _puts("Cannot access directory: ");
+        _puts(dir_path);
+        _putchar('\n');
+        return (1);
+    }
+    
+    while ((entry = readdir(dir)) != NULL)
+    {
+        /* Skip hidden files if not showing hidden */
+        if (!show_hidden && entry->d_name[0] == '.')
+            continue;
+        
+        /* Construct full file path for stat */
+        snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, entry->d_name);
+        
+        /* Get file status */
+        if (stat(file_path, &file_stat) < 0) 
+            continue;  /* Skip files we can't stat */
+        
+        if (long_format)
+        {
+            /* Print file type */
+            _puts(S_ISDIR(file_stat.st_mode) ? "d" : "-");
+            
+            /* Print permissions */
+            _puts(file_stat.st_mode & S_IRUSR ? "r" : "-");
+            _puts(file_stat.st_mode & S_IWUSR ? "w" : "-");
+            _puts(file_stat.st_mode & S_IXUSR ? "x" : "-");
+            _puts(file_stat.st_mode & S_IRGRP ? "r" : "-");
+            _puts(file_stat.st_mode & S_IWGRP ? "w" : "-");
+            _puts(file_stat.st_mode & S_IXGRP ? "x" : "-");
+            _puts(file_stat.st_mode & S_IROTH ? "r" : "-");
+            _puts(file_stat.st_mode & S_IWOTH ? "w" : "-");
+            _puts(file_stat.st_mode & S_IXOTH ? "x" : "-");
+            _puts(" ");
+            
+            /* Print size */
+            char size_str[32];
+            snprintf(size_str, sizeof(size_str), "%8lld ", (long long)file_stat.st_size);
+            _puts(size_str);
+            
+            /* Print date (basic format) */
+            char time_str[64];
+            struct tm *tm_info = localtime(&file_stat.st_mtime);
+            strftime(time_str, sizeof(time_str), "%b %d %H:%M ", tm_info);
+            _puts(time_str);
+        }
+        
+        /* Print file name with color coding based on file type from stat() */
+        if (S_ISDIR(file_stat.st_mode))
+        {
+            /* Directory - blue */
+            _puts("\033[1;34m");
+            _puts(entry->d_name);
+            _puts("\033[0m");
+        }
+        else if (S_ISREG(file_stat.st_mode) && (file_stat.st_mode & S_IXUSR))
+        {
+            /* Executable - green */
+            _puts("\033[1;32m");
+            _puts(entry->d_name);
+            _puts("\033[0m");
+        }
+        else
+        {
+            /* Regular file - normal color */
+            _puts(entry->d_name);
+        }
+        _putchar('\n');
+    }
+    
+    closedir(dir);
+#endif
+    
     return (0);
 }
