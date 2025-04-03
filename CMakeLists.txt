@@ -16,9 +16,8 @@ option(GUI_MODE "Build with GUI support using ImGui" OFF) # Default to ON if tha
 # Option for enabling tests
 option(ENABLE_TESTS "Build the test suite" OFF)
 
-# --- Define Core C Source Files ---
-# Explicitly list all source files for better build system reliability
-set(CORE_SOURCES
+# --- Define Source File Lists for Libraries ---
+set(ARBSH_CORE_SOURCES
     # Core shell logic
     src/core/builtin.c
     src/core/builtin1.c
@@ -36,12 +35,16 @@ set(CORE_SOURCES
     src/core/shell_loop.c
     src/core/tokenizer.c
     src/core/vars.c
+)
 
+set(ARBSH_I18N_SOURCES
     # Internationalization (i18n)
     src/i18n/arabic_input.c
     src/i18n/bidi/bidi.c
     src/i18n/locale/locale.c
+)
 
+set(ARBSH_UTILS_SOURCES
     # Utilities
     src/utils/imgui_compat.c
     src/utils/lists.c
@@ -54,13 +57,27 @@ set(CORE_SOURCES
     src/utils/utf8_output.c
     src/utils/highlight/highlight.c
 )
-# ---------------------------------------------------------------------------
+# ------------------------------------------------
+
+# --- Define Libraries ---
+add_library(arbsh_utils STATIC ${ARBSH_UTILS_SOURCES})
+target_include_directories(arbsh_utils PUBLIC include)
+
+add_library(arbsh_i18n STATIC ${ARBSH_I18N_SOURCES})
+target_include_directories(arbsh_i18n PUBLIC include)
+target_link_libraries(arbsh_i18n PRIVATE arbsh_utils) # i18n uses utils
+
+add_library(arbsh_core STATIC ${ARBSH_CORE_SOURCES})
+target_include_directories(arbsh_core PUBLIC include)
+target_link_libraries(arbsh_core PRIVATE arbsh_i18n arbsh_utils) # core uses i18n and utils
+
+# ------------------------------------------------
 
 # Exclude old entry points if they exist and were caught by glob
-list(FILTER CORE_SOURCES EXCLUDE REGEX ".*main\\.c$")
-list(FILTER CORE_SOURCES EXCLUDE REGEX ".*main_gui\\.c$")
-list(FILTER CORE_SOURCES EXCLUDE REGEX ".*win_main\\.c$")
-list(FILTER CORE_SOURCES EXCLUDE REGEX ".*win_gui_common\\.c$")
+list(FILTER ARBSH_CORE_SOURCES EXCLUDE REGEX ".*main\\.c$")
+list(FILTER ARBSH_CORE_SOURCES EXCLUDE REGEX ".*main_gui\\.c$")
+list(FILTER ARBSH_CORE_SOURCES EXCLUDE REGEX ".*win_main\\.c$")
+list(FILTER ARBSH_CORE_SOURCES EXCLUDE REGEX ".*win_gui_common\\.c$")
 # ---------------------------------------------------------------------------
 
 # --- Define ImGui Source Files ---
@@ -108,7 +125,7 @@ if(WIN32 AND GUI_MODE)
     # Combine all sources needed for GUI mode
     # Core C files + Platform C files + ImGui C++ files + GUI Specific C/C++ files
     set(GUI_ALL_SOURCES
-        ${CORE_SOURCES}
+        ${ARBSH_CORE_SOURCES}
         ${PLATFORM_SOURCES}
         ${IMGUI_SOURCES}
         ${GUI_SPECIFIC_SOURCES}
@@ -128,12 +145,12 @@ if(WIN32 AND GUI_MODE)
     )
 
     # Link libraries for GUI
-    target_link_libraries(hsh PRIVATE d3d11 dxgi d3dcompiler dwmapi shell32 user32 gdi32 kernel32 ws2_32) # Added ws2_32
+    target_link_libraries(hsh PRIVATE arbsh_core arbsh_i18n arbsh_utils d3d11 dxgi d3dcompiler dwmapi shell32 user32 gdi32 kernel32 ws2_32) # Added ws2_32
 
 else()
     # --- Console Application Configuration ---
     # Combine sources needed for Console mode
-    set(CONSOLE_SOURCES ${CORE_SOURCES} ${PLATFORM_SOURCES})
+    set(CONSOLE_SOURCES ${ARBSH_CORE_SOURCES} ${PLATFORM_SOURCES})
     add_executable(hsh ${CONSOLE_SOURCES})
 
     # Include directories for Console
@@ -251,7 +268,7 @@ if(ENABLE_TESTS)
         target_include_directories(test_imgui PRIVATE ${TEST_COMMON_INCLUDE_DIRS} ${IMGUI_DIR} ${IMGUI_DIR}/backends)
         target_compile_definitions(test_imgui PRIVATE WINDOWS _CRT_SECURE_NO_WARNINGS USE_IMGUI GUI_MODE) # Define GUI mode for test too
         # Link libraries needed by ImGui test
-        target_link_libraries(test_imgui PRIVATE d3d11 dxgi d3dcompiler dwmapi user32 gdi32)
+        target_link_libraries(test_imgui PRIVATE arbsh_utils arbsh_i18n d3d11 dxgi d3dcompiler dwmapi user32 gdi32)
         add_test(NAME ImGuiTest COMMAND test_imgui)
     endif()
 
