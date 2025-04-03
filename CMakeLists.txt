@@ -67,9 +67,26 @@ add_library(arbsh_i18n STATIC ${ARBSH_I18N_SOURCES})
 target_include_directories(arbsh_i18n PUBLIC include)
 target_link_libraries(arbsh_i18n PRIVATE arbsh_utils) # i18n uses utils
 
+# Define Platform Abstraction Library (PAL)
+add_library(arbsh_platform STATIC) # Start as INTERFACE, add sources below
+target_include_directories(arbsh_platform INTERFACE include)
+
+if(WIN32)
+    target_sources(arbsh_platform INTERFACE PRIVATE src/platform/windows/process.c)
+    # Add other windows platform files here as they are created
+    # target_link_libraries(arbsh_platform INTERFACE ws2_32 ...) # Link platform libs needed by windows implementation
+elseif(UNIX)
+    target_sources(arbsh_platform INTERFACE src/platform/posix/process.c)
+    # Add other posix platform files here
+    # target_link_libraries(arbsh_platform INTERFACE pthread dl ...) # Link platform libs needed by posix implementation
+else()
+    message(FATAL_ERROR "Unsupported platform for ArbSh PAL")
+endif()
+
 add_library(arbsh_core STATIC ${ARBSH_CORE_SOURCES})
 target_include_directories(arbsh_core PUBLIC include)
-target_link_libraries(arbsh_core PRIVATE arbsh_i18n arbsh_utils) # core uses i18n and utils
+# Core library now depends on the platform abstraction
+target_link_libraries(arbsh_core PRIVATE arbsh_i18n arbsh_utils arbsh_platform)
 
 # ------------------------------------------------
 
@@ -98,69 +115,64 @@ set(IMGUI_SOURCES
 set(GUI_SPECIFIC_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/imgui_shell.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/imgui_main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/process_manager.c" # Needed by terminal_tab.c
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/terminal_tab.c"       # Needed by imgui_shell.cpp
+    # "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/process_manager.c" # This is platform-specific now
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/terminal_tab.c"
 )
 # ------------------------------------
 
-# --- Define Platform Specific Sources ---
-set(PLATFORM_SOURCES "")
+# --- Platform Specific Sources for Executable ---
+# We still need the resource file for Windows builds
+set(PLATFORM_EXE_SOURCES "")
 if(WIN32)
-    # Use GLOB for platform-specific C files if desired
-    file(GLOB PLATFORM_WIN_SOURCES CONFIGURE_DEPENDS "src/platform/windows/*.c")
-    list(APPEND PLATFORM_SOURCES ${PLATFORM_WIN_SOURCES})
-
-    # Add Windows resource file if it exists
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/shell.rc")
-        list(APPEND PLATFORM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/shell.rc")
+        list(APPEND PLATFORM_EXE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/shell.rc")
     endif()
-# elseif(UNIX) # Example for Unix-like systems
-    # file(GLOB PLATFORM_UNIX_SOURCES CONFIGURE_DEPENDS "src/platform/unix/*.c")
-    # list(APPEND PLATFORM_SOURCES ${PLATFORM_UNIX_SOURCES})
+    # If process_manager.c is ONLY used by GUI, add it here conditionally
+    if(GUI_MODE)
+        list(APPEND PLATFORM_EXE_SOURCES "src/platform/process_manager.c")
+    endif()
+# elseif(UNIX)
+    # No extra sources needed for console executable usually
 endif()
 # ------------------------------------------------------------
 
 # --- Configure Executable Based on Mode ---
 if(WIN32 AND GUI_MODE)
-    # Combine all sources needed for GUI mode
-    # Core C files + Platform C files + ImGui C++ files + GUI Specific C/C++ files
-    set(GUI_ALL_SOURCES
-        ${ARBSH_CORE_SOURCES}
-        ${PLATFORM_SOURCES}
-        ${IMGUI_SOURCES}
+    add_executable(hsh WIN32
         ${GUI_SPECIFIC_SOURCES}
+        ${IMGUI_SOURCES}
+        ${PLATFORM_EXE_SOURCES} # Add platform sources needed specifically by the EXE
+        src/core/shell_entry.c
     )
-    add_executable(hsh WIN32 ${GUI_ALL_SOURCES}) # Use the combined list
 
-    # Add GUI-related definitions
+    # Link the main libraries, platform libs are handled via arbsh_platform dependency in arbsh_core
+    target_link_libraries(hsh PRIVATE arbsh_core d3d11 dxgi d3dcompiler dwmapi shell32 user32 gdi32 kernel32 ws2_32)
+
     target_compile_definitions(hsh PRIVATE USE_IMGUI GUI_MODE)
 
-    # Include directories for GUI
     target_include_directories(hsh PRIVATE
-        include                     # Core headers (shell.h)
-        ${IMGUI_DIR}                # ImGui headers
-        ${IMGUI_DIR}/backends       # ImGui backend headers
-        src/platform                # For process_manager.h
-        src/gui                     # For terminal_tab.h
+        include
+        ${IMGUI_DIR}
+        ${IMGUI_DIR}/backends
+        # src/platform # Include comes from arbsh_platform
+        src/gui
     )
-
-    # Link libraries for GUI
-    target_link_libraries(hsh PRIVATE arbsh_core arbsh_i18n arbsh_utils d3d11 dxgi d3dcompiler dwmapi shell32 user32 gdi32 kernel32 ws2_32) # Added ws2_32
 
 else()
     # --- Console Application Configuration ---
-    # Combine sources needed for Console mode
-    set(CONSOLE_SOURCES ${ARBSH_CORE_SOURCES} ${PLATFORM_SOURCES})
-    add_executable(hsh ${CONSOLE_SOURCES})
+    add_executable(hsh
+         ${PLATFORM_EXE_SOURCES} # Add platform sources needed specifically by the EXE
+    )
+    # Link the core library (which transitively links utils, i18n, and platform)
+    target_link_libraries(hsh PRIVATE arbsh_core)
 
-    # Include directories for Console
-    target_include_directories(hsh PRIVATE include src/platform) # Adjust as needed
+    target_include_directories(hsh PRIVATE include) # Core includes come via arbsh_core
 
-    # Link libraries for Console (Platform specific)
+    # Platform-specific libraries linked by arbsh_platform or directly if needed by EXE
     if(WIN32)
         target_link_libraries(hsh PRIVATE shell32 user32 gdi32 kernel32 ws2_32)
     # elseif(UNIX)
-        # target_link_libraries(hsh PRIVATE dl pthread) # Example for Unix
+        # target_link_libraries(hsh PRIVATE pthread dl)
     endif()
 
 endif()

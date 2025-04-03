@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "platform/process.h"
 
 /**
  * hsh - main shell loop
@@ -133,88 +134,50 @@ void find_cmd(info_t *info)
 }
 
 /**
- * fork_cmd - forks a an exec thread to run cmd
+ * fork_cmd - Uses the platform abstraction layer to create and wait for a command.
  * @info: the parameter & return info struct
  * Return: void
  */
 void fork_cmd(info_t *info)
 {
-#ifdef WINDOWS
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    char cmdline[1024];
-    int i;
+    platform_process_t *process = NULL;
+    int exit_code;
+    char **env = get_environ_copy(info); // Get current environment copy
 
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
+    // Create the process using the platform abstraction layer
+    // Pass the command path (info->path), arguments (info->argv), and environment (env)
+    process = platform_create_process(info, info->path, info->argv, env);
 
-    // Set GUI environment variable for child process
-    set_gui_env_for_child();
+    // Free the copied environment strings if they were allocated
+    // TODO: Ensure get_environ_copy() contract is clear about ownership
+    // Assuming get_environ_copy allocated memory that needs freeing here.
+    // If it returns a pointer to static or managed memory, this free is wrong.
+    // free_string_array(env); // Hypothetical function to free the env array
 
-    // Build command line string
-    _snprintf(cmdline, sizeof(cmdline), "%s", info->path);
-    for (i = 1; info->argv[i] != NULL; i++)
+    if (!process)
     {
-        _snprintf(cmdline + strlen(cmdline), sizeof(cmdline) - strlen(cmdline),
-                  " %s", info->argv[i]);
-    }
-
-    if (!CreateProcess(NULL,    // No module name (use command line)
-                       cmdline, // Command line
-                       NULL,    // Process handle not inheritable
-                       NULL,    // Thread handle not inheritable
-                       FALSE,   // Set handle inheritance to FALSE
-                       0,       // No creation flags
-                       NULL,    // Use parent's environment block
-                       NULL,    // Use parent's starting directory
-                       &si,     // Pointer to STARTUPINFO structure
-                       &pi))    // Pointer to PROCESS_INFORMATION structure
-    {
-        info->status = GetLastError();
-        print_error(info, "Command failed\n");
+        // Error occurred during process creation (already printed by PAL)
+        // We might want to set a specific info->status here
+        info->status = 127; // Indicate command could not be run
+        // Print a generic error? PAL might have already done it.
+        // print_error(info, "Failed to start command\n");
         return;
     }
 
-    // Wait until child process exits
-    WaitForSingleObject(pi.hProcess, INFINITE);
-    GetExitCodeProcess(pi.hProcess, (LPDWORD) & (info->status));
+    // Wait for the process to complete and get its exit code
+    exit_code = platform_wait_process(process);
 
-    // Close process and thread handles
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-#else
-    pid_t child_pid;
-    int status;
+    // Store the exit status in the info struct
+    info->status = exit_code;
 
-    // Set GUI environment variable for child process
-    set_gui_env_for_child();
+    // Perform platform-specific cleanup (closing handles, etc.)
+    platform_cleanup_process(process);
 
-    child_pid = fork();
-    if (child_pid == -1)
+    // Handle specific exit codes (like permission denied)
+    if (info->status == 126)
     {
-        perror("Error:");
-        return;
+        print_error(info, "Permission denied\n");
     }
-    if (child_pid == 0)
-    {
-        if (execve(info->path, info->argv, get_environ_copy(info)) == -1)
-        {
-            free_info(info, 1);
-            if (errno == EACCES)
-                exit(126);
-            exit(1);
-        }
-    }
-    else
-    {
-        wait(&(info->status));
-        if (WIFEXITED(info->status))
-        {
-            info->status = WEXITSTATUS(info->status);
-            if (info->status == 126)
-                print_error(info, "Permission denied\n");
-        }
-    }
-#endif
+    // The POSIX implementation of wait handles WIFSIGNALED, returning 128 + signal
+    // No need for specific WIFEXITED checks here as PAL handles it.
 }
