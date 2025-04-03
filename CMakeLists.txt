@@ -17,26 +17,44 @@ option(GUI_MODE "Build with GUI support using ImGui" OFF) # Default to ON if tha
 option(ENABLE_TESTS "Build the test suite" OFF)
 
 # --- Define Core C Source Files ---
-# Using GLOB with CONFIGURE_DEPENDS is okay for smaller projects,
-# but explicitly listing files is generally more robust for larger ones.
-file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
-    "src/core/*.c"
-    "src/i18n/arabic_input.c" # Explicitly list i18n files
-    "src/i18n/bidi/bidi.c"
-    "src/i18n/locale/locale.c"
-    "src/utils/imgui_compat.c" # Include compat needed for GUI linking even if defined later
-    "src/utils/lists.c"
-    "src/utils/lists1.c"
-    "src/utils/memory.c"
-    "src/utils/realloc.c"
-    "src/utils/string.c"
-    "src/utils/string1.c"
-    "src/utils/utf8.c"
-    "src/utils/utf8_output.c"
-    "src/utils/highlight/highlight.c"  # Add our new highlighting module
+# Explicitly list all source files for better build system reliability
+set(CORE_SOURCES
+    # Core shell logic
+    src/core/builtin.c
+    src/core/builtin1.c
+    src/core/config.c
+    src/core/environ.c
+    src/core/errors.c
+    src/core/errors1.c
+    src/core/exits.c
+    src/core/getLine.c
+    src/core/getenv.c
+    src/core/getinfo.c
+    src/core/history.c
+    src/core/parser.c
+    src/core/shell_entry.c
+    src/core/shell_loop.c
+    src/core/tokenizer.c
+    src/core/vars.c
+
+    # Internationalization (i18n)
+    src/i18n/arabic_input.c
+    src/i18n/bidi/bidi.c
+    src/i18n/locale/locale.c
+
+    # Utilities
+    src/utils/imgui_compat.c
+    src/utils/lists.c
+    src/utils/lists1.c
+    src/utils/memory.c
+    src/utils/realloc.c
+    src/utils/string.c
+    src/utils/string1.c
+    src/utils/utf8.c
+    src/utils/utf8_output.c
+    src/utils/highlight/highlight.c
 )
-# Explicitly add shell_entry.c if not caught by glob
-# list(APPEND CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/core/shell_entry.c") # Already covered by src/core/*.c
+# ---------------------------------------------------------------------------
 
 # Exclude old entry points if they exist and were caught by glob
 list(FILTER CORE_SOURCES EXCLUDE REGEX ".*main\\.c$")
