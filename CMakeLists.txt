@@ -68,23 +68,29 @@ target_include_directories(arbsh_i18n PUBLIC include)
 target_link_libraries(arbsh_i18n PRIVATE arbsh_utils) # i18n uses utils
 
 # Define Platform Abstraction Library (PAL)
-add_library(arbsh_platform STATIC) # Start as INTERFACE, add sources below
-target_include_directories(arbsh_platform INTERFACE include)
+add_library(arbsh_platform STATIC)
+target_include_directories(arbsh_platform PUBLIC include)
 
 if(WIN32)
-    target_sources(arbsh_platform INTERFACE PRIVATE 
-    src/platform/windows/process.c
-    src/platform/windows/console.c
+    target_sources(arbsh_platform PRIVATE
+        src/platform/windows/process.c
+        src/platform/windows/console.c
+        src/platform/windows/filesystem.c
+        # Add other windows platform source files here
     )
-    # Add other windows platform files here as they are created
-    # target_link_libraries(arbsh_platform INTERFACE ws2_32 ...) # Link platform libs needed by windows implementation
+    # Link system libs needed by windows platform implementation
+    # We need Shell32.lib for SHGetFolderPathW used in filesystem.c
+    target_link_libraries(arbsh_platform PRIVATE shell32)
 elseif(UNIX)
-    target_sources(arbsh_platform INTERFACE 
-    src/platform/posix/process.c
-    src/platform/posix/console.c
+    target_sources(arbsh_platform PRIVATE
+        src/platform/posix/process.c
+        src/platform/posix/console.c
+        src/platform/posix/filesystem.c
+        # Add other posix platform source files here
     )
-    # Add other posix platform files here
-    # target_link_libraries(arbsh_platform INTERFACE pthread dl ...) # Link platform libs needed by posix implementation
+    # Link system libs needed by posix platform implementation
+    # (e.g., -lpthread for threads, -ldl for dynamic linking if used)
+    # target_link_libraries(arbsh_platform PRIVATE pthread dl)
 else()
     message(FATAL_ERROR "Unsupported platform for ArbSh PAL")
 endif()

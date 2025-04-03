@@ -86,9 +86,9 @@ int _putsfd_utf8(char *str, int fd)
  */
 void print_prompt_utf8(info_t *info)
 {
-    char prompt_buffer[512] = {0}; // Increased size
+    char prompt_buffer[512] = {0};
     char *username = NULL;
-    char cwd[1024] = {0}; // Increased size
+    char cwd[1024] = {0};
     char status_indicator[8] = {0};
     const char *prompt_base;
     int is_rtl;
@@ -108,10 +108,9 @@ void print_prompt_utf8(info_t *info)
         return;
     }
 
-    /* Get current working directory */
-    // TODO: Replace getcwd with platform_filesystem_getcwd() when PAL is expanded
-    if (getcwd(cwd, sizeof(cwd)) == NULL)
-        _strcpy(cwd, "?");
+    /* Get current working directory using PAL */
+    if (platform_getcwd(cwd, sizeof(cwd)) == NULL)
+        _strcpy(cwd, "?"); // Use fallback if PAL fails
 
     /* Get username from environment */
     username = _getenv(info, "USER");
@@ -135,7 +134,6 @@ void print_prompt_utf8(info_t *info)
     #define C_PROMPT  "\033[1;35m" // Bold Magenta
 
     // Build the prompt string with ANSI color codes
-    char temp_buf[128];
     _strcat(prompt_buffer, "[");
     _strcat(prompt_buffer, C_USER);
     _strcat(prompt_buffer, username);

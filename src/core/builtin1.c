@@ -1,4 +1,6 @@
 #include "shell.h"
+#include "platform/console.h" // For output
+#include "platform/filesystem.h" // Include Filesystem PAL
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -49,17 +51,18 @@ int is_executable_file(const char *filename)
  */
 char *get_alias_file(info_t *info)
 {
-    char *buf, *dir;
+    char homedir[MAX_PATH]; // Use platform max path?
+    char *buf;
 
-    dir = _getenv(info, "HOME=");
-    if (!dir)
+    if (!platform_get_home_dir(homedir, sizeof(homedir)))
         return (NULL);
-    buf = malloc(sizeof(char) * (_strlen(dir) + 20)); /* Allow space for path + filename */
+
+    buf = malloc(sizeof(char) * (_strlen(homedir) + 20)); // Allow space
     if (!buf)
         return (NULL);
-    buf[0] = 0;
-    _strcpy(buf, dir);
-    _strcat(buf, "/");
+    _strcpy(buf, homedir);
+    // TODO: Use platform-specific path separator
+    _strcat(buf, "/"); // Assumes POSIX separator for now
     _strcat(buf, ".arbsh_aliases");
     return (buf);
 }
@@ -273,62 +276,43 @@ int _myalias(info_t *info)
 }
 
 /**
- * _myclear - clears the terminal screen
+ * _myclear - clears the terminal screen using PAL
  * @info: Structure containing potential arguments
  * Return: Always 0
  */
 int _myclear(info_t *info)
 {
-    /* Unused parameter */
-    (void)info;
-    
-#ifdef WINDOWS
-    /* Windows-specific clear screen using ANSI escape codes */
-    _puts("\033[2J\033[H");
-#else
-    /* UNIX clear screen using ANSI escape codes */
-    _puts("\033[2J\033[H");
-#endif
+    (void)info; // Unused
+    // Use platform write with standard ANSI clear codes
+    platform_console_write(PLATFORM_STDOUT_FILENO, "\033[2J\033[H", 6);
     return (0);
 }
 
 /**
- * _mypwd - prints the current working directory
+ * _mypwd - prints the current working directory using PAL
  * @info: Structure containing potential arguments
- * Return: Always 0
+ * Return: Always 0 on success, 1 on error
  */
 int _mypwd(info_t *info)
 {
     char cwd[1024];
-    char *pwd_str;
-    
-    /* Unused parameter */
-    (void)info;
-    
-    /* First try getcwd */
-    if (getcwd(cwd, sizeof(cwd)) != NULL)
+    (void)info; // Unused
+
+    if (platform_getcwd(cwd, sizeof(cwd)) != NULL)
     {
-        _puts(cwd);
+        _puts(cwd); // _puts uses platform_console_write
         _putchar('\n');
         return (0);
     }
-    
-    /* If getcwd fails, try getting PWD from environment */
-    pwd_str = _getenv(info, "PWD=");
-    if (pwd_str)
+    else
     {
-        _puts(pwd_str);
-        _putchar('\n');
-        return (0);
+        _eputs("pwd: error retrieving current directory\n"); // _eputs uses PAL
+        return (1);
     }
-    
-    /* If both methods fail */
-    _puts("Error: Could not determine current working directory\n");
-    return (1);
 }
 
 /**
- * _myls - simple implementation of ls command
+ * _myls - simple implementation of ls command using PAL stat
  * @info: Structure containing potential arguments
  * Return: 0 on success, 1 on error
  */
@@ -338,9 +322,9 @@ int _myls(info_t *info)
     int show_hidden = 0;
     int long_format = 0;
     int i;
-    
-    /* Parse arguments */
-    for (i = 1; i < info->argc; i++)
+
+    // ... (Argument parsing remains the same) ...
+     for (i = 1; i < info->argc; i++)
     {
         if (info->argv[i][0] == '-')
         {
@@ -356,178 +340,127 @@ int _myls(info_t *info)
         }
         else
         {
-            /* Non-flag argument is treated as directory path */
             dir_path = info->argv[i];
         }
     }
-    
+
 #ifdef WINDOWS
-    /* Windows implementation using FindFirstFile/FindNextFile */
+    // TODO: Abstract directory iteration into the PAL
+    // Keep platform-specific block for now
     WIN32_FIND_DATA find_data;
     HANDLE find_handle;
     char search_path[1024];
-    SYSTEMTIME system_time;
-    FILETIME local_file_time;
-    
-    /* Create search path pattern */
+    char full_path[MAX_PATH]; // For stat
+    platform_stat_t p_stat;
+
     snprintf(search_path, sizeof(search_path), "%s\\*", dir_path);
-    
-    /* Start file enumeration */
     find_handle = FindFirstFile(search_path, &find_data);
-    if (find_handle == INVALID_HANDLE_VALUE)
-    {
-        _puts("Cannot access directory: ");
-        _puts(dir_path);
-        _putchar('\n');
+    if (find_handle == INVALID_HANDLE_VALUE) {
+        _eputs("ls: cannot access "); _eputs(dir_path); _eputs(": No such file or directory\n");
         return (1);
     }
-    
-    do
-    {
-        /* Skip hidden files if not showing hidden */
+
+    do {
         if (!show_hidden && find_data.cFileName[0] == '.')
             continue;
-        
-        if (long_format)
-        {
-            /* Print file type */
-            if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                _puts("d");
-            else
-                _puts("-");
-            
-            /* Print attributes (simplified) */
-            _puts((find_data.dwFileAttributes & FILE_ATTRIBUTE_READONLY) ? "r-" : "rw");
-            _puts((find_data.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) ? "s " : "- ");
-            
-            /* Convert file time to local time and format */
-            FileTimeToLocalFileTime(&(find_data.ftLastWriteTime), &local_file_time);
-            FileTimeToSystemTime(&local_file_time, &system_time);
-            
-            /* Print size */
-            char size_str[32];
-            ULARGE_INTEGER file_size;
-            file_size.LowPart = find_data.nFileSizeLow;
-            file_size.HighPart = find_data.nFileSizeHigh;
-            snprintf(size_str, sizeof(size_str), "%12llu ", file_size.QuadPart);
-            _puts(size_str);
-            
-            /* Print date/time (basic format) */
-            char time_str[64];
-            snprintf(time_str, sizeof(time_str), "%02d-%02d-%04d %02d:%02d ",
-                    system_time.wMonth, system_time.wDay, system_time.wYear,
-                    system_time.wHour, system_time.wMinute);
-            _puts(time_str);
+
+        snprintf(full_path, sizeof(full_path), "%s\\%s", dir_path, find_data.cFileName);
+
+        if (long_format) {
+             if (platform_stat(full_path, &p_stat) == 0) {
+                 // Use p_stat accessors
+                 _puts(platform_stat_is_directory(&p_stat) ? "d" : "-");
+                 // Permissions are tricky on windows, simple placeholder
+                 _puts("rwxrwxrwx "); 
+                 // Size
+                 char size_str[32];
+                 snprintf(size_str, sizeof(size_str), "%10lld ", platform_stat_get_size(&p_stat));
+                 _puts(size_str);
+                 // Time - Needs formatting
+                 time_t mtime = platform_stat_get_mtime(&p_stat);
+                 struct tm *tm_info = localtime(&mtime);
+                 if (tm_info) { 
+                    char time_str[64];
+                    strftime(time_str, sizeof(time_str), "%b %d %H:%M ", tm_info);
+                    _puts(time_str);
+                 } else { _puts("Jan 01 00:00 "); }
+             } else {
+                 _puts("??????????          ?? ??? ?? ??:?? "); // Stat failed
+             }
         }
-        
-        /* Print file name with color coding */
-        if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-        {
-            /* Directory - blue */
-            _puts("\033[1;34m");
-            _puts(find_data.cFileName);
-            _puts("\033[0m");
-        }
-        else if (is_executable_file(find_data.cFileName))
-        {
-            /* Executable - green */
-            _puts("\033[1;32m");
-            _puts(find_data.cFileName);
-            _puts("\033[0m");
-        }
-        else
-        {
-            /* Regular file - normal color */
+
+        // Print file name with color coding using stat info
+        if (platform_stat_is_directory(&p_stat)) {
+            _puts("\033[1;34m"); _puts(find_data.cFileName); _puts("\033[0m");
+        } else if (is_executable_file(find_data.cFileName)) { // Use helper for now
+            _puts("\033[1;32m"); _puts(find_data.cFileName); _puts("\033[0m");
+        } else {
             _puts(find_data.cFileName);
         }
         _putchar('\n');
-        
+
     } while (FindNextFile(find_handle, &find_data));
-    
     FindClose(find_handle);
-#else
-    /* UNIX implementation using opendir/readdir */
+
+#else // POSIX
     DIR *dir;
     struct dirent *entry;
-    struct stat file_stat;
+    platform_stat_t p_stat; // Use PAL stat struct
     char file_path[1024];
-    
+
     dir = opendir(dir_path);
-    if (!dir)
-    {
-        _puts("Cannot access directory: ");
-        _puts(dir_path);
-        _putchar('\n');
+    if (!dir) {
+        _eputs("ls: cannot access "); _eputs(dir_path); _eputs(": No such file or directory\n");
         return (1);
     }
-    
-    while ((entry = readdir(dir)) != NULL)
-    {
-        /* Skip hidden files if not showing hidden */
+
+    while ((entry = readdir(dir)) != NULL) {
         if (!show_hidden && entry->d_name[0] == '.')
             continue;
-        
-        /* Construct full file path for stat */
+
         snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, entry->d_name);
-        
-        /* Get file status */
-        if (stat(file_path, &file_stat) < 0) 
-            continue;  /* Skip files we can't stat */
-        
-        if (long_format)
-        {
-            /* Print file type */
-            _puts(S_ISDIR(file_stat.st_mode) ? "d" : "-");
-            
-            /* Print permissions */
-            _puts(file_stat.st_mode & S_IRUSR ? "r" : "-");
-            _puts(file_stat.st_mode & S_IWUSR ? "w" : "-");
-            _puts(file_stat.st_mode & S_IXUSR ? "x" : "-");
-            _puts(file_stat.st_mode & S_IRGRP ? "r" : "-");
-            _puts(file_stat.st_mode & S_IWGRP ? "w" : "-");
-            _puts(file_stat.st_mode & S_IXGRP ? "x" : "-");
-            _puts(file_stat.st_mode & S_IROTH ? "r" : "-");
-            _puts(file_stat.st_mode & S_IWOTH ? "w" : "-");
-            _puts(file_stat.st_mode & S_IXOTH ? "x" : "-");
+
+        if (platform_stat(file_path, &p_stat) != 0)
+             continue; // Skip files we can't stat
+
+        if (long_format) {
+            _puts(platform_stat_is_directory(&p_stat) ? "d" : "-");
+            // Permissions - slightly simplified for now
+            _puts((p_stat.posix_stat.st_mode & S_IRUSR) ? "r" : "-");
+            _puts((p_stat.posix_stat.st_mode & S_IWUSR) ? "w" : "-");
+            _puts((p_stat.posix_stat.st_mode & S_IXUSR) ? "x" : "-");
+            _puts((p_stat.posix_stat.st_mode & S_IRGRP) ? "r" : "-");
+            _puts((p_stat.posix_stat.st_mode & S_IWGRP) ? "w" : "-");
+            _puts((p_stat.posix_stat.st_mode & S_IXGRP) ? "x" : "-");
+            _puts((p_stat.posix_stat.st_mode & S_IROTH) ? "r" : "-");
+            _puts((p_stat.posix_stat.st_mode & S_IWOTH) ? "w" : "-");
+            _puts((p_stat.posix_stat.st_mode & S_IXOTH) ? "x" : "-");
             _puts(" ");
-            
-            /* Print size */
+            // Size
             char size_str[32];
-            snprintf(size_str, sizeof(size_str), "%8lld ", (long long)file_stat.st_size);
+            snprintf(size_str, sizeof(size_str), "%10lld ", platform_stat_get_size(&p_stat));
             _puts(size_str);
-            
-            /* Print date (basic format) */
-            char time_str[64];
-            struct tm *tm_info = localtime(&file_stat.st_mtime);
-            strftime(time_str, sizeof(time_str), "%b %d %H:%M ", tm_info);
-            _puts(time_str);
+            // Time
+            time_t mtime = platform_stat_get_mtime(&p_stat);
+            struct tm *tm_info = localtime(&mtime);
+             if (tm_info) { 
+                char time_str[64];
+                strftime(time_str, sizeof(time_str), "%b %d %H:%M ", tm_info);
+                _puts(time_str);
+             } else { _puts("Jan 01 00:00 "); }
         }
-        
-        /* Print file name with color coding based on file type from stat() */
-        if (S_ISDIR(file_stat.st_mode))
-        {
-            /* Directory - blue */
-            _puts("\033[1;34m");
-            _puts(entry->d_name);
-            _puts("\033[0m");
-        }
-        else if (S_ISREG(file_stat.st_mode) && (file_stat.st_mode & S_IXUSR))
-        {
-            /* Executable - green */
-            _puts("\033[1;32m");
-            _puts(entry->d_name);
-            _puts("\033[0m");
-        }
-        else
-        {
-            /* Regular file - normal color */
-            _puts(entry->d_name);
+
+        // Print file name with color coding using stat info
+        if (platform_stat_is_directory(&p_stat)) {
+             _puts("\033[1;34m"); _puts(entry->d_name); _puts("\033[0m");
+        } else if (platform_stat_is_executable(&p_stat)) { // Use PAL check
+             _puts("\033[1;32m"); _puts(entry->d_name); _puts("\033[0m");
+        } else {
+             _puts(entry->d_name);
         }
         _putchar('\n');
     }
-    
     closedir(dir);
 #endif
-    
     return (0);
 }

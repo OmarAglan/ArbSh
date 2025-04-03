@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "platform/filesystem.h"
 
 /**
  * _myexit - exits the shell
@@ -30,49 +31,66 @@ int _myexit(info_t *info)
 }
 
 /**
- * _mycd - changes the current directory of the process
- * @info: Structure containing potential arguments. Used to maintain
- *          constant function prototype.
- *  Return: Always 0
+ * _mycd - changes the current directory of the process using PAL
+ * @info: Structure containing potential arguments.
+ * Return: Always 0 on success, 1 on error.
  */
 int _mycd(info_t *info)
 {
     char *s, *dir, buffer[1024];
     int chdir_ret;
 
-    s = _getcwd(buffer, 1024);
+    s = platform_getcwd(buffer, 1024);
     if (!s)
-        _puts("Error: Could not get current directory\n");
+    {
+        _eputs("cd: error retrieving current directory\n");
+        return (1);
+    }
     if (!info->argv[1])
     {
         dir = _getenv(info, "HOME=");
         if (!dir)
-            chdir_ret = chdir((dir = _getenv(info, "PWD=")) ? dir : "/");
-        else
-            chdir_ret = chdir(dir);
+        {
+            if (!platform_get_home_dir(buffer, 1024)) {
+                _eputs("cd: could not resolve home directory\n");
+                return (1);
+            }
+            dir = buffer;
+        }
     }
     else if (_strcmp(info->argv[1], "-") == 0)
     {
-        if (!_getenv(info, "OLDPWD="))
+        dir = _getenv(info, "OLDPWD=");
+        if (!dir)
         {
             _puts(s);
             _putchar('\n');
-            return (1);
+            return (0);
         }
-        _puts(_getenv(info, "OLDPWD=")), _putchar('\n');
-        chdir_ret = chdir((dir = _getenv(info, "OLDPWD=")) ? dir : "/");
+        _puts(dir);
+        _putchar('\n');
     }
     else
-        chdir_ret = chdir(info->argv[1]);
+    {
+        dir = info->argv[1];
+    }
+
+    chdir_ret = platform_chdir(dir);
     if (chdir_ret == -1)
     {
         print_error(info, "can't cd to ");
-        _eputs(info->argv[1]), _eputchar('\n');
+        _eputs(dir);
+        _eputchar('\n');
+        return (1);
     }
     else
     {
         _setenv(info, "OLDPWD", _getenv(info, "PWD="));
-        _setenv(info, "PWD", _getcwd(buffer, 1024));
+        s = platform_getcwd(buffer, 1024);
+        if (!s) {
+            _eputs("cd: error retrieving new current directory\n");
+        }
+        _setenv(info, "PWD", s ? s : "");
     }
     return (0);
 }

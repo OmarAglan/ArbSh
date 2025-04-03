@@ -1,20 +1,24 @@
 #include "shell.h"
+#include "platform/filesystem.h" // Include Filesystem PAL
 #include <errno.h>
+#include <ctype.h> // For isspace
 
 #ifdef WINDOWS
-#include <shlobj.h> // For SHGetFolderPathW
+#include <shlobj.h> // For SHGetFolderPathW (now handled by PAL)
 #include <wchar.h>
 #include <stdlib.h>
 #else
-#include <unistd.h> // For getuid, getpwuid
+#include <unistd.h> // For getuid, getpwuid (now handled by PAL)
 #include <sys/types.h>
-#include <pwd.h>    // For getpwuid
+#include <pwd.h>    // For getpwuid (now handled by PAL)
 #endif
 
 // --- Configuration Defaults ---
 #define DEFAULT_LANGUAGE LANG_EN
 #define DEFAULT_LAYOUT 0 // 0 = EN, 1 = AR
 #define DEFAULT_HISTORY_FILE HIST_FILE // From shell.h
+#define DEFAULT_CONFIG_FILENAME_WINDOWS L"\\ArbSh\\config.ini" // Needs conversion
+#define DEFAULT_CONFIG_FILENAME_POSIX "/.arbshrc"
 
 // Structure to hold loaded config (can be integrated into info_t later)
 // For now, we'll directly modify info_t or global settings.
@@ -153,97 +157,84 @@ int ensure_config_dir_exists(const char *path)
 }
 
 /**
- * get_config_file_path - Gets the platform-specific path for the config file.
- * @buffer: Buffer to store the path.
+ * get_config_file_path - Constructs the platform-specific path to the config file.
+ * @buf: Buffer to store the resulting path.
  * @size: Size of the buffer.
- * Return: Pointer to buffer on success, NULL on failure.
+ * Return: 1 on success, 0 on failure.
  */
-char *get_config_file_path(char *buffer, size_t size)
+int get_config_file_path(char *buf, size_t size)
 {
+    char home_dir[PATH_MAX];
+
+    if (!platform_get_home_dir(home_dir, sizeof(home_dir)))
+    {
+        return 0; // Cannot determine home directory
+    }
+
 #ifdef WINDOWS
-    wchar_t path_w[MAX_PATH];
-    char path_a[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, path_w)))
-    {
-        // Convert wide char path to multi-byte
-        if (WideCharToMultiByte(CP_UTF8, 0, path_w, -1, path_a, MAX_PATH, NULL, NULL) == 0) {
-             fprintf(stderr, "Error converting config path to UTF-8\n");
-             return NULL;
-        }
-        snprintf(buffer, size, "%s\\ArbSh\\config.ini", path_a);
-        // Ensure the ArbSh directory exists
-        ensure_config_dir_exists(buffer);
-        return buffer;
-    } else {
-         fprintf(stderr, "Error getting APPDATA directory\n");
-         return NULL;
-    }
-#else
-    const char *home_dir = getenv("HOME");
-    struct passwd *pw = NULL;
-
-    if (!home_dir)
-    {
-        pw = getpwuid(getuid());
-        if (pw)
-        {
-            home_dir = pw->pw_dir;
+    // On Windows, config is typically in %APPDATA%\ArbSh\config.ini
+    // platform_get_home_dir usually gives USERPROFILE, need APPDATA
+    wchar_t wpath[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, wpath))) {
+        // Convert APPDATA path
+        size_t converted_chars = 0;
+        errno_t err = wcstombs_s(&converted_chars, buf, size, wpath, _TRUNCATE);
+        if (err == 0 && converted_chars > 0) {
+            // Append our subdirectory and filename
+            strncat(buf, "\\ArbSh", size - strlen(buf) - 1);
+            // TODO: Ensure ArbSh directory exists
+            strncat(buf, "\\config.ini", size - strlen(buf) - 1);
+            return 1;
         }
     }
+    // Fallback if SHGetFolderPath fails (less ideal)
+    snprintf(buf, size, "%s%s", home_dir, "\\AppData\\Roaming\\ArbSh\\config.ini");
+    return 1;
 
-    if (home_dir)
-    {
-        // Prefer ~/.arbshrc for simplicity for now
-        snprintf(buffer, size, "%s/.arbshrc", home_dir);
-        return buffer;
-        // // XDG compliant path (more complex to ensure dir exists)
-        // const char *xdg_config_home = getenv("XDG_CONFIG_HOME");
-        // if (xdg_config_home && xdg_config_home[0]) {
-        //     snprintf(buffer, size, "%s/arbsh/config", xdg_config_home);
-        // } else {
-        //     snprintf(buffer, size, "%s/.config/arbsh/config", home_dir);
-        // }
-        // // Ensure the config directory exists
-        // ensure_config_dir_exists(buffer);
-        // return buffer;
-    } else {
-        fprintf(stderr, "Error getting HOME directory\n");
-        return NULL;
-    }
+#else // POSIX
+    // On POSIX, config is typically ~/.arbshrc
+    snprintf(buf, size, "%s%s", home_dir, DEFAULT_CONFIG_FILENAME_POSIX);
+    return 1;
 #endif
 }
 
-
 /**
- * load_configuration - Loads settings from the config file.
- * @info: Pointer to the shell info struct to update.
+ * load_configuration - Loads settings from the configuration file.
+ * @info: The info struct to populate.
  */
 void load_configuration(info_t *info)
 {
-    char config_path[PATH_MAX]; // Use PATH_MAX from limits.h
+    char config_path[PATH_MAX];
     FILE *file;
     char line[512];
     char *key = NULL;
     char *value = NULL;
+    int line_num = 0;
 
     // --- Set Defaults First ---
     info->default_layout = DEFAULT_LAYOUT;
-    info->history_file_path = shell_strdup(DEFAULT_HISTORY_FILE);
+    // History file path might also depend on home dir, handle later
+    info->history_file_path = NULL; // Set to null initially
 
-    // --- Get Config Path ---
+    // --- Get Config Path (uses platform_get_home_dir internally) ---
     if (!get_config_file_path(config_path, sizeof(config_path)))
     {
-        fprintf(stderr, "Warning: Could not determine configuration file path. Using defaults.\n");
+        // Non-fatal: Use defaults if config path fails
+        fprintf(stderr, "Warning: Could not determine config file path. Using defaults.\n");
+        // Ensure history path has a default based on platform_get_home_dir if possible
+        char *hist_path = get_history_file(info); // This now uses PAL
+        info->history_file_path = hist_path ? hist_path : shell_strdup(DEFAULT_HISTORY_FILE);
         return;
     }
 
     // --- Open and Read Config File ---
+    // TODO: Use platform_open later?
     file = fopen(config_path, "r");
     if (!file)
     {
-        // File doesn't exist or can't be opened - this is fine, use defaults.
-        // You might want to log this only if verbose mode is on.
-        // fprintf(stderr, "Info: Configuration file '%s' not found or not readable. Using defaults.\n", config_path);
+        // Non-fatal: Use defaults if file not found
+        char *hist_path = get_history_file(info);
+        info->history_file_path = hist_path ? hist_path : shell_strdup(DEFAULT_HISTORY_FILE);
         return;
     }
 
@@ -251,53 +242,28 @@ void load_configuration(info_t *info)
 
     while (fgets(line, sizeof(line), file))
     {
+        line_num++;
         if (parse_config_line(line, &key, &value) == 0)
         {
-            // --- Apply Settings ---
-            if (_strcmp(key, "language") == 0)
-            {
-                if (_strcmp(value, "ar") == 0) {
-                    set_language(LANG_AR); // Directly set language
-                    printf("Config: Language set to Arabic\n"); // Debug
-                } else if (_strcmp(value, "en") == 0) {
-                    set_language(LANG_EN);
-                    printf("Config: Language set to English\n"); // Debug
-                } else {
-                    fprintf(stderr, "Warning: Invalid language '%s' in config file. Using default.\n", value);
-                }
-            }
-            else if (_strcmp(key, "history_file") == 0)
-            {
-                // Update the history file path in the info struct
-                free(info->history_file_path); // Free default if set
-                info->history_file_path = shell_strdup(value);
-                printf("Config: History file path set to '%s'\n", value); // Debug
-            }
-            else if (_strcmp(key, "default_layout") == 0)
-            {
-                if (_strcmp(value, "ar") == 0) {
-                    info->default_layout = 1;
-                    set_keyboard_layout(1); // Set initial layout
-                    printf("Config: Default layout set to Arabic\n"); // Debug
-                } else if (_strcmp(value, "en") == 0) {
-                    info->default_layout = 0;
-                    set_keyboard_layout(0);
-                    printf("Config: Default layout set to English\n"); // Debug
-                } else {
-                    fprintf(stderr, "Warning: Invalid default_layout '%s' in config file. Using default.\n", value);
-                }
-            }
-            // Add more settings here (e.g., colors)
-
-            // Free allocated key/value for the current line
-            free(key);
-            free(value);
-            key = NULL;
-            value = NULL;
+            apply_configuration(info, key, value, config_path, line_num);
+            free(key); key = NULL;
+            free(value); value = NULL;
         }
     }
 
     fclose(file);
+
+    // If history file wasn't set in config, get default path now
+    if (!info->history_file_path) {
+        char *hist_path = get_history_file(info); // Uses PAL
+        info->history_file_path = hist_path ? hist_path : shell_strdup(DEFAULT_HISTORY_FILE);
+    }
+
+    // Apply defaults if specific settings weren't found
+    // (e.g., set language based on system default if not in config)
+    if (/* language not set by config */ 1) {
+         set_language(detect_system_language());
+    }
 }
 
 /**

@@ -1,24 +1,36 @@
 #include "shell.h"
+#include "platform/filesystem.h"
 
 /**
- * is_cmd - determines if a file is an executable command
- * @info: the info struct
+ * is_cmd - determines if a file is an executable command using PAL
+ * @info: the info struct (unused)
  * @path: path to the file
  *
  * Return: 1 if true, 0 otherwise
  */
 int is_cmd(info_t *info, char *path)
 {
-	struct stat st;
-
+	platform_stat_t stat_buf;
 	(void)info;
-	if (!path || stat(path, &st))
+
+	if (!path)
 		return (0);
 
-	if (st.st_mode & S_IFREG)
+	if (platform_stat(path, &stat_buf) != 0)
+	{
+		return (0);
+	}
+
+	if (!platform_stat_is_regular_file(&stat_buf))
+	{
+		return (0);
+	}
+
+	if (platform_access(path, PLATFORM_X_OK) == 0)
 	{
 		return (1);
 	}
+
 	return (0);
 }
 

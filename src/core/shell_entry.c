@@ -13,6 +13,8 @@
 #include "shell.h"
 #include "config.h" // Include config if needed for defines like USE_IMGUI
 #include "platform/console.h" // Include PAL console functions
+#include "platform/filesystem.h" // Include Filesystem PAL
+#include <fcntl.h> // For O_RDONLY (POSIX standard, CRT often maps it)
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -148,7 +150,7 @@ void set_gui_env_for_child(void)
 int shell_main(int argc, char *argv[])
 {
     info_t info[] = {INFO_INIT};
-    int fd = 2;
+    int script_fd = -1;
 
     // Initialize locale for better internationalization support
     init_locale();
@@ -176,34 +178,53 @@ int shell_main(int argc, char *argv[])
 #else
     asm("mov %1, %0\n\t"
         "add $3, %0"
-        : "=r"(fd)
-        : "r"(fd));
+        : "=r"(script_fd)
+        : "r"(script_fd));
 #endif
 
+    // Argument parsing for script execution
     if (argc == 2)
     {
-        fd = open(argv[1], O_RDONLY);
-        if (fd == -1)
+        // Use platform-independent file operations
+        script_fd = platform_open(argv[1], O_RDONLY); // Use PAL open
+        if (script_fd == -1)
         {
-            if (errno == EACCES)
-                exit(126);
+            // Error handling (check errno/GetLastError after platform_open)
+            // Use platform console write for error messages
+            if (errno == EACCES) exit(126); // Assuming errno is set by PAL
             if (errno == ENOENT)
             {
-                _eputs(argv[0]);
-                _eputs(": 0: Can't open ");
-                _eputs(argv[1]);
-                _eputchar('\n');
-                _eputchar(BUF_FLUSH);
+                platform_console_write(PLATFORM_STDERR_FILENO, argv[0], strlen(argv[0]));
+                platform_console_write(PLATFORM_STDERR_FILENO, ": 0: Can't open ", 18);
+                platform_console_write(PLATFORM_STDERR_FILENO, argv[1], strlen(argv[1]));
+                platform_console_write(PLATFORM_STDERR_FILENO, "\n", 1);
                 exit(127);
             }
+            // Generic open error
+            platform_console_write(PLATFORM_STDERR_FILENO, argv[0], strlen(argv[0]));
+            platform_console_write(PLATFORM_STDERR_FILENO, ": Can't open script ", 20);
+            platform_console_write(PLATFORM_STDERR_FILENO, argv[1], strlen(argv[1]));
+            platform_console_write(PLATFORM_STDERR_FILENO, "\n", 1);
             return (EXIT_FAILURE);
         }
-        info->readfd = fd;
+        info->readfd = script_fd; // Tell shell loop to read from this fd
     }
+    else
+    {
+        // Default to reading from stdin if no script provided
+        info->readfd = PLATFORM_STDIN_FILENO;
+    }
+
     populate_env_list(info);
     read_history(info);
     load_aliases(info);  // Load aliases at startup
     hsh(info, argv);
+
+    // Cleanup
+    if (script_fd != -1 && script_fd != PLATFORM_STDIN_FILENO) {
+        platform_close(script_fd); // Use PAL close
+    }
+
     return (EXIT_SUCCESS);
 }
 

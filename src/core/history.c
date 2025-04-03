@@ -1,42 +1,67 @@
 #include "shell.h"
+#include "platform/filesystem.h" // Include Filesystem PAL
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h> // For mode_t on some systems
+#include <sys/stat.h>  // For S_IRUSR, S_IWUSR etc.
 
 #ifdef WINDOWS
-#include <windows.h>
-#include <io.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/file.h> /* For file locking constants on some systems */
-#include <sys/types.h>
-#include <errno.h>
-#include <string.h> /* For strerror() */
+#include <io.h>      // For _open, _close, _read, _write
+#include <fcntl.h>   // For _O_RDONLY, _O_WRONLY, _O_CREAT, _O_TRUNC
+#else // POSIX
+#include <unistd.h>  // For open, close, read, write, stat
+#include <fcntl.h>   // For O_RDONLY, O_WRONLY, O_CREAT, O_TRUNC
+#include <pwd.h>     // For getpwuid (now handled by PAL)
 #endif
 
 /**
- * get_history_file - gets the history file
- * @info: parameter struct
- * Return: allocated string containing history file
+ * get_history_file - returns the history file path
+ * @info: parameter struct (unused currently, but good practice)
+ *
+ * Return: allocated string containing history file path, or NULL
  */
 char *get_history_file(info_t *info)
 {
-    char *buf, *dir;
+	char *buf = NULL, *dir = NULL;
+	char home_dir[PATH_MAX];
 
-    // If we have a configured history_file_path, use it
-    if (info->history_file_path)
-        return shell_strdup(info->history_file_path);
+	(void)info; // Mark as unused for now
 
-    // Fall back to the default behavior
-    dir = _getenv(info, "HOME=");
-    if (!dir)
-        return (NULL);
-    buf = malloc(sizeof(char) * (_strlen(dir) + _strlen(HIST_FILE) + 2));
-    if (!buf)
-        return (NULL);
-    buf[0] = 0;
-    _strcpy(buf, dir);
-    _strcat(buf, "/");
-    _strcat(buf, HIST_FILE);
-    return (buf);
+	if (!platform_get_home_dir(home_dir, sizeof(home_dir)))
+	{
+		// Cannot determine home directory, maybe return default relative path?
+		// For now, return NULL to indicate failure.
+		return (NULL);
+	}
+	dir = home_dir;
+
+	// Allocate space for the full path: dir + '/' + filename + null terminator
+	buf = malloc(sizeof(char) * (strlen(dir) + strlen(HIST_FILE) + 2));
+	if (!buf)
+	{
+		free(dir); // Free dir if malloc fails
+		return (NULL);
+	}
+
+	buf[0] = 0; // Initialize buffer
+	strcpy(buf, dir);
+
+#ifdef WINDOWS
+	// Use backslash on Windows
+	strcat(buf, "\\");
+#else
+	// Use forward slash on POSIX
+	strcat(buf, "/");
+#endif
+
+	strcat(buf, HIST_FILE);
+
+	// We only copied the pointer from platform_get_home_dir's buffer, no need to free 'dir' here
+	// if platform_get_home_dir allocated memory, it should be freed by the caller
+	// or have a separate platform_free_path function.
+	// Assuming platform_get_home_dir writes to the provided buffer.
+
+	return (buf);
 }
 
 /**
