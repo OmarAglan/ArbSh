@@ -1,6 +1,7 @@
 #include "shell.h"
 #include <signal.h>
 #include "bidi.h"  /* Add include for bidi constants */
+#include "platform/console.h" // Include PAL
 
 #ifdef WINDOWS
 #define SIGINT 2
@@ -154,37 +155,39 @@ ssize_t get_input(info_t *info)
 }
 
 /**
- * read_buf - reads a buffer
- * @info: parameter struct
- * @buf: buffer
- * @i: size
- *
- * Return: r
+ * read_buf - reads a buffer using PAL
+ * @info: parameter struct (contains readfd)
+ * @buf: buffer to read into
+ * @i: size pointer (updated with bytes read)
+ * Return: bytes read (ssize_t), 0 on EOF, -1 on error
  */
 ssize_t read_buf(info_t *info, char *buf, size_t *i)
 {
     ssize_t r = 0;
 
     if (*i)
-        return (0);
-    r = read(info->readfd, buf, READ_BUF_SIZE);
-    if (r >= 0)
+        return (0); // Buffer already has data
+
+    // Use platform_console_read, passing the read file descriptor from info struct
+    r = platform_console_read(info->readfd, buf, READ_BUF_SIZE);
+
+    if (r >= 0) // platform_console_read returns >= 0 on success (including 0 for EOF)
         *i = r;
+    // Return value directly from platform_console_read (0 for EOF, -1 for error)
     return (r);
 }
 
 /**
- * _getline - gets the next line of input from STDIN
+ * _getline - gets the next line of input from STDIN (uses read_buf -> PAL)
  * @info: parameter struct
  * @ptr: address of pointer to buffer, preallocated or NULL
  * @length: size of preallocated ptr buffer if not NULL
- *
- * Return: size
+ * Return: size of line read (ssize_t), or -1 on EOF/error
  */
-int _getline(info_t *info, char **ptr, size_t *length)
+ssize_t _getline(info_t *info, char **ptr, size_t *length)
 {
-    static char buf[READ_BUF_SIZE];
-    static size_t i, len;
+    static char read_static_buf[READ_BUF_SIZE]; // Renamed to avoid confusion with buf in input_buf
+    static size_t buf_i = 0, buf_len = 0;
     size_t k;
     ssize_t r = 0, s = 0;
     char *p = NULL, *new_p = NULL, *c;
@@ -192,91 +195,67 @@ int _getline(info_t *info, char **ptr, size_t *length)
     p = *ptr;
     if (p && length)
         s = *length;
-    if (i == len)
-        i = len = 0;
 
-    r = read_buf(info, buf, &len);
-    if (r == -1 || (r == 0 && len == 0))
-        return (-1);
-
-    c = _strchr(buf + i, '\n');
-    k = c ? 1 + (unsigned int)(c - buf) : len;
-    new_p = _realloc(p, s, s ? s + k : k + 1);
-    if (!new_p) /* MALLOC FAILURE! */
-        return (p ? free(p), -1 : -1);
-
-    if (s)
-        _strncat(new_p, buf + i, k - i);
-    else
-        _strncpy(new_p, buf + i, k - i + 1);
-
-    s += k - i;
-    i = k;
-    p = new_p;
-
-    /* Process character widths for cursor positioning if in interactive mode */
-    if (interactive(info))
-    {
-        /* UTF-8 character width processing for proper cursor movement */
-        int char_pos = 0;
-        int display_pos = 0;
-        int utf8_bytes = 0;
-        
-        /* Calculate character width mappings for cursor positioning */
-        while (char_pos < s)
+    // Loop to read until newline or EOF/error
+    while (1) {
+        // If buffer is empty, read more data using PAL via read_buf
+        if (buf_i == buf_len)
         {
-            /* Get UTF-8 character length at current position */
-            utf8_bytes = get_utf8_char_length(p[char_pos]);
-            
-            if (utf8_bytes > 0 && char_pos + utf8_bytes <= s)
+            buf_i = buf_len = 0; // Reset buffer pointers
+            r = read_buf(info, read_static_buf, &buf_len);
+            if (r == -1 || (r == 0 && buf_len == 0)) // Error or EOF with no data left
             {
-                /* Valid UTF-8 character */
-                char utf8_char[5] = {0};
-                int codepoint;
-                
-                /* Extract the character */
-                memcpy(utf8_char, p + char_pos, utf8_bytes);
-                
-                /* Convert to Unicode codepoint */
-                if (utf8_to_codepoint(utf8_char, &codepoint))
-                {
-                    /* Special handling for double-width characters (CJK, etc.) */
-                    if ((codepoint >= 0x1100 && codepoint <= 0x11FF) ||   /* Hangul Jamo */
-                        (codepoint >= 0x3000 && codepoint <= 0x303F) ||   /* CJK Symbols and Punctuation */
-                        (codepoint >= 0x3040 && codepoint <= 0x309F) ||   /* Hiragana */
-                        (codepoint >= 0x30A0 && codepoint <= 0x30FF) ||   /* Katakana */
-                        (codepoint >= 0x3400 && codepoint <= 0x4DBF) ||   /* CJK Unified Ideographs Extension A */
-                        (codepoint >= 0x4E00 && codepoint <= 0x9FFF) ||   /* CJK Unified Ideographs */
-                        (codepoint >= 0xF900 && codepoint <= 0xFAFF) ||   /* CJK Compatibility Ideographs */
-                        (codepoint >= 0xFF00 && codepoint <= 0xFFEF))     /* Halfwidth and Fullwidth Forms */
-                    {
-                        display_pos += 2;  /* Double-width character */
-                    }
-                    else
-                    {
-                        display_pos += 1;  /* Regular width character */
-                    }
-                }
-                else
-                {
-                    display_pos += 1;  /* Invalid UTF-8 sequence treated as single character */
-                }
-                
-                char_pos += utf8_bytes;  /* Move to next character */
-            }
-            else
-            {
-                /* Invalid UTF-8 sequence, treat as single byte */
-                display_pos += 1;
-                char_pos += 1;
+                 // Clean up allocated buffer if nothing was added to it
+                if (p && s == 0) free(p);
+                *ptr = NULL;
+                return (-1);
             }
         }
-    }
 
-    if (length)
-        *length = s;
-    *ptr = p;
-    return (s);
+        // Find newline in the current buffer chunk
+        c = _strchr(read_static_buf + buf_i, '\n');
+        k = c ? 1 + (unsigned int)(c - (read_static_buf + buf_i)) : buf_len - buf_i;
+
+        // Reallocate buffer to hold the new chunk
+        new_p = _realloc(p, s, s ? s + k : k + 1);
+        if (!new_p) /* MALLOC FAILURE! */
+            return (p ? free(p), -1 : -1);
+
+        // Copy the chunk (up to newline or end of buffer) into the result buffer
+        _memcpy(new_p + s, read_static_buf + buf_i, k);
+
+        s += k; // Update total size read into result buffer
+        buf_i += k; // Update position in static read buffer
+        p = new_p;
+
+        if (length) *length = s;
+        *ptr = p;
+
+        // If newline was found, terminate the string and return
+        if (c) {
+            p[s - 1] = '\0'; // Replace newline with null terminator
+            // Note: Cursor width calculation was removed, needs re-evaluation
+            // in the context of a proper line editing library/implementation.
+            return (s - 1);
+        }
+
+        // If we read the whole buffer but didn't find newline, loop to read more
+        if (buf_i == buf_len) continue;
+    }
+    // Should not be reached
+    return -1;
+}
+
+/**
+ * interactive - returns true if shell is interactive mode using PAL
+ * @info: struct address
+ * Return: 1 if interactive mode, 0 otherwise
+ */
+int interactive(info_t *info)
+{
+    // Check if standard input is a TTY using PAL
+    // and readfd is less than or equal to 2 (stdin, stdout, stderr)
+    return (platform_console_isatty(PLATFORM_STDIN_FILENO) && info->readfd <= 2);
 }
 
 /**

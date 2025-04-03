@@ -20,82 +20,6 @@ int get_utf8_char_length(char first_byte)
 }
 
 /**
- * set_text_direction - Sets the text direction based on the current language
- * @is_rtl: Whether to set RTL (1) or LTR (0) direction
- *
- * Return: 0 on success, -1 on failure
- */
-int set_text_direction(int is_rtl)
-{
-#ifdef _WIN32
-    /* Windows console support for RTL using Virtual Terminal Sequences */
-    if (is_rtl) {
-        /* Set RTL mode using comprehensive escape sequences */
-        write(STDOUT_FILENO, "\033[?7l", 5);     /* Disable line wrapping */
-        
-        /* Use more reliable RTL rendering sequence */
-        write(STDOUT_FILENO, "\033[2J", 4);      /* Clear screen for clean RTL rendering */
-        write(STDOUT_FILENO, "\033[0m", 4);      /* Reset attributes */
-        
-        /* Set base direction to RTL with multiple techniques for better compatibility */
-        write(STDOUT_FILENO, "\033]8;;bidi=R\a", 12);
-        
-        /* Force RTL paragraph direction */
-        write(STDOUT_FILENO, "\xE2\x80\x8F", 3); /* RTL mark (U+200F) */
-        
-        /* Enable additional RTL mode flags - these are implementation specific but work on newer Windows Terminal */
-        write(STDOUT_FILENO, "\033[=14h", 6);    /* Enable RTL rendering */
-        write(STDOUT_FILENO, "\033[=15h", 6);    /* Enable RTL cursor movement */
-        
-        /* Set console mode through Windows API for better support */
-        #ifdef WINDOWS
-        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-        if (hOut != INVALID_HANDLE_VALUE) {
-            DWORD dwMode = 0;
-            if (GetConsoleMode(hOut, &dwMode)) {
-                /* Set ENABLE_VIRTUAL_TERMINAL_PROCESSING and other relevant flags */
-                dwMode |= 0x0004 | 0x0008; /* ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT */
-                SetConsoleMode(hOut, dwMode);
-            }
-        }
-        #endif
-    } else {
-        /* Set LTR mode using comprehensive escape sequences */
-        write(STDOUT_FILENO, "\033[?7h", 5);     /* Enable line wrapping */
-        write(STDOUT_FILENO, "\033[0m", 4);      /* Reset attributes */
-        
-        /* Set base direction to LTR */
-        write(STDOUT_FILENO, "\033]8;;bidi=L\a", 12);
-        
-        /* Force LTR paragraph direction */
-        write(STDOUT_FILENO, "\xE2\x80\x8E", 3); /* LTR mark (U+200E) */
-        
-        /* Disable RTL mode flags */
-        write(STDOUT_FILENO, "\033[=14l", 6);    /* Disable RTL rendering */
-        write(STDOUT_FILENO, "\033[=15l", 6);    /* Disable RTL cursor movement */
-    }
-#else
-    /* For Unix/Linux systems with proper terminal support */
-    if (is_rtl) {
-        /* Set RTL mode with better compatibility */
-        write(STDOUT_FILENO, "\033[?7l", 5);    /* Disable line wrapping */
-        write(STDOUT_FILENO, "\xE2\x80\x8F", 3); /* RTL mark (U+200F) */
-        
-        /* Use BiDi console mode if available (some modern terminals) */
-        write(STDOUT_FILENO, "\033]8;;bidi=R\a", 12);
-    } else {
-        /* Set LTR mode */
-        write(STDOUT_FILENO, "\033[?7h", 5);    /* Enable line wrapping */
-        write(STDOUT_FILENO, "\xE2\x80\x8E", 3); /* LTR mark (U+200E) */
-        
-        /* Reset BiDi console mode if available */
-        write(STDOUT_FILENO, "\033]8;;bidi=L\a", 12);
-    }
-#endif
-    return 0;
-}
-
-/**
  * read_utf8_char - Reads a complete UTF-8 character from a buffer
  * @buffer: The buffer containing the UTF-8 character
  * @max_size: The maximum number of bytes to read
@@ -147,6 +71,7 @@ int is_rtl_char(int unicode_codepoint)
     
     return 0;
 }
+
 /**
  * utf8_to_codepoint - Converts a UTF-8 character to a Unicode codepoint
  * @utf8_char: The UTF-8 character buffer
@@ -233,84 +158,4 @@ int codepoint_to_utf8(int codepoint, char *utf8_char)
     /* Invalid codepoint */
     utf8_char[0] = '?';
     return 1;
-}
-
-/**
- * configure_terminal_for_utf8 - Configures the terminal for UTF-8 support
- */
-void configure_terminal_for_utf8(void)
-{
-#ifdef _WIN32
-    /* Set console code page to UTF-8 */
-    SetConsoleOutputCP(65001); /* CP_UTF8 */
-    SetConsoleCP(65001);       /* CP_UTF8 */
-    
-    /* Enable VT processing for ANSI escape sequences */
-    #ifdef WINDOWS
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hOut != INVALID_HANDLE_VALUE)
-    {
-        DWORD dwMode = 0;
-        if (GetConsoleMode(hOut, &dwMode))
-        {
-            dwMode |= 0x0004; /* ENABLE_VIRTUAL_TERMINAL_PROCESSING */
-            SetConsoleMode(hOut, dwMode);
-        }
-    }
-    
-    /* Configure console font for better Unicode support */
-    CONSOLE_FONT_INFOEX cfi;
-    cfi.cbSize = sizeof(cfi);
-    cfi.nFont = 0;
-    cfi.dwFontSize.X = 0;  /* Default width */
-    cfi.dwFontSize.Y = 16; /* Default height */
-    cfi.FontFamily = FF_DONTCARE;
-    cfi.FontWeight = FW_NORMAL;
-    
-    /* Try different fonts with better Arabic support in order of preference */
-    BOOL fontSet = FALSE;
-    /* Try Arial first (excellent Arabic support) */
-    wcscpy(cfi.FaceName, L"Arial");
-    fontSet = SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
-    
-    if (!fontSet) {
-        /* Try Tahoma (good Arabic support) */
-        wcscpy(cfi.FaceName, L"Tahoma");
-        fontSet = SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
-    }
-    
-    if (!fontSet) {
-        /* Fall back to Courier New (acceptable Arabic support) */
-        wcscpy(cfi.FaceName, L"Courier New");
-        fontSet = SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
-    }
-    
-    if (!fontSet) {
-        /* Last attempt with Consolas */
-        wcscpy(cfi.FaceName, L"Consolas");
-        SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
-    }
-    
-    /* Force bidirectional text handling */
-    write(STDOUT_FILENO, "\033[?7l", 5);     /* Disable line wrapping */
-    /* Instead of forcing RTL for all content, let terminal detect directionality */
-    write(STDOUT_FILENO, "\033]8;;bidi=L\a", 12); /* Set base direction to LTR but allow bidirectional content */
-    /* Only insert RTL mark when in explicit Arabic mode */
-    if (get_language() == 1) /* LANG_AR */
-    {
-        write(STDOUT_FILENO, "\xE2\x80\x8F", 3); /* RTL mark (U+200F) */
-    }
-    
-    /* Set console window size */
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    if (GetConsoleScreenBufferInfo(hOut, &csbi))
-    {
-        SMALL_RECT windowRect = {0, 0, 100, 30}; /* Width: 100, Height: 30 */
-        SetConsoleWindowInfo(hOut, TRUE, &windowRect);
-    }
-    #endif
-#else
-    /* Set locale to use UTF-8 */
-    setlocale(LC_ALL, "en_US.UTF-8");
-#endif
 }

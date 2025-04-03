@@ -11,6 +11,8 @@
  */
 
 #include "shell.h"
+#include "config.h" // Include config if needed for defines like USE_IMGUI
+#include "platform/console.h" // Include PAL console functions
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -35,11 +37,9 @@
 
 /* Global variables for GUI mode */
 #ifdef WINDOWS
-BOOL g_GuiMode = FALSE;           /* Flag to indicate GUI mode is active */
+int g_GuiMode = 0;           /* Flag to indicate GUI mode is active */
 
-#ifdef USE_IMGUI
-BOOL g_ImGuiMode = TRUE;          /* Flag to indicate ImGui mode is active */
-#endif
+int g_ImGuiMode = 0;          /* Flag to indicate ImGui mode is active */
 
 /* Forward declarations */
 int shell_main(int argc, char *argv[]);

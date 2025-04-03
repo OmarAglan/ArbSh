@@ -72,11 +72,17 @@ add_library(arbsh_platform STATIC) # Start as INTERFACE, add sources below
 target_include_directories(arbsh_platform INTERFACE include)
 
 if(WIN32)
-    target_sources(arbsh_platform INTERFACE PRIVATE src/platform/windows/process.c)
+    target_sources(arbsh_platform INTERFACE PRIVATE 
+    src/platform/windows/process.c
+    src/platform/windows/console.c
+    )
     # Add other windows platform files here as they are created
     # target_link_libraries(arbsh_platform INTERFACE ws2_32 ...) # Link platform libs needed by windows implementation
 elseif(UNIX)
-    target_sources(arbsh_platform INTERFACE src/platform/posix/process.c)
+    target_sources(arbsh_platform INTERFACE 
+    src/platform/posix/process.c
+    src/platform/posix/console.c
+    )
     # Add other posix platform files here
     # target_link_libraries(arbsh_platform INTERFACE pthread dl ...) # Link platform libs needed by posix implementation
 else()

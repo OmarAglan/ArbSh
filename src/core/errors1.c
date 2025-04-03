@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "platform/console.h"
 
 /**
  * _erratoi - converts a string to an integer
@@ -29,17 +30,16 @@ int _erratoi(char *s)
 }
 
 /**
- * print_error - prints an error message
+ * print_error - prints an error message to stderr using PAL
  * @info: the parameter & return info struct
  * @estr: string containing specified error type
- * Return: 0 if no numbers in string, converted number otherwise
- *        -1 on error
+ * Return: void
  */
 void print_error(info_t *info, char *estr)
 {
 	_eputs(info->fname);
 	_eputs(": ");
-	print_d(info->line_count, STDERR_FILENO);
+	print_d(info->line_count, PLATFORM_STDERR_FILENO);
 	_eputs(": ");
 	_eputs(info->argv[0]);
 	_eputs(": ");
@@ -47,40 +47,45 @@ void print_error(info_t *info, char *estr)
 }
 
 /**
- * print_d - function prints a decimal (integer) number (base 10)
- * @input: the input
- * @fd: the filedescriptor to write to
- *
+ * print_d - function prints a decimal (integer) number (base 10) to a given fd
+ * @input: the input number
+ * @fd: the filedescriptor to write to (use platform constants)
  * Return: number of characters printed
  */
 int print_d(int input, int fd)
 {
-	int (*__putchar)(char) = _putchar;
+	int (*output_char)(char, int) = _putfd;
 	int i, count = 0;
 	unsigned int _abs_, current;
+	char buffer[20];
+	int buf_idx = 0;
 
-	if (fd == STDERR_FILENO)
-		__putchar = _eputchar;
 	if (input < 0)
 	{
 		_abs_ = -input;
-		__putchar('-');
+		output_char('-', fd);
 		count++;
 	}
 	else
 		_abs_ = input;
+
 	current = _abs_;
-	for (i = 1000000000; i > 1; i /= 10)
-	{
-		if (_abs_ / i)
-		{
-			__putchar('0' + current / i);
-			count++;
+	if (current == 0) {
+		buffer[buf_idx++] = '0';
+	} else {
+		while (current > 0) {
+			buffer[buf_idx++] = '0' + (current % 10);
+			current /= 10;
 		}
-		current %= i;
 	}
-	__putchar('0' + current);
-	count++;
+
+	for (i = buf_idx - 1; i >= 0; i--)
+	{
+		output_char(buffer[i], fd);
+		count++;
+	}
+
+	output_char(BUF_FLUSH, fd);
 
 	return (count);
 }

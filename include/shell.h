@@ -13,37 +13,6 @@
 #define LANG_EN 0
 #define LANG_AR 1
 
-#ifdef WINDOWS
-#include <windows.h>
-#include <io.h>
-#include <direct.h>
-#include <process.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#define chdir _chdir
-#define getcwd _getcwd
-#define read _read
-#define write _write
-#define isatty _isatty
-#define access _access
-#define open _open
-#define close _close
-#define fstat _fstat
-#define F_OK 0
-#define STDIN_FILENO 0
-#define STDOUT_FILENO 1
-#define STDERR_FILENO 2
-/* Only define ssize_t if it's not already defined */
-#if !defined(ssize_t) && !defined(_SSIZE_T_DEFINED)
-typedef long long ssize_t;
-#define _SSIZE_T_DEFINED
-#endif
-#else
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#endif
-
 /* for read/write buffers */
 #define READ_BUF_SIZE 1024
 #define WRITE_BUF_SIZE 1024
