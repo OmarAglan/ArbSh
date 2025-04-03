@@ -222,7 +222,7 @@ ssize_t _getline(info_t *info, char **ptr, size_t *length)
             return (p ? free(p), -1 : -1);
 
         // Copy the chunk (up to newline or end of buffer) into the result buffer
-        _memcpy(new_p + s, read_static_buf + buf_i, k);
+        memcpy(new_p + s, read_static_buf + buf_i, k);
 
         s += k; // Update total size read into result buffer
         buf_i += k; // Update position in static read buffer

@@ -13,22 +13,22 @@ int _myenv(info_t *info)
 }
 
 /**
- * _getenv - gets the value of an environ variable
+ * _getenv - gets the value of an environment variable
  * @info: Structure containing potential arguments. Used to maintain
  * @name: env var name
  *
- * Return: the value
+ * Return: the value or NULL if not found
  */
 char *_getenv(info_t *info, const char *name)
 {
     list_t *node = info->env;
-    char *p;
+    const char *p = NULL;
 
     while (node)
     {
         p = starts_with(node->str, name);
         if (p && *p)
-            return (p);
+            return ((char*)p);
         node = node->next;
     }
     return (NULL);

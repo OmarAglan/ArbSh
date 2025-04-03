@@ -5,6 +5,7 @@
 #include <sys/stat.h> // For _stat structure (used indirectly by _access maybe)
 #include <shlobj.h> // For SHGetFolderPathW
 #include <stdlib.h> // For wcstombs
+#include <stdio.h>  // For snprintf
 
 // Define the actual structure for Windows file status
 struct platform_stat_s {

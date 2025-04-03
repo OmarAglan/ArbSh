@@ -1,9 +1,14 @@
 #include "shell.h"
 #include "platform/console.h" // For output
 #include "platform/filesystem.h" // Include Filesystem PAL
+#include <limits.h> // For PATH_MAX
 
 #ifdef WINDOWS
 #include <windows.h>
+// Include the definition directly for Windows
+struct platform_stat_s {
+    WIN32_FILE_ATTRIBUTE_DATA file_info;
+};
 #else
 #include <unistd.h>
 #include <fcntl.h>
@@ -12,6 +17,10 @@
 #include <errno.h>
 #include <dirent.h>
 #include <time.h>
+// Include the definition directly for POSIX
+struct platform_stat_s {
+    struct stat posix_stat;
+};
 #endif
 
 /* _mylayout function is now defined in arabic_input.c */
@@ -51,7 +60,7 @@ int is_executable_file(const char *filename)
  */
 char *get_alias_file(info_t *info)
 {
-    char homedir[MAX_PATH]; // Use platform max path?
+    char homedir[PATH_MAX]; // Use POSIX PATH_MAX (limits.h)
     char *buf;
 
     if (!platform_get_home_dir(homedir, sizeof(homedir)))
@@ -322,9 +331,14 @@ int _myls(info_t *info)
     int show_hidden = 0;
     int long_format = 0;
     int i;
+    platform_stat_t p_stat; // Now declare directly, size should be known
 
-    // ... (Argument parsing remains the same) ...
-     for (i = 1; i < info->argc; i++)
+    // Allocate memory for the stat structure - NO longer needed
+    // p_stat_ptr = malloc(sizeof(platform_stat_t));
+    // if (!p_stat_ptr) { ... }
+
+    // Argument parsing
+    for (i = 1; i < info->argc; i++)
     {
         if (info->argv[i][0] == '-')
         {
@@ -350,8 +364,7 @@ int _myls(info_t *info)
     WIN32_FIND_DATA find_data;
     HANDLE find_handle;
     char search_path[1024];
-    char full_path[MAX_PATH]; // For stat
-    platform_stat_t p_stat;
+    char full_path[PATH_MAX]; // Use PATH_MAX
 
     snprintf(search_path, sizeof(search_path), "%s\\*", dir_path);
     find_handle = FindFirstFile(search_path, &find_data);
@@ -366,17 +379,17 @@ int _myls(info_t *info)
 
         snprintf(full_path, sizeof(full_path), "%s\\%s", dir_path, find_data.cFileName);
 
+        // Use the stack-allocated p_stat
+        int stat_result = platform_stat(full_path, &p_stat);
+
         if (long_format) {
-             if (platform_stat(full_path, &p_stat) == 0) {
+             if (stat_result == 0) {
                  // Use p_stat accessors
                  _puts(platform_stat_is_directory(&p_stat) ? "d" : "-");
-                 // Permissions are tricky on windows, simple placeholder
-                 _puts("rwxrwxrwx "); 
-                 // Size
+                 _puts("rwxrwxrwx ");
                  char size_str[32];
                  snprintf(size_str, sizeof(size_str), "%10lld ", platform_stat_get_size(&p_stat));
                  _puts(size_str);
-                 // Time - Needs formatting
                  time_t mtime = platform_stat_get_mtime(&p_stat);
                  struct tm *tm_info = localtime(&mtime);
                  if (tm_info) { 
@@ -389,11 +402,11 @@ int _myls(info_t *info)
              }
         }
 
-        // Print file name with color coding using stat info
-        if (platform_stat_is_directory(&p_stat)) {
+        // Print file name with color coding using stat info (check stat_result)
+        if (stat_result == 0 && platform_stat_is_directory(&p_stat)) {
             _puts("\033[1;34m"); _puts(find_data.cFileName); _puts("\033[0m");
-        } else if (is_executable_file(find_data.cFileName)) { // Use helper for now
-            _puts("\033[1;32m"); _puts(find_data.cFileName); _puts("\033[0m");
+        } else if (is_executable_file(find_data.cFileName)) {
+             _puts("\033[1;32m"); _puts(find_data.cFileName); _puts("\033[0m");
         } else {
             _puts(find_data.cFileName);
         }
@@ -405,8 +418,7 @@ int _myls(info_t *info)
 #else // POSIX
     DIR *dir;
     struct dirent *entry;
-    platform_stat_t p_stat; // Use PAL stat struct
-    char file_path[1024];
+    char file_path[PATH_MAX]; // Use PATH_MAX
 
     dir = opendir(dir_path);
     if (!dir) {
@@ -420,12 +432,14 @@ int _myls(info_t *info)
 
         snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, entry->d_name);
 
-        if (platform_stat(file_path, &p_stat) != 0)
+        // Use the stack-allocated p_stat
+        int stat_result = platform_stat(file_path, &p_stat);
+        if (stat_result != 0)
              continue; // Skip files we can't stat
 
         if (long_format) {
             _puts(platform_stat_is_directory(&p_stat) ? "d" : "-");
-            // Permissions - slightly simplified for now
+            // Permissions (use p_stat.posix_stat directly)
             _puts((p_stat.posix_stat.st_mode & S_IRUSR) ? "r" : "-");
             _puts((p_stat.posix_stat.st_mode & S_IWUSR) ? "w" : "-");
             _puts((p_stat.posix_stat.st_mode & S_IXUSR) ? "x" : "-");
@@ -453,7 +467,7 @@ int _myls(info_t *info)
         // Print file name with color coding using stat info
         if (platform_stat_is_directory(&p_stat)) {
              _puts("\033[1;34m"); _puts(entry->d_name); _puts("\033[0m");
-        } else if (platform_stat_is_executable(&p_stat)) { // Use PAL check
+        } else if (platform_stat_is_executable(&p_stat)) {
              _puts("\033[1;32m"); _puts(entry->d_name); _puts("\033[0m");
         } else {
              _puts(entry->d_name);
@@ -462,5 +476,7 @@ int _myls(info_t *info)
     }
     closedir(dir);
 #endif
+
+    // free(p_stat_ptr); // No longer needed
     return (0);
 }

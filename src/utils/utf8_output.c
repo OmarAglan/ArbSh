@@ -1,5 +1,6 @@
 #include "shell.h"
 #include "platform/console.h" // Include PAL
+#include "platform/filesystem.h" // Include Filesystem PAL
 
 /**
  * _puts_utf8 - prints a UTF-8 string with proper handling to STDOUT

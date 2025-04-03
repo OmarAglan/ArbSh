@@ -180,21 +180,21 @@ int _putfd(char c, int fd);
 int _putsfd(char *str, int fd);
 
 /* toem_string.c */
-int _strlen(char *);
-int _strcmp(char *, char *);
-char *starts_with(const char *, const char *);
-char *_strcat(char *, char *);
+int _strlen(const char *s);
+int _strcmp(const char *s1, const char *s2);
+const char *starts_with(const char *haystack, const char *needle);
+char *_strcat(char *dest, const char *src);
 
 /* toem_string1.c */
-char *_strcpy(char *, char *);
-char *shell_strdup(const char *); /* Renamed from _strdup to avoid conflict */
-void _puts(char *);
-int _putchar(char);
+char *_strcpy(char *dest, const char *src);
+char *shell_strdup(const char *str);
+void _puts(const char *str);
+int _putchar(char c);
 
 /* toem_exits.c */
-char *_strncpy(char *, char *, int);
-char *_strncat(char *, char *, int);
-char *_strchr(char *, char);
+char *_strncpy(char *dest, const char *src, size_t n);
+char *_strncat(char *dest, const char *src, size_t n);
+char *_strchr(const char *s, int c);
 
 /* toem_tokenizer.c */
 char **strtow(char *, char *);
@@ -250,7 +250,8 @@ char *get_alias_file(info_t *);
 
 /*toem_getline.c */
 ssize_t get_input(info_t *);
-int _getline(info_t *, char **, size_t *);
+ssize_t read_buf(info_t *info, char *buf, size_t *i);
+ssize_t _getline(info_t *info, char **ptr, size_t *length);
 void sigintHandler(int);
 
 /* toem_getinfo.c */

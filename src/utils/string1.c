@@ -3,11 +3,11 @@
 /**
  * _strcpy - copies a string
  * @dest: the destination
- * @src: the source
+ * @src: the source (read-only)
  *
  * Return: pointer to destination
  */
-char *_strcpy(char *dest, char *src)
+char *_strcpy(char *dest, const char *src)
 {
 	int i = 0;
 
@@ -24,7 +24,7 @@ char *_strcpy(char *dest, char *src)
 
 /**
  * shell_strdup - duplicates a string
- * @str: the string to duplicate
+ * @str: the string to duplicate (read-only)
  *
  * Return: pointer to the duplicated string
  */
@@ -51,7 +51,7 @@ char *shell_strdup(const char *str)
  *
  * Return: Nothing
  */
-void _puts(char *str)
+void _puts(const char *str)
 {
 	int i = 0;
 
