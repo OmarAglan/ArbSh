@@ -113,6 +113,14 @@ extern "C"
     bool terminate_shell_process(shell_process_t *process, bool force);
 
     /**
+     * Send an interrupt signal (like Ctrl+C) to the shell process
+     *
+     * @param process Shell process structure
+     * @return true if signal was sent successfully (or attempted), false on error
+     */
+    bool send_shell_interrupt(shell_process_t *process);
+
+    /**
      * Cleanup resources associated with the shell process
      *
      * @param process Shell process structure

@@ -122,25 +122,6 @@ int is_hosted_by_gui(void)
 }
 
 /**
- * set_gui_env_for_child - Sets environment variable for child processes
- * This lets child processes know they're hosted by the GUI
- */
-void set_gui_env_for_child(void)
-{
-#ifdef WINDOWS
-    if (g_GuiMode)
-        _putenv("ARBSH_HOSTED_BY_GUI=1");
-    else
-        _putenv("ARBSH_HOSTED_BY_GUI=0");
-#else
-    if (g_GuiMode)
-        setenv("ARBSH_HOSTED_BY_GUI", "1", 1);
-    else
-        setenv("ARBSH_HOSTED_BY_GUI", "0", 1);
-#endif
-}
-
-/**
  * shell_main - Main shell logic (formerly in main.c)
  * @argc: argument count
  * @argv: argument vector
@@ -325,75 +306,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
  */
 int main(int argc, char *argv[])
 {
-#ifdef WINDOWS
-    /* When compiled as a Windows GUI application, ensure we use WinMain */
-#ifdef GUI_MODE
-    /* Redirect to WinMain for GUI mode */
-    extern int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int);
-    HINSTANCE hInstance = GetModuleHandle(NULL);
-    return WinMain(hInstance, NULL, GetCommandLine(), SW_SHOWNORMAL);
-#endif
-
-    /* Check if we should run in GUI mode */
-    g_GuiMode = FALSE;
-#ifdef USE_IMGUI
-    g_ImGuiMode = FALSE;
-#endif
-
-    for (int i = 1; i < argc; i++)
-    {
-        if (strcmp(argv[i], "--gui") == 0)
-        {
-#ifdef USE_IMGUI
-            /* GUI mode now always uses ImGui */
-            g_GuiMode = TRUE;
-            g_ImGuiMode = TRUE;
-            
-            /* Redirect to ImGui WinMain */
-            extern int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int);
-            HINSTANCE hInstance = GetModuleHandle(NULL);
-            return WinMain(hInstance, NULL, GetCommandLine(), SW_SHOWNORMAL);
-#else
-            printf("GUI mode requires ImGui support\n");
-            return 1;
-#endif
-        }
-    }
-
-    /* Set up console and run in console mode */
-    setup_console_window(TRUE);
-
-    /* Display startup message with a distinctive appearance */
-    printf("\033[0m");               /* Reset any previous formatting */
-    printf("\033[38;2;50;255;255m"); /* RGB color similar to Windows Terminal accent */
-    printf("╔════════════════════════════════════════════════════╗\n");
-    printf("║                                                    ║\n");
-    printf("║                  ArbSh - CONSOLE MODE              ║\n");
-    printf("║         WITH ARABIC AND BAA LANGUAGE SUPPORT       ║\n");
-    printf("║                                                    ║\n");
-    printf("╚════════════════════════════════════════════════════╝\n");
-    printf("\033[0m\n"); /* Reset text formatting */
-
-    /* Test Arabic output */
-    printf("\033[38;2;255;200;50m"); /* Gold color for Arabic text */
-    printf("مرحبًا بكم في ArbSh - واجهة مستخدم حديثة\n");
-    printf("\033[0m\n"); /* Reset text formatting */
-
-    /* Parse command line into argc/argv */
-    LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (wargv)
-    {
-        /* Run the shell in console mode */
-        int result = shell_main(argc, argv);
-        LocalFree(wargv);
-        return result;
-    }
-
+    // Proceed with the console entry point (using shell_main)
     return shell_main(argc, argv);
-#else
-    /* On non-Windows platforms, just run in console mode */
-    return shell_main(argc, argv);
-#endif
 }
 
 #ifdef WINDOWS

@@ -40,4 +40,11 @@ int platform_wait_process(platform_process_t *process);
  */
 void platform_cleanup_process(platform_process_t *process);
 
+/**
+ * @brief Gets the process ID of the current process.
+ *
+ * @return The process ID.
+ */
+long platform_getpid(void); // Return type could be pid_t or DWORD, use long for now
+
 #endif /* _PLATFORM_PROCESS_H_ */ 

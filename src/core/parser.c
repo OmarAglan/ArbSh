@@ -1,6 +1,18 @@
 #include "shell.h"
 #include "platform/filesystem.h"
 
+#ifdef WINDOWS
+#include <windows.h>
+struct platform_stat_s {
+	WIN32_FILE_ATTRIBUTE_DATA file_info;
+};
+#else
+#include <sys/stat.h>
+struct platform_stat_s {
+	struct stat posix_stat;
+};
+#endif
+
 /**
  * is_cmd - determines if a file is an executable command using PAL
  * @info: the info struct (unused)

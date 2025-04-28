@@ -25,9 +25,7 @@ platform_process_t* platform_create_process(info_t *info, const char *command, c
     }
     process->exit_status = -1; // Initialize status
 
-    // Set GUI environment variable for child process (if applicable)
-    // TODO: Pass GUI mode status explicitly
-    set_gui_env_for_child();
+    // TODO: Revisit how GUI mode is passed to child env if needed.
 
     child_pid = fork();
     if (child_pid == -1)
@@ -98,4 +96,10 @@ void platform_cleanup_process(platform_process_t *process)
     if (!process) return;
     // Nothing specific to clean up for POSIX fork/exec apart from memory
     free(process);
+}
+
+long platform_getpid(void)
+{
+    // Standard POSIX function to get process ID
+    return (long)getpid();
 } 

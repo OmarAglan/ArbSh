@@ -36,12 +36,14 @@
 #define HIST_MAX 4096
 
 /* Avoid conflict with system environ */
-#ifdef WINDOWS
-/* Use _environ from stdlib.h, don't redeclare it */
-#define shell_environ _environ
+#if defined(WINDOWS)
+    // On Windows (especially MinGW using MSVCRT), use the runtime's _environ
+    #include <stdlib.h> // Ensure stdlib.h is included for _environ
+    #define shell_environ _environ
 #else
-extern char **environ;
-#define shell_environ environ
+    // On POSIX systems, declare environ
+    extern char **environ;
+    #define shell_environ environ
 #endif
 
 /* Message IDs for localization */
@@ -266,8 +268,9 @@ int _mysetenv(info_t *);
 int _myunsetenv(info_t *);
 int populate_env_list(info_t *);
 
-/* toem_getenv.c */
-char **get_environ(info_t *);
+/* toem_getenv.c - Add declaration for get_environ_copy */
+char **get_environ_copy(info_t *);
+// char **get_environ(info_t *); // Removed this
 int _unsetenv(info_t *, char *);
 int _setenv(info_t *, char *, char *);
 
@@ -300,8 +303,8 @@ int replace_vars(info_t *);
 int replace_string(char **, char *);
 
 /* Command highlighting and advanced input functions */
-char *highlight_command(const char *input);
-void print_highlighted_input(char *input);
+char *highlight_command(const char *, info_t *);
+void print_highlighted_input(char *);
 int is_command(const char *cmd);
 int is_builtin(const char *cmd);
 char *get_highlighted_prompt(info_t *info);

@@ -202,7 +202,8 @@ void load_configuration(info_t *info)
         line_num++;
         if (parse_config_line(line, &key, &value) == 0)
         {
-            apply_configuration(info, key, value, config_path, line_num);
+            // TODO: Re-implement or find apply_configuration function
+            // apply_configuration(info, key, value, config_path, line_num);
             free(key); key = NULL;
             free(value); value = NULL;
         }

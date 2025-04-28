@@ -71,7 +71,7 @@ Arabic language support is a primary focus and largely complete:
 ### Build System
 
 - CMake-based build with cross-platform support (Console mode).
-- Options for GUI_MODE, ENABLE_TESTS, BUILD_STATIC.
+- Options for ENABLE_TESTS, BUILD_STATIC.
 - Four distinct build configurations possible.
 - Handles C and C++ sources, linking dependencies (ImGui, D3D11).
 

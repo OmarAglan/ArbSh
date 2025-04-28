@@ -1,4 +1,7 @@
 #include "shell.h"
+#include <locale.h> // For setlocale()
+#include <stdlib.h> // For getenv()
+#include "platform/console.h" // Include console PAL
 
 /* Define language codes */
 #define LANG_EN 0
@@ -81,10 +84,10 @@ int set_language(int lang_code)
     /* Set text direction based on language */
     if (lang_code == LANG_AR) {
         /* Arabic is right-to-left */
-        set_text_direction(1);
+        platform_console_set_text_direction(1);
     } else {
         /* English is left-to-right */
-        set_text_direction(0);
+        platform_console_set_text_direction(0);
     }
     
     return 0;
@@ -141,9 +144,9 @@ int init_locale(void)
 {
     int detected_lang;
     
-    /* Configure terminal for UTF-8 */
-    configure_terminal_for_utf8();
-    
+    /* Set C library locale (important for functions like strftime, numeric formats) */
+    setlocale(LC_ALL, "");
+
     /* Detect system language */
     detected_lang = detect_system_language();
     

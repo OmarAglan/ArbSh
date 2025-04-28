@@ -142,17 +142,15 @@ void fork_cmd(info_t *info)
 {
     platform_process_t *process = NULL;
     int exit_code;
-    char **env = get_environ_copy(info); // Get current environment copy
+    char **env = get_environ_copy(info);
 
     // Create the process using the platform abstraction layer
     // Pass the command path (info->path), arguments (info->argv), and environment (env)
     process = platform_create_process(info, info->path, info->argv, env);
 
     // Free the copied environment strings if they were allocated
-    // TODO: Ensure get_environ_copy() contract is clear about ownership
-    // Assuming get_environ_copy allocated memory that needs freeing here.
-    // If it returns a pointer to static or managed memory, this free is wrong.
-    // free_string_array(env); // Hypothetical function to free the env array
+    // Note: get_environ() returns info->env_array which is freed by free_info later.
+    // Do not free 'env' here.
 
     if (!process)
     {

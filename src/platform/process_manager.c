@@ -688,6 +688,75 @@
  }
  
  /**
+  * Send an interrupt signal (like Ctrl+C) to the shell process
+  */
+ bool send_shell_interrupt(shell_process_t *process)
+ {
+     if (!process || !process->is_running)
+     {
+         return false;
+     }
+
+ #ifdef WINDOWS
+     // For Windows, try sending CTRL_C_EVENT.
+     // This generally works if the child process was created with CREATE_NEW_PROCESS_GROUP
+     // or if it's a console application that handles Ctrl+C.
+     // Note: CREATE_NEW_PROCESS_GROUP was NOT used in create_shell_process.
+     // If this fails, sometimes writing ASCII ETX (0x03) to stdin works for shells.
+     // However, GenerateConsoleCtrlEvent is the more standard way to signal console processes.
+
+     // Need the Process ID (PID) for GenerateConsoleCtrlEvent
+     // Our create_shell_process stores the handle, let's get the PID from it.
+     // Although, we could also store the PID directly in shell_process_t at creation.
+     DWORD processId = GetProcessId(process->hProcess);
+     if (processId == 0)
+     {
+         fprintf(stderr, "Error: Could not get PID to send interrupt (%lu)\n", GetLastError());
+         return false;
+     }
+
+     // Attempt to send Ctrl+C event to the process group (0 signifies current process group,
+     // but we want to target the child's group. If the child inherits console or creates one,
+     // using its PID might target its group implicitly. Let's try targeting its PID directly.)
+     // Sending 0 targets the *current* process group, which is the GUI, not the child!
+     // We need to target the child's process ID directly. Documentation is murky,
+     // but empirically, using the child's PID seems necessary here.
+     if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, processId))
+     {
+         // Maybe the process doesn't have a console or doesn't handle it?
+         fprintf(stderr, "Warning: GenerateConsoleCtrlEvent(CTRL_C_EVENT) failed (%lu). Child process might not handle Ctrl+C this way.\n", GetLastError());
+
+         // Fallback: Try writing ETX (Ctrl+C character) to stdin? Risky, might be interpreted as literal input.
+         // const char ctrl_c = '\x03';
+         // write_shell_input(process, &ctrl_c, 1);
+
+         // Return true because we attempted, even if it failed. The caller might not care about failure.
+         // Or return false? Let's return false to indicate the primary mechanism failed.
+         return false;
+     }
+
+     printf("Sent CTRL_C_EVENT to PID %lu\n", processId);
+     return true;
+
+ #else
+     // Unix/Linux: Send SIGINT signal
+     if (process->pid != -1)
+     {
+         if (kill(process->pid, SIGINT) == 0)
+         {
+             return true;
+         }
+         else
+         {
+             perror("Error sending SIGINT");
+             return false;
+         }
+     }
+     return false; // No valid PID
+ #endif
+ }
+
+ /**
   * Cleanup resources associated with the shell process
   */
  void cleanup_shell_process(shell_process_t *process)

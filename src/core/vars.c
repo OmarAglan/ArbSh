@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "platform/process.h"
 
 /**
  * is_chain - test if current char in buffer is a chain delimeter
@@ -114,28 +115,23 @@ int replace_vars(info_t *info)
         if (info->argv[i][0] != '$' || !info->argv[i][1])
             continue;
 
+        if (!_strcmp(info->argv[i], "$$"))
+        {
+            replace_string(&(info->argv[i]),
+                           shell_strdup(convert_number(platform_getpid(), 10, 0)));
+            continue;
+        }
         if (!_strcmp(info->argv[i], "$?"))
         {
             replace_string(&(info->argv[i]),
-                shell_strdup(convert_number(info->status, 10, 0)));
-            continue;
-        }
-        if (!_strcmp(info->argv[i], "$$"))
-        {
-#ifdef WINDOWS
-            replace_string(&(info->argv[i]),
-                shell_strdup(convert_number(GetCurrentProcessId(), 10, 0)));
-#else
-            replace_string(&(info->argv[i]),
-                shell_strdup(convert_number(getpid(), 10, 0)));
-#endif
+                           shell_strdup(convert_number(info->status, 10, 0)));
             continue;
         }
         node = node_starts_with(info->env, &info->argv[i][1], '=');
         if (node)
         {
             replace_string(&(info->argv[i]),
-                shell_strdup(_strchr(node->str, '=') + 1));
+                           shell_strdup(_strchr(node->str, '=') + 1));
             continue;
         }
         replace_string(&info->argv[i], shell_strdup(""));

@@ -4,17 +4,25 @@
 #include <ctype.h> // For isspace
 #include <stdio.h> // For snprintf
 
+// Forward declaration moved here
+void highlight_line(const char *line, char *output_buffer, size_t output_size, info_t *info);
+
 /**
  * Color codes for terminal output
  */
 #define COLOR_RESET   "\033[0m"
 #define COLOR_COMMAND "\033[1;32m"  /* Bright green for commands */
-#define COLOR_BUILTIN "\033[1;36m"  /* Cyan for builtin commands */
+#define COLOR_BUILTIN "\033[1;34m"  /* Cyan for builtin commands */
 #define COLOR_ARG     "\033[1;37m"  /* White for arguments */
 #define COLOR_VAR     "\033[1;33m"  /* Yellow for variables */
 #define COLOR_PATH    "\033[1;34m"  /* Blue for paths */
 #define COLOR_QUOTE   "\033[1;35m"  /* Magenta for quoted text */
 #define COLOR_ERROR   "\033[1;31m"  /* Red for errors */
+#define COLOR_ARGUMENT      "\033[0;37m" // White (same as ARG for now)
+#define COLOR_OPERATOR      "\033[1;35m" // Bold Magenta
+#define COLOR_STRING        "\033[0;33m" // Yellow
+#define COLOR_VARIABLE      "\033[0;36m" // Cyan (different from VAR? maybe COLOR_VAR is for $VAR)
+#define COLOR_COMMENT       "\033[0;37m" // Gray/White (adjust as needed)
 
 /**
  * is_builtin - check if a command is a shell builtin
@@ -45,116 +53,26 @@ int is_builtin(const char *cmd)
 }
 
 /**
- * highlight_command - Highlight different parts of a command with color codes
- * @input: the command string to highlight
- *
- * Return: dynamically allocated highlighted string
+ * highlight_command - Adds syntax highlighting to a command string.
+ * @input: The command string input.
+ * @info: Pointer to the shell info struct (for context like is_cmd).
+ * Return: A newly allocated string with ANSI color codes, or NULL on error.
+ *         The caller is responsible for freeing the returned string.
  */
-char *highlight_command(const char *input)
+char *highlight_command(const char *input, info_t *info)
 {
-    char *highlighted, *token, *saveptr;
-    char *inputcpy;
-    size_t len, total_len = 0;
-    int is_first_token = 1;
-    int in_quote = 0;
-    char quote_char = 0;
-    
-    if (!input || !*input)
-        return NULL;
-    
-    /* Estimate size for highlighted string (4x for color codes) */
-    len = _strlen((char *)input);
-    highlighted = malloc(len * 4 + 20);
+    // Estimate buffer size (generous: 2x original + color codes)
+    size_t input_len = strlen(input);
+    size_t buffer_size = input_len * 2 + 256; // Extra space for colors/reset
+    char *highlighted = malloc(buffer_size);
     if (!highlighted)
-        return NULL;
-    
-    *highlighted = '\0';
-    
-    /* Make a copy to tokenize */
-    inputcpy = _strdup((char *)input);
-    if (!inputcpy)
     {
-        free(highlighted);
-        return NULL;
+        return NULL; // Allocation failed
     }
-    
-    /* First pass: simple tokenization by space to identify command/builtin */
-    token = strtok_r(inputcpy, " \t", &saveptr);
-    
-    while (token)
-    {
-        if (is_first_token)
-        {
-            /* First token is the command */
-            if (is_builtin(token))
-            {
-                _strcat(highlighted, COLOR_BUILTIN);
-                _strcat(highlighted, token);
-                _strcat(highlighted, COLOR_RESET);
-            }
-            else if (is_command(token))
-            {
-                _strcat(highlighted, COLOR_COMMAND);
-                _strcat(highlighted, token);
-                _strcat(highlighted, COLOR_RESET);
-            }
-            else
-            {
-                /* Command not found */
-                _strcat(highlighted, COLOR_ERROR);
-                _strcat(highlighted, token);
-                _strcat(highlighted, COLOR_RESET);
-            }
-            is_first_token = 0;
-        }
-        else
-        {
-            /* Arguments */
-            if (token[0] == '-')
-            {
-                /* Option argument */
-                _strcat(highlighted, COLOR_ARG);
-                _strcat(highlighted, token);
-                _strcat(highlighted, COLOR_RESET);
-            }
-            else if (token[0] == '$')
-            {
-                /* Variable */
-                _strcat(highlighted, COLOR_VAR);
-                _strcat(highlighted, token);
-                _strcat(highlighted, COLOR_RESET);
-            }
-            else if (token[0] == '/' || token[0] == '\\' || 
-                    (token[1] == ':' && (token[2] == '/' || token[2] == '\\')))
-            {
-                /* Path */
-                _strcat(highlighted, COLOR_PATH);
-                _strcat(highlighted, token);
-                _strcat(highlighted, COLOR_RESET);
-            }
-            else if (token[0] == '\'' || token[0] == '"')
-            {
-                /* Quoted string */
-                _strcat(highlighted, COLOR_QUOTE);
-                _strcat(highlighted, token);
-                _strcat(highlighted, COLOR_RESET);
-            }
-            else
-            {
-                /* Regular argument */
-                _strcat(highlighted, COLOR_ARG);
-                _strcat(highlighted, token);
-                _strcat(highlighted, COLOR_RESET);
-            }
-        }
-        
-        /* Add space between tokens */
-        _strcat(highlighted, " ");
-        
-        token = strtok_r(NULL, " \t", &saveptr);
-    }
-    
-    free(inputcpy);
+
+    // Call the core highlighting logic
+    highlight_line(input, highlighted, buffer_size, info); // Pass info
+
     return highlighted;
 }
 
@@ -166,7 +84,7 @@ char *highlight_command(const char *input)
  */
 void print_highlighted_input(char *input)
 {
-    char *highlighted = highlight_command(input);
+    char *highlighted = highlight_command(input, NULL);
     
     if (highlighted)
     {
@@ -221,19 +139,6 @@ char *get_highlighted_prompt(info_t *info)
     return prompt;
 }
 
-// Syntax highlighting definitions
-#define COLOR_RESET         "\033[0m"
-#define COLOR_COMMAND       "\033[1;32m" // Bold Green
-#define COLOR_ARGUMENT      "\033[0;37m" // White
-#define COLOR_OPERATOR      "\033[1;35m" // Bold Magenta
-#define COLOR_STRING        "\033[0;33m" // Yellow
-#define COLOR_VARIABLE      "\033[0;36m" // Cyan
-#define COLOR_COMMENT       "\033[0;37m" // Gray/White (adjust as needed)
-#define COLOR_BUILTIN       "\033[1;34m" // Bold Blue
-
-// Forward declaration
-void highlight_line(const char *line, char *output_buffer, size_t output_size, info_t *info);
-
 /**
  * highlight_line - Applies syntax highlighting to a shell command line.
  * @line: The input command line string.
@@ -264,7 +169,7 @@ void highlight_line(const char *line, char *output_buffer, size_t output_size, i
 
                 // Check if it's the command
                 if (potential_command) {
-                    if (is_cmd(info, current_token)) { // Use is_cmd from parser.c (declared in shell.h)
+                    if (info != NULL && is_cmd(info, current_token)) {
                         color = COLOR_COMMAND;
                     } else {
                         // Check common builtins (placeholder)
@@ -322,7 +227,7 @@ void highlight_line(const char *line, char *output_buffer, size_t output_size, i
                  current_token[token_idx] = '\0';
                  const char *color = COLOR_ARGUMENT;
                  if (potential_command) {
-                      if (is_cmd(info, current_token)) { color = COLOR_COMMAND; }
+                      if (info != NULL && is_cmd(info, current_token)) { color = COLOR_COMMAND; }
                       else { /* Check builtins? */ color = COLOR_BUILTIN; }
                  } else if (current_token[0] == '$') { color = COLOR_VARIABLE; }
                  snprintf(output_buffer + out_idx, output_size - out_idx, "%s%s%s", color, current_token, COLOR_RESET);
@@ -341,7 +246,7 @@ void highlight_line(const char *line, char *output_buffer, size_t output_size, i
                 current_token[token_idx] = '\0';
                 const char *color = COLOR_ARGUMENT;
                 if (potential_command) { /* Command/Builtin Check */
-                    if (is_cmd(info, current_token)) { color = COLOR_COMMAND; }
+                    if (info != NULL && is_cmd(info, current_token)) { color = COLOR_COMMAND; }
                     else { color = COLOR_BUILTIN; } // Simple fallback
                     potential_command = 0;
                 } else if (current_token[0] == '$') { color = COLOR_VARIABLE; }
@@ -376,14 +281,13 @@ void highlight_line(const char *line, char *output_buffer, size_t output_size, i
         current_token[token_idx] = '\0';
         const char *color = COLOR_ARGUMENT; // Default
          if (potential_command) {
-             if (is_cmd(info, current_token)) { color = COLOR_COMMAND; }
+             if (info != NULL && is_cmd(info, current_token)) { color = COLOR_COMMAND; }
              else { /* Check builtins? */ color = COLOR_BUILTIN; }
          } else if (in_string) { // Unclosed string
              color = COLOR_STRING;
          } else if (current_token[0] == '$') { color = COLOR_VARIABLE; }
 
         snprintf(output_buffer + out_idx, output_size - out_idx, "%s%s%s", color, current_token, COLOR_RESET);
-        // out_idx += strlen(output_buffer + out_idx); // Not needed as we are at the end
     }
 
     // Ensure null termination if something was written

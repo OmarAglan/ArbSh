@@ -10,8 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Option for static linking
 option(BUILD_STATIC "Build statically linked executable" OFF)
 
-# Option for GUI mode (now only ImGui)
-option(GUI_MODE "Build with GUI support using ImGui" OFF) # Default to ON if that's your main target
+
 
 # Option for enabling tests
 option(ENABLE_TESTS "Build the test suite" OFF)
@@ -46,7 +45,7 @@ set(ARBSH_I18N_SOURCES
 
 set(ARBSH_UTILS_SOURCES
     # Utilities
-    src/utils/imgui_compat.c
+
     src/utils/lists.c
     src/utils/lists1.c
     src/utils/memory.c
@@ -109,28 +108,7 @@ list(FILTER ARBSH_CORE_SOURCES EXCLUDE REGEX ".*win_main\\.c$")
 list(FILTER ARBSH_CORE_SOURCES EXCLUDE REGEX ".*win_gui_common\\.c$")
 # ---------------------------------------------------------------------------
 
-# --- Define ImGui Source Files ---
-set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui")
-set(IMGUI_SOURCES
-    "${IMGUI_DIR}/imgui.cpp"
-    "${IMGUI_DIR}/imgui_demo.cpp"
-    "${IMGUI_DIR}/imgui_draw.cpp"
-    "${IMGUI_DIR}/imgui_tables.cpp"
-    "${IMGUI_DIR}/imgui_widgets.cpp"
-    "${IMGUI_DIR}/backends/imgui_impl_win32.cpp"
-    "${IMGUI_DIR}/backends/imgui_impl_dx11.cpp"
-)
-# --------------------------------
 
-# --- Define GUI Specific Source Files ---
-# These are files specifically for the GUI mode, including C files they depend on
-set(GUI_SPECIFIC_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/imgui_shell.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/imgui_main.cpp"
-    # "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/process_manager.c" # This is platform-specific now
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/terminal_tab.c"
-)
-# ------------------------------------
 
 # --- Platform Specific Sources for Executable ---
 # We still need the resource file for Windows builds
@@ -139,55 +117,27 @@ if(WIN32)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/shell.rc")
         list(APPEND PLATFORM_EXE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/shell.rc")
     endif()
-    # If process_manager.c is ONLY used by GUI, add it here conditionally
-    if(GUI_MODE)
-        list(APPEND PLATFORM_EXE_SOURCES "src/platform/process_manager.c")
-    endif()
+
 # elseif(UNIX)
     # No extra sources needed for console executable usually
 endif()
 # ------------------------------------------------------------
 
-# --- Configure Executable Based on Mode ---
-if(WIN32 AND GUI_MODE)
-    add_executable(hsh WIN32
-        ${GUI_SPECIFIC_SOURCES}
-        ${IMGUI_SOURCES}
-        ${PLATFORM_EXE_SOURCES} # Add platform sources needed specifically by the EXE
-        src/core/shell_entry.c
-    )
+# --- Console Application Configuration ---
+add_executable(hsh
+     ${PLATFORM_EXE_SOURCES} # Add platform sources needed specifically by the EXE
+     src/core/shell_entry.c
+)
+# Link the core library (which transitively links utils, i18n, and platform)
+target_link_libraries(hsh PRIVATE arbsh_core)
 
-    # Link the main libraries, platform libs are handled via arbsh_platform dependency in arbsh_core
-    target_link_libraries(hsh PRIVATE arbsh_core d3d11 dxgi d3dcompiler dwmapi shell32 user32 gdi32 kernel32 ws2_32)
+target_include_directories(hsh PRIVATE include) # Core includes come via arbsh_core
 
-    target_compile_definitions(hsh PRIVATE USE_IMGUI GUI_MODE)
-
-    target_include_directories(hsh PRIVATE
-        include
-        ${IMGUI_DIR}
-        ${IMGUI_DIR}/backends
-        # src/platform # Include comes from arbsh_platform
-        src/gui
-    )
-
-else()
-    # --- Console Application Configuration ---
-    add_executable(hsh
-         ${PLATFORM_EXE_SOURCES} # Add platform sources needed specifically by the EXE
-         src/core/shell_entry.c
-    )
-    # Link the core library (which transitively links utils, i18n, and platform)
-    target_link_libraries(hsh PRIVATE arbsh_core)
-
-    target_include_directories(hsh PRIVATE include) # Core includes come via arbsh_core
-
-    # Platform-specific libraries linked by arbsh_platform or directly if needed by EXE
-    if(WIN32)
-        target_link_libraries(hsh PRIVATE shell32 user32 gdi32 kernel32 ws2_32)
-    # elseif(UNIX)
-        # target_link_libraries(hsh PRIVATE pthread dl)
-    endif()
-
+# Platform-specific libraries linked by arbsh_platform or directly if needed by EXE
+if(WIN32)
+    target_link_libraries(hsh PRIVATE shell32 user32 gdi32 kernel32 ws2_32)
+# elseif(UNIX)
+    # target_link_libraries(hsh PRIVATE pthread dl)
 endif()
 # -----------------------------------------
 
@@ -280,29 +230,10 @@ if(ENABLE_TESTS)
     endif()
     add_test(NAME KeyboardTest COMMAND test_keyboard)
 
-    # If GUI mode is enabled, add GUI-specific tests
-    if(GUI_MODE AND WIN32) # GUI tests likely depend on WIN32 and ImGui
-        # Test for ImGui integration (Example - adjust sources as needed)
-        add_executable(test_imgui WIN32 # Needs WIN32 for ImGui backend
-            tests/gui/test_imgui.cpp
-            # Link necessary ImGui sources or a minimal ImGui test setup
-            ${IMGUI_SOURCES}
-            # Link common utils if needed by test_imgui.cpp
-            ${TEST_COMMON_UTILS_SOURCES}
-        )
-        target_include_directories(test_imgui PRIVATE ${TEST_COMMON_INCLUDE_DIRS} ${IMGUI_DIR} ${IMGUI_DIR}/backends)
-        target_compile_definitions(test_imgui PRIVATE WINDOWS _CRT_SECURE_NO_WARNINGS USE_IMGUI GUI_MODE) # Define GUI mode for test too
-        # Link libraries needed by ImGui test
-        target_link_libraries(test_imgui PRIVATE arbsh_utils arbsh_i18n d3d11 dxgi d3dcompiler dwmapi user32 gdi32)
-        add_test(NAME ImGuiTest COMMAND test_imgui)
-    endif()
-
     # Define a custom test target to run all tests
     # List explicit test targets as dependencies
     set(TEST_TARGETS test_utf8 test_bidi test_keyboard)
-    if(GUI_MODE AND WIN32)
-        list(APPEND TEST_TARGETS test_imgui)
-    endif()
+    # Add other test targets here if needed
 
     add_custom_target(run_tests
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --verbose # Add verbose for more output

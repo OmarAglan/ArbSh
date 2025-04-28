@@ -31,11 +31,6 @@ platform_process_t* platform_create_process(info_t *info, const char *command, c
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    // Set GUI environment variable for child process
-    // This assumes set_gui_env_for_child() is available globally or passed via info
-    // TODO: Consider passing GUI mode status explicitly
-    set_gui_env_for_child();
-
     // Build command line string carefully
     // Ensure proper quoting for arguments with spaces
     snprintf(cmdline, sizeof(cmdline), "\"%s\"", command); // Quote the command itself
@@ -127,4 +122,10 @@ void platform_cleanup_process(platform_process_t *process)
 
     // Free the memory allocated for our structure
     free(process);
+}
+
+long platform_getpid(void)
+{
+    // Windows API function to get current process ID
+    return (long)GetCurrentProcessId();
 } 
