@@ -13,13 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added placeholder classes for core pipeline (`PipelineObject`, `CmdletBase`) and execution (`Parser`, `Executor`).
   - Implemented basic REPL loop in `Program.cs`.
   - Added basic `WriteOutputCmdlet` placeholder.
-  - Added `ParsedCommand.cs` to represent parsed command structure, including basic support for named parameters.
-  - Updated `Parser.cs` with improved tokenization logic (`TokenizeInput`) to handle double-quoted arguments and basic escaped quotes (`\"`). Differentiates positional arguments from named parameters (starting with `-`).
+  - Added `ParsedCommand.cs` to represent parsed command structure, including properties for output redirection.
+  - Updated `Parser.cs`'s `TokenizeInput` method to handle escaped quotes (`\"`) and basic escaped operators (`\|`, `\;`, `\>`).
+  - Updated `Parser.cs`'s `Parse` method to detect output redirection operators (`>`, `>>`) and store the path/append flag in `ParsedCommand`. Added basic handling for command separator (`;`) - currently only processes the first statement.
   - Added `ParameterAttribute.cs` for marking cmdlet parameters.
   - Updated `GetHelpCmdlet.cs` and `GetCommandCmdlet.cs` to use `[Parameter]` attribute.
-  - Implemented basic parameter binding logic in `Executor.cs` using reflection, including basic type conversion (e.g., string to bool/int) and mandatory parameter checking (throwing `ParameterBindingException`).
+  - Implemented parameter binding logic in `Executor.cs` using reflection, including mandatory parameter checks (throwing `ParameterBindingException`), stricter boolean switch handling, and improved type conversion using `TypeConverter` / `Convert.ChangeType`.
   - Added `CommandDiscovery.cs` to find available cmdlets using reflection.
-  - Updated `Executor.cs` to use `CommandDiscovery`, handle `ParameterBindingException`, and use the updated binding logic.
+  - Updated `Executor.cs` to use `CommandDiscovery`, handle `ParameterBindingException`, and use the refined binding logic.
   - Updated `CmdletBase.cs` to collect output internally using `BlockingCollection`.
   - Updated `Executor.cs` with basic sequential pipeline logic (passing output of one command to the input of the next via `BlockingCollection`), confirmed working with `Get-Command | Write-Output`.
   - Updated `Parser.cs` to handle the pipeline operator (`|`).

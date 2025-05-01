@@ -1,8 +1,13 @@
 using System;
+using System;
+using System.Collections.Generic;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Collections.Concurrent; // For BlockingCollection
+using System.Collections.Concurrent;
+using System.ComponentModel;
+using System.IO; // For StreamWriter
 using ArbSh.Console.Commands;
 
 namespace ArbSh.Console
@@ -163,19 +168,62 @@ namespace ArbSh.Console
             } // End of pipeline loop
 
             // --- Output Handling ---
-            // If there was any output from the last command, print it to the console.
+            // Handle output from the last command in the pipeline
             if (currentInput != null)
             {
-                 System.Console.WriteLine("DEBUG (Executor Pipeline): Final pipeline output:");
-                 try
-                 {
-                     foreach (var finalOutput in currentInput.GetConsumingEnumerable()) // Consume final output
-                     {
-                         // TODO: Implement proper formatting based on object type
-                         System.Console.WriteLine(finalOutput.ToString());
+                ParsedCommand lastCommand = parsedCommands.Last(); // Get the last command for redirection info
+                StreamWriter? redirectWriter = null;
+
+                try
+                {
+                    // Check for output redirection on the last command
+                    if (!string.IsNullOrEmpty(lastCommand.OutputRedirectPath))
+                    {
+                        try
+                        {
+                            FileMode mode = lastCommand.AppendOutput ? FileMode.Append : FileMode.Create;
+                            // Using UTF8 encoding by default
+                            redirectWriter = new StreamWriter(lastCommand.OutputRedirectPath, lastCommand.AppendOutput, System.Text.Encoding.UTF8);
+                            System.Console.WriteLine($"DEBUG (Executor): Redirecting output {(lastCommand.AppendOutput ? ">>" : ">")} {lastCommand.OutputRedirectPath}");
+                        }
+                        catch (Exception ex)
+                        {
+                             System.Console.ForegroundColor = ConsoleColor.Red;
+                             System.Console.WriteLine($"ERROR: Cannot open file '{lastCommand.OutputRedirectPath}' for redirection: {ex.Message}");
+                             System.Console.ResetColor();
+                             // Don't proceed with output if redirection failed
+                             currentInput.Dispose(); // Dispose the collection
+                             currentInput = null;
+                        }
+                    }
+
+                    if (currentInput != null) // Check again in case redirection failed
+                    {
+                        if (redirectWriter == null) {
+                             System.Console.WriteLine("DEBUG (Executor Pipeline): Final pipeline output to Console:");
+                        }
+
+                        foreach (var finalOutput in currentInput.GetConsumingEnumerable()) // Consume final output
+                        {
+                            // TODO: Implement proper formatting based on object type
+                            string outputString = finalOutput.ToString() ?? string.Empty;
+
+                            if (redirectWriter != null)
+                            {
+                                redirectWriter.WriteLine(outputString);
+                            }
+                            else
+                            {
+                                System.Console.WriteLine(outputString);
+                            }
                      }
                  }
+                 }
                  catch (OperationCanceledException) { /* Expected if collection is empty and completed */ }
+                 finally
+                 {
+                     redirectWriter?.Dispose(); // Ensure file stream is closed
+                 }
             }
              System.Console.WriteLine($"DEBUG (Executor): Pipeline execution finished.");
         }
@@ -209,40 +257,45 @@ namespace ArbSh.Console
                  {
                      string? namedValue = command.Parameters[paramName]; // May be empty for switch parameters
 
-                     // Handle boolean switch parameters (presence implies true)
+                     // Handle boolean switch parameters
                      if (prop.PropertyType == typeof(bool))
                      {
-                         // If value is null/empty, treat as true switch. If value is provided, try parsing it.
-                         if (string.IsNullOrEmpty(namedValue))
+                         // If parameter name is present, it implies true unless a value $false is explicitly given
+                         if (string.IsNullOrEmpty(namedValue)) // e.g., -Full
                          {
                              valueToSet = true;
+                             found = true;
+                             System.Console.WriteLine($"DEBUG (Binder): Bound switch parameter '{paramName}' to true (no value provided).");
                          }
-                         else if (bool.TryParse(namedValue, out bool boolValue)) // Handle -Param:$true/$false
+                         else // e.g., -Full $true, -Full $false, -Full someValue
                          {
-                             valueToSet = boolValue;
+                             if (bool.TryParse(namedValue, out bool boolValue))
+                             {
+                                 valueToSet = boolValue;
+                                 found = true;
+                                 System.Console.WriteLine($"DEBUG (Binder): Bound boolean parameter '{paramName}' to explicit value '{valueToSet}'.");
+                             }
+                             else
+                             {
+                                 // Value provided for bool param, but it's not 'true' or 'false' - this is an error.
+                                 throw new ParameterBindingException($"A value '{namedValue}' cannot be specified for the boolean (switch) parameter '{paramName}'.");
+                             }
                          }
-                         else
-                         {
-                              System.Console.WriteLine($"WARN (Binder): Invalid boolean value '{namedValue}' for switch parameter '{paramName}'. Treating as true.");
-                              valueToSet = true; // Default switch behavior if value is invalid bool
-                         }
-                         found = true;
-                         System.Console.WriteLine($"DEBUG (Binder): Bound boolean parameter '{paramName}' to value '{valueToSet}'");
                      }
                      // Attempt type conversion for parameters with non-empty values
                      else if (!string.IsNullOrEmpty(namedValue))
                      {
                          try
                          {
-                             // Explicit handling for int, fallback to Convert.ChangeType
-                             if (prop.PropertyType == typeof(int))
+                             // Attempt conversion using TypeConverter first, then fallback
+                             TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
+                             if (converter != null && converter.CanConvertFrom(typeof(string)))
                              {
-                                 valueToSet = int.Parse(namedValue); // Use Parse for clearer exceptions
+                                 valueToSet = converter.ConvertFromString(namedValue);
                              }
                              else
                              {
-                                 // Use Convert.ChangeType for other basic conversions (string, etc.)
-                                 // TODO: Add more robust type conversion (collections, custom types)
+                                 // Fallback for basic types if no specific converter found/applicable
                                  valueToSet = Convert.ChangeType(namedValue, prop.PropertyType);
                              }
                              found = true;
@@ -261,18 +314,15 @@ namespace ArbSh.Console
                      string positionalValue = command.Arguments[paramAttr.Position];
                      try
                      {
-                         // Explicit handling for int, fallback to Convert.ChangeType
-                         if (prop.PropertyType == typeof(int))
+                         // Attempt conversion using TypeConverter first, then fallback
+                         TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
+                         if (converter != null && converter.CanConvertFrom(typeof(string)))
                          {
-                             valueToSet = int.Parse(positionalValue);
-                         }
-                         else if (prop.PropertyType == typeof(bool)) // Positional bool doesn't make much sense, but handle anyway
-                         {
-                             valueToSet = bool.Parse(positionalValue);
+                             valueToSet = converter.ConvertFromString(positionalValue);
                          }
                          else
                          {
-                             // Use Convert.ChangeType for other basic conversions
+                             // Fallback for basic types
                              valueToSet = Convert.ChangeType(positionalValue, prop.PropertyType);
                          }
                          found = true;

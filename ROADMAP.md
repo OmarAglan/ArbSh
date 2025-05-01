@@ -26,14 +26,15 @@ To create a powerful, extensible shell environment built on .NET that:
 
 -   [✅] Basic REPL (Read-Eval-Print Loop) implementation in `ArbSh.Console`.
 -   [✅] Develop the initial C# parser (`Parser.cs`) for simple syntax, handling quoted args, parameters (`-`), and pipelines (`|`).
--   [✅] Implement basic cmdlet parameter binding (`Executor.BindParameters`) using reflection and `[Parameter]` attribute, with basic type conversion.
+-   [✅] Implement basic cmdlet parameter binding (`Executor.BindParameters`) using reflection and `[Parameter]` attribute.
+-   [✅] Refined Parameter Binding: Added basic type conversion (`TypeConverter`/`Convert.ChangeType`), mandatory parameter checks, and stricter boolean switch handling.
 -   [✅] Implement fundamental built-in cmdlets placeholders (`Write-Output`, `Get-Help`, `Get-Command`) with basic logic.
 -   [✅] Implement basic command discovery (`CommandDiscovery.cs`).
 -   [✅] Implement basic sequential pipeline execution simulation (`Executor.cs`).
--   [🟡] **Refine Parameter Binding:** Improve type conversion, handle mandatory parameters, switch parameters more robustly. (In Progress)
--   [ ] **Refine Parser:** Handle escaped quotes/operators, command separators (`;`), redirection (`>`), variable expansion (`$var`).
+-   [🟡] **Refine Parser:** Handle escaped quotes/operators, command separators (`;`), redirection (`>`), variable expansion (`$var`). (In Progress: Basic ';', '\"', '\|', '\>', redirection parsing added)
 -   [ ] **Refine Pipeline Execution:** Implement true concurrent execution, manage streams more effectively.
--   [ ] **Implement Cmdlet Logic:** Add real logic to placeholder cmdlets.
+-   [ ] **Implement Cmdlet Logic:** Add real logic to placeholder cmdlets (e.g., `Get-Help` parameter details).
+-   [ ] **Further Refine Parameter Binding:** Add support for more complex types (arrays, enums), improve error reporting.
 
 **Phase 3: Arabic Command Parsing & Tokenization (C#)**
 

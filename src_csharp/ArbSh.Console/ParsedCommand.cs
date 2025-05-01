@@ -30,7 +30,18 @@ namespace ArbSh.Console
         /// </summary>
         public Dictionary<string, string> Parameters { get; }
 
-        // TODO: Add properties for redirections (Input, Output, Error)
+        /// <summary>
+        /// Gets the file path for output redirection (> or >>). Null if no redirection.
+        /// </summary>
+        public string? OutputRedirectPath { get; private set; }
+
+        /// <summary>
+        /// Gets a value indicating whether output redirection should append (>>).
+        /// Only relevant if OutputRedirectPath is not null.
+        /// </summary>
+        public bool AppendOutput { get; private set; }
+
+        // TODO: Add properties for input redirection (<) and error redirection (2>)
         // TODO: Add information about pipeline position (start, middle, end)
 
         public ParsedCommand(string commandName, List<string> arguments, Dictionary<string, string> parameters)
@@ -38,6 +49,16 @@ namespace ArbSh.Console
             CommandName = commandName;
             Arguments = arguments ?? new List<string>();
             Parameters = parameters ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // Case-insensitive keys
+            // Redirection is set separately by the parser
+        }
+
+        /// <summary>
+        /// Internal method used by the parser to set redirection details.
+        /// </summary>
+        internal void SetOutputRedirection(string path, bool append)
+        {
+            OutputRedirectPath = path;
+            AppendOutput = append;
         }
     }
 }
