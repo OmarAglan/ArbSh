@@ -1,136 +1,67 @@
+# ArbSh Project - Refactoring Status
 
-# ArbSh Project Status
+**Note:** This project is currently undergoing a major refactoring. The goal is to transition from the original C-based implementation to a new **C#/.NET PowerShell-inspired shell** with first-class support for **Arabic commands and full Arabic text handling (UTF-8, BiDi/RTL)**.
 
-This document provides a comprehensive overview of the current state of the ArbSh project, its components, and planned development roadmap.
+This document provides an overview of the new direction and the status of the refactoring effort. The original C implementation remains in the `src/` directory for reference, particularly its i18n components which are being ported to C#.
 
-## Project Overview
+## New Project Overview
 
-The ArbSh project is a UNIX command line interpreter implemented in C with cross-platform support for both Unix/Linux and Windows systems. The project is specifically designed to support the Baa language ecosystem by providing comprehensive Arabic language support that most standard terminals lack. Key features include:
+The refactored ArbSh aims to be a modern, cross-platform command-line shell built on C# and .NET. Inspired by PowerShell's object pipeline architecture, it will offer a powerful and extensible environment.
 
-1. **Cross-platform compatibility** - Core shell works on both Windows and Unix/Linux systems.
-2. **Full Arabic language support** - Including right-to-left text, a full Unicode Bidirectional Algorithm (UAX #9), UTF-8 handling, and localization.
-3. **Standalone operation** - Can be installed as a primary shell.
-4. **Modern UI options** - Optional ImGui-based GUI mode on Windows with tabbed interface.
+A primary and distinguishing feature is its **native support for the Arabic language**:
 
-This shell addresses a critical gap in the Baa language ecosystem by providing a terminal environment that fully supports Arabic as both input and output, which is essential for the proper functioning of the Baa programming language.
+1.  **Arabic Commands:** Users will be able to write and execute commands using Arabic script (e.g., `احصل-محتوى` instead of `Get-Content`).
+2.  **Full Arabic Text Handling:** Leveraging ported logic from the original ArbSh, it will correctly handle UTF-8 encoding, complex bidirectional text (UAX #9 BiDi algorithm), and Right-to-Left (RTL) rendering in the console.
+3.  **Object Pipeline:** Commands (cmdlets) will operate on rich .NET objects, enabling more powerful scripting and data manipulation than traditional text-based shells.
+4.  **Cross-Platform:** Targeting .NET Core / .NET 5+ ensures compatibility across Windows, macOS, and Linux.
 
-## Current Implementation Status
+This shell aims to provide a seamless and powerful command-line experience for Arabic-speaking users and developers.
 
-### Core Shell Functionality
+## Current Refactoring Status
 
-The core shell functionality is implemented and working:
+The project is in the **early stages** of the C# refactoring (Phase 1 complete, starting Phase 2):
 
-- Basic command execution
-- Environment variable handling
-- Command history
-- Built-in commands (cd, exit, env, help, history, alias, setenv, unsetenv, lang, layout, test)
-- Signal handling (Ctrl+C)
-- Input/output redirection (basic)
-- Command line editing (basic)
-- Command chaining (&&, ||, ;)
-- Variable replacement ($?, $$)
-- Cross-platform compatibility layer (console mode)
+-   **C# Project Structure:** A new .NET solution (`src_csharp/ArbSh.sln`) and console application project (`src_csharp/ArbSh.Console/`) have been created.
+-   **Core Placeholders:** Initial classes for the object pipeline (`PipelineObject`, `CmdletBase`), parsing (`Parser`, `ParsedCommand`), and execution (`Executor`) are in place.
+-   **Basic REPL:** A functional Read-Eval-Print Loop exists in `Program.cs`.
+-   **Basic Parsing:** The parser (`Parser.cs`, `TokenizeInput`) can now handle basic double-quoted arguments, differentiate command names/arguments/parameters, and split commands based on the pipeline operator (`|`).
+-   **Parameter Binding:** Added `ParameterAttribute` and implemented basic parameter binding in the `Executor` using reflection. Supports named/positional parameters and basic type conversion (e.g., string to bool for switches like `Get-Help -Full`).
+-   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation.
+-   **Basic Pipeline:** `CmdletBase` now collects output internally. The `Executor` simulates sequential pipeline execution by passing output collections between cmdlets (verified with `Get-Command | Write-Output`).
+-   **Placeholder Cmdlets:** Basic `Write-Output`, `Get-Help`, and `Get-Command` cmdlets have been added and are discoverable. Cmdlets use the `[Parameter]` attribute.
+-   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, etc.) has been updated to reflect the C# refactoring.
+-   **C Code Reference:** The original C source code (`src/`, `include/`) is preserved as a reference for porting the i18n algorithms.
 
-### Arabic Language Support
+*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse simple commands with quoted arguments and pipelines, discover cmdlets, perform basic parameter binding with simple type conversion, and simulate pipeline flow. However, advanced parsing (escaped quotes, robust pipeline handling), true concurrent pipeline execution, robust type conversion, error handling, and Arabic support are still needed.*
 
-Arabic language support is a primary focus and largely complete:
+## New Code Structure
 
-| Feature                 | Status        | Notes                                                                 |
-| :---------------------- | :------------ | :-------------------------------------------------------------------- |
-| UTF-8 encoding          | ✅ Complete   | Full implementation (`utf8.c`).                                       |
-| Right-to-left text      | ✅ Complete   | Full RTL support via BiDi algorithm and terminal controls.            |
-| Localization            | ✅ Complete   | English/Arabic messages (`locale.c`). `lang` command.                 |
-| Terminal configuration  | ✅ Complete   | UTF-8 setup, font hints, direction setting (`utf8.c`).                |
-| Arabic character handling | ✅ Complete   | Detection and basic handling. Shaping relies on renderer.             |
-| Bidirectional text      | ✅ Complete   | Full UAX #9 implementation (`bidi.c`). Handles complex cases.         |
-| Arabic keyboard layout  | ✅ Complete   | Support for layout switching (`arabic_input.c`, `layout` command).    |
-| Right-to-left rendering | ✅ Complete   | Text rendered RTL in Arabic mode (console/GUI).                       |
-| Mixed text handling     | ✅ Complete   | Correct directional handling via BiDi algorithm.                      |
-| Input method            | ✅ Complete   | Basic Arabic text input with RTL handling.                            |
+-   **`src_csharp/`**: Contains the new C#/.NET solution and projects.
+    -   `ArbSh.Console/`: The main console application executable.
+    -   (Future libraries for core logic, cmdlets, i18n ports will reside here).
+-   **`src/`**: Contains the original C source code (preserved for reference, especially `src/i18n/` and `src/utils/`). Will likely be removed or archived once porting is complete.
+-   **`include/`**: Original C headers (preserved for reference).
+-   **`docs/`**: Project documentation (being updated).
+-   **`tests/`**: Original C tests (preserved for reference, new C# tests needed).
 
-### GUI Support (ImGui - Windows Only)
-
-| Feature                     | Status        | Notes                                                                 |
-| :-------------------------- | :------------ | :-------------------------------------------------------------------- |
-| ImGui integration           | ✅ Complete   | Framework integrated (`imgui_main.cpp`, `imgui_shell.cpp`).           |
-| GUI shell interface         | ✅ Complete   | Shell runs in tabs, basic I/O via pipes.                              |
-| Modern UI elements          | ✅ Complete   | Custom styling, dark theme, tabs (`imgui_shell.cpp`).                 |
-| Theme support               | ✅ Complete   | Basic dark theme applied.                                             |
-| Tab Management (Process)    | ✅ Complete   | Each tab runs `hsh.exe` via `process_manager.c`, `terminal_tab.c`.    |
-| **Terminal Emulation**      | ❌ **Missing**| **CRITICAL GAP:** GUI shows raw output, no VT100/ANSI interpretation. |
-
-### Windows-Specific Features
-
-| Feature             | Status        | Notes                                                                 |
-| :------------------ | :------------ | :-------------------------------------------------------------------- |
-| Standalone console  | ✅ Complete   | Custom console setup with UTF-8 support (`shell_entry.c`, `utf8.c`).    |
-| Custom appearance   | ✅ Complete   | Font, colors configurable via code (`utf8.c`, `imgui_shell.cpp`).       |
-| Windows API integration | ✅ Complete   | Uses Console API, Process API, etc.                                   |
-| ImGui GUI mode      | ✅ Complete   | Functional GUI mode available.                                        |
-
-### Build System
-
-- CMake-based build with cross-platform support (Console mode).
-- Options for ENABLE_TESTS, BUILD_STATIC.
-- Four distinct build configurations possible.
-- Handles C and C++ sources, linking dependencies (ImGui, D3D11).
-
-## Code Structure
-
-The codebase is organized into the following key components:
-
-- **`src/core/`**: Core shell logic (loop, builtins, parsing, execution). `shell_entry.c` is the unified entry point.
-- **`src/i18n/`**: Internationalization (`locale/locale.c`), Bidirectional algorithm (`bidi/bidi.c`), Arabic input (`arabic_input.c`).
-- **`src/platform/`**: Platform-specific code. `windows/` contains implementations. `process_manager.c/h` handles child processes.
-- **`src/gui/`**: ImGui GUI components (`imgui_main.cpp`, `imgui_shell.cpp`), Tab logic (`terminal_tab.c/h`).
-- **`src/utils/`**: Utility functions (lists, memory, string, UTF-8 helpers, `imgui_compat.c`).
-- **`include/`**: Public headers, primarily `shell.h`.
-- **`external/imgui/`**: ImGui library source.
-- **`tests/`**: Test suites (`arabic/`, `gui/`).
-- **`docs/`**: Project documentation.
-- **`CMakeLists.txt`**: Main build configuration.
+The project will transition away from the CMake build system towards the standard .NET build tools (`dotnet build`).
 
 ## Roadmap Overview
 
-(See `ROADMAP.md` and `TERMINAL_EMULATION_ROADMAP.md` for details)
+Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refactoring and feature implementation plan.
 
-- **Phase 1: Arabic Language Support:** ✅ Mostly Complete
-- **Phase 2: Baa Language Integration:** 🔶 Planned (Environment ready)
-- **Phase 3: Standalone Shell Application:** 🔶 In Progress (GUI exists, needs terminal emulation)
-- **Phase 4: Cross-Platform Compatibility:** 🔶 Partial (Core is cross-platform, GUI/Process Manager is Windows-only)
-- **Phase 5: Advanced Features & Ecosystem:** 🔶 Planned
+## Technical Challenges (Porting Focus)
 
-## Next Development Priorities
+-   **Porting BiDi Algorithm:** Accurately translating the complex UAX #9 logic from `src/i18n/bidi/bidi.c` to C# requires careful attention to detail.
+-   **Console Rendering:** Integrating the ported BiDi logic with .NET console output mechanisms (`System.Console` or potentially libraries like `Spectre.Console`) to achieve correct RTL/mixed text rendering.
+-   **Arabic Command Parsing:** Designing and implementing a robust parser in C# that correctly handles Arabic script alongside potential English keywords/parameters and object syntax.
 
-1. **Implement Terminal Emulation in GUI:** (Critical) Integrate a VT100/ANSI emulator to make the GUI usable with interactive applications. See `TERMINAL_EMULATION_ROADMAP.md`.
-2. **Strengthen Platform Abstraction:** Implement Unix/Linux equivalents for `process_manager.c` and other platform code to make GUI/Tabs potentially cross-platform.
-3. **Enhance GUI/Shell Integration:** Explore ways for richer communication beyond stdin/stdout (control channel or library model).
-4. **Baa Language Features:** Begin implementing Baa-specific commands, syntax highlighting, etc.
-5. **PowerShell-like Features:** Start designing/implementing the object pipeline.
+## Known Issues and Limitations (Current State)
 
-## Technical Challenges and Solutions
-
-- **Arabic/BiDi Support:** Addressed via custom UTF-8 handling (`utf8.c`) and a full UAX #9 BiDi implementation (`bidi.c`). Terminal configuration (`utf8.c`) sets up the environment.
-- **GUI Implementation:** Addressed using ImGui with DirectX on Windows. Tabs use separate processes managed by `process_manager.c` and `terminal_tab.c`.
-- **Cross-Platform:** Core C logic is largely portable. GUI and Process Management are currently Windows-specific and need abstraction/implementation for other platforms.
-
-## Integration with Baa Language Ecosystem
-
-ArbSh provides the necessary foundation:
-
-1. **Correct Arabic Environment:** Overcomes limitations of standard terminals.
-2. **Consistent Platform:** Aims to provide a uniform base for Baa development.
-3. **UTF-8/RTL/BiDi:** Handles the complexities of Arabic text required by Baa.
-
-## Known Issues and Limitations
-
-1. **GUI Lacks Terminal Emulation:** The ImGui GUI currently displays raw stdout/stderr. It doesn't interpret terminal control codes (colors, cursor movement), making it unsuitable for interactive programs like text editors or utilities like `htop`. This is the most significant limitation of the GUI mode.
-2. **GUI/Shell Integration:** Communication is limited to stdin/stdout pipes due to the process-per-tab model. Richer interaction (e.g., GUI reflecting shell CWD) is not implemented.
-3. **Platform Support:** GUI mode and process management are currently Windows-only. Unix/Linux implementations are needed for cross-platform GUI/tabs.
-4. **Performance:** BiDi processing (`bidi.c`) is complex; performance under heavy load or with extremely long lines hasn't been benchmarked. Process-per-tab might have overhead.
-5. **Testing Coverage:** Core Arabic/BiDi/UTF-8 logic has tests (`test_utf8`, `test_bidi`, `test_keyboard`). GUI (`test_imgui`) tests are basic. Terminal emulation, process management, and broader integration tests are needed.
-6. **Arabic Shaping:** Relies on the underlying rendering engine (Console font rendering or ImGui font rendering) for Arabic letter shaping (joining forms, ligatures). No custom shaping logic is implemented in ArbSh itself.
+-   The C# shell is currently non-functional and in the very early stages of development.
+-   No Arabic language support (commands or text rendering) is implemented in the C# version yet.
+-   No object pipeline or cmdlet execution is implemented yet.
 
 ## Conclusion
 
-ArbSh has successfully implemented robust core shell features and comprehensive Arabic/BiDi support. The addition of the ImGui GUI provides a modern interface foundation on Windows. The immediate critical next step is implementing terminal emulation within the GUI to make it fully functional. The project is well-positioned to serve the Baa ecosystem once GUI usability is addressed.
+ArbSh is embarking on an ambitious refactoring to become a modern, PowerShell-inspired C# shell with unique, first-class support for Arabic commands and text. The robust i18n logic from the original C implementation provides a strong foundation for the porting effort. Development is currently focused on establishing the core C# architecture and beginning the porting process.

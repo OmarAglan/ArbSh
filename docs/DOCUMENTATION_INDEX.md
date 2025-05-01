@@ -1,150 +1,56 @@
-# ArbSh Documentation Index
+# ArbSh Documentation Index (C# Refactoring)
 
-This document provides an overview of all available documentation for the ArbSh project. Use this as your starting point for navigating the project documentation.
+**Note:** The ArbSh project is currently undergoing a major refactoring to C#/.NET. This index reflects the documentation relevant to this new direction. Some documents listed below describe the original C implementation and are preserved primarily as **reference material** for the porting effort.
 
 ## Core Documentation
 
-| Document | Description | Target Audience |
+| Document | Description | Status / Target Audience |
 |----------|-------------|-----------------|
-| [README.md](../README.md) | Project overview, build instructions, and basic usage | All users |
-| [PROJECT_STATUS.md](PROJECT_STATUS.md) | Current implementation status and feature roadmap | Developers, Project Managers |
-| [ROADMAP.md](ROADMAP.md) | Detailed development roadmap and timeline | Developers, Project Managers |
-| [DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md) | Prioritized development tasks and assignments | Developers |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Guidelines for contributing to the project | Contributors |
-| [CHANGELOG.md](CHANGELOG.md) | History of changes and version information | All users |
+| [README.md](../README.md) | **(Updated)** Project overview, C# refactoring status, goals. | All users |
+| [ROADMAP.md](ROADMAP.md) | **(Updated)** Detailed C#/.NET development roadmap. | Developers, Project Managers |
+| [PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md) | **(Updated)** Describes the new C# project structure and the role of legacy C code. | Developers, Project Managers |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Guidelines for contributing (Needs update for C# focus). | Contributors |
+| [CHANGELOG.md](CHANGELOG.md) | History of changes (Needs update for C# refactoring start). | All users |
+| [PROJECT_STATUS.md](PROJECT_STATUS.md) | **(Outdated)** Describes status of the *original C* implementation. | Historical Reference |
+| [DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md) | **(Outdated)** Tasks related to the *original C* implementation. See [ROADMAP.md](ROADMAP.md) for C# tasks. | Historical Reference |
 
-## Specialized Documentation
+## Specialized Documentation (Reference for C# Porting)
 
-| Document | Description | Target Audience |
+| Document | Description | Status / Relevance |
 |----------|-------------|-----------------|
-| [ARABIC_SUPPORT_GUIDE.md](ARABIC_SUPPORT_GUIDE.md) | Technical details of Arabic language support | Developers |
-| [BAA_INTEGRATION.md](BAA_INTEGRATION.md) | Guide for integrating with Baa language ecosystem | Developers, Baa Language Team |
-| [CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md) | Detailed build system configuration options | Developers |
-| [TESTING_FRAMEWORK.md](TESTING_FRAMEWORK.md) | Comprehensive testing strategy and implementation | Developers, QA Engineers |
-| [PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md) | Professional project structure and organization | Developers, Project Managers |
+| [ARABIC_SUPPORT_GUIDE.md](ARABIC_SUPPORT_GUIDE.md) | **(Reference)** Technical details of the *original C* Arabic language support implementation (BiDi, UTF-8). Crucial reference for porting to C#. | C# Developers (Porting) |
+| [TESTING_FRAMEWORK.md](TESTING_FRAMEWORK.md) | **(Reference)** Describes the testing strategy for the *original C* implementation. C# tests need a new framework (xUnit/NUnit). | Historical Reference |
+| [CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md) | **(Deprecated)** Details the CMake build system used for the *original C* code. C# uses `.NET CLI`. | Historical Reference |
+| [BAA_INTEGRATION.md](BAA_INTEGRATION.md) | **(Outdated/Reference)** Describes integration plans for the *original C* shell with Baa. Integration for C# version is a future goal. | Historical Reference |
 
 ## Documentation Highlights
 
-### For New Users
+### For Understanding the New Direction
 
-If you're new to the project, we recommend reading these documents first:
+1.  **[README.md](../README.md)** - Get the overview of the C# refactoring goals.
+2.  **[ROADMAP.md](ROADMAP.md)** - Understand the development plan for the C# shell.
+3.  **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - See the new C# project structure.
 
-1. **[README.md](../README.md)** - Get a basic understanding of the project and how to build it
-2. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Understand the current state of the project
+### For C# Developers (Porting Focus)
 
-### For Developers
-
-If you're a developer looking to contribute, focus on these documents:
-
-1. **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - See current prioritized tasks
-2. **[ARABIC_SUPPORT_GUIDE.md](ARABIC_SUPPORT_GUIDE.md)** - Understand the technical implementation
-3. **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Learn about build configuration options
-4. **[TESTING_FRAMEWORK.md](TESTING_FRAMEWORK.md)** - Understand the testing approach
-5. **[BAA_INTEGRATION.md](BAA_INTEGRATION.md)** - Learn about integration with the Baa language
-6. **[CONTRIBUTING.md](CONTRIBUTING.md)** - Understand the contribution process
-
-### For Project Managers
-
-For those managing the project, these documents are most relevant:
-
-1. **[ROADMAP.md](ROADMAP.md)** - Comprehensive development plan
-2. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current implementation status
-3. **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Immediate priorities and tasks
-4. **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - Project structure and organization
-
-## Key Features Documentation
-
-### Arabic Language Support
-
-The shell's Arabic language support is documented in:
-
-- **[ARABIC_SUPPORT_GUIDE.md](ARABIC_SUPPORT_GUIDE.md)** - Technical implementation details
-- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current status of Arabic support features
-- **[BAA_INTEGRATION.md](BAA_INTEGRATION.md)** - Integration with the Baa language ecosystem
-
-This includes information on:
-
-- UTF-8 character handling
-- Right-to-left text support
-- Bidirectional text algorithm
-- Arabic character shaping
-- Localization system
-
-### ImGui GUI Mode
-
-The ImGui-based GUI mode is documented in:
-
-- **[README.md](../README.md)** - Basic build instructions for GUI mode
-- **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Detailed build options for GUI mode
-- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current status of GUI features
-- **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Upcoming GUI enhancement tasks
-
-This includes information on:
-
-- Building with GUI mode enabled
-- ImGui integration architecture
-- GUI features and customization
-- Platform-specific considerations
-
-### Baa Language Integration
-
-The integration with the Baa language ecosystem is documented in:
-
-- **[BAA_INTEGRATION.md](BAA_INTEGRATION.md)** - Integration guide and status
-- **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Upcoming integration tasks
-
-This includes information on:
-
-- Current integration status
-- Integration testing
-- Future development plans
-- Developer guidelines
-
-### Cross-Platform Support
-
-The shell's cross-platform capabilities are documented in:
-
-- **[README.md](../README.md)** - Platform-specific build instructions
-- **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Build system configuration for different platforms
-- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Status of platform support
-- **[ROADMAP.md](ROADMAP.md)** - Plans for enhanced cross-platform support
-
-## Testing Framework
-
-The comprehensive testing framework is documented in:
-
-- **[TESTING_FRAMEWORK.md](TESTING_FRAMEWORK.md)** - Overall testing strategy
-- **[CMAKE_CONFIGURATION.md](CMAKE_CONFIGURATION.md)** - Building and running tests
-- **[DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md)** - Testing-related tasks
-
-This includes information on:
-
-- Test suite organization
-- Running and writing tests
-- Testing bidirectional text and Arabic support
-- GUI mode testing
-- Continuous integration
+1.  **[ARABIC_SUPPORT_GUIDE.md](ARABIC_SUPPORT_GUIDE.md)** - **Essential reading** to understand the C i18n logic being ported.
+2.  Review the original C code in `src/i18n/` and `src/utils/`.
+3.  Review the C# placeholder code in `src_csharp/`.
+4.  Follow the tasks outlined in [ROADMAP.md](ROADMAP.md).
 
 ## Documentation Maintenance
 
-The documentation is maintained according to these principles:
+-   Documentation should reflect the current state of the **C# refactoring effort**.
+-   Documents describing the original C implementation should be clearly marked as reference/historical.
+-   New C# features require corresponding updates or new documentation files.
 
-1. **Accuracy**: Documentation should reflect the current state of the project
-2. **Completeness**: All major features should be documented
-3. **Clarity**: Documentation should be clear and accessible
-4. **Timeliness**: Documentation should be updated with significant changes
+## Future C# Documentation (Planned)
 
-When making code changes, please update the relevant documentation to keep it current.
-
-## Future Documentation
-
-The following documentation is planned for future development:
-
-1. **User Guide** - Comprehensive guide for end users
-2. **API Reference** - Detailed reference for programmatic interfaces
-3. **Performance Tuning** - Guide for optimizing performance
-4. **ImGui GUI Mode User Guide** - Detailed guide for using the GUI features
+-   C# API Reference (Generated from XML comments).
+-   C# Cmdlet Developer Guide.
+-   C# Porting Notes (Lessons learned from porting i18n logic).
+-   C# User Guide (Once basic functionality exists).
 
 ## Conclusion
 
-This documentation set provides a comprehensive overview of the ArbSh project, with a focus on its role in supporting the Baa language ecosystem through robust Arabic language support and modern GUI features. The documentation will continue to evolve as the project develops.
+This documentation index guides users and developers through the resources available during the C# refactoring of ArbSh. Priority is given to understanding the new architecture and leveraging the original C implementation's i18n logic as a reference for porting.

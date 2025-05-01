@@ -5,7 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - YYYY-MM-DD
+
+### Added
+- **Start of C#/.NET Refactoring:**
+  - Created new C# solution (`src_csharp/ArbSh.sln`) and console project (`src_csharp/ArbSh.Console`).
+  - Added placeholder classes for core pipeline (`PipelineObject`, `CmdletBase`) and execution (`Parser`, `Executor`).
+  - Implemented basic REPL loop in `Program.cs`.
+  - Added basic `WriteOutputCmdlet` placeholder.
+  - Added `ParsedCommand.cs` to represent parsed command structure, including basic support for named parameters.
+  - Updated `Parser.cs` with basic tokenization logic (`TokenizeInput`) to handle double-quoted arguments and differentiate positional arguments from named parameters (starting with `-`).
+  - Added `ParameterAttribute.cs` for marking cmdlet parameters.
+  - Updated `GetHelpCmdlet.cs` and `GetCommandCmdlet.cs` to use `[Parameter]` attribute.
+  - Implemented basic parameter binding logic in `Executor.cs` using reflection, including basic type conversion (e.g., string to bool for switch parameters) via `Convert.ChangeType`.
+  - Added `CommandDiscovery.cs` to find available cmdlets using reflection.
+  - Updated `Executor.cs` to use `CommandDiscovery` for dynamic cmdlet instantiation.
+  - Updated `CmdletBase.cs` to collect output internally using `BlockingCollection`.
+  - Updated `Executor.cs` with basic sequential pipeline logic (passing output of one command to the input of the next via `BlockingCollection`), confirmed working with `Get-Command | Write-Output`.
+  - Updated `Parser.cs` to handle the pipeline operator (`|`).
+  - Added basic `GetHelpCmdlet` placeholder and integrated into `Executor`.
+  - Added basic `GetCommandCmdlet` placeholder and integrated into `Executor`.
+- Updated documentation (`README.md`, `ROADMAP.md`, `docs/PROJECT_ORGANIZATION.md`, `docs/DOCUMENTATION_INDEX.md`, `CONTRIBUTING.md`, `docs/CHANGELOG.md`) to reflect the new C# direction and refactoring status.
+- Updated `.gitignore` for C#/.NET development.
+
+### Changed
+- Project direction shifted towards a PowerShell-inspired C# shell with Arabic command support.
+- Build system transitioning from CMake to .NET CLI.
+
+### Deprecated
+- The existing C implementation (`src/`, `include/`) is now considered legacy and primarily serves as a reference for porting i18n logic.
+- CMake build system (`CMakeLists.txt`, `cmake/`).
+
+## Previous C Implementation [Unreleased] - Before C# Refactor
 
 ### Added
 
