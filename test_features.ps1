@@ -147,7 +147,7 @@ Write-Log ("ArbSh process exited with code " + $process.ExitCode + ".") # Use co
 Write-Log "Verifying redirection files..."
 if (Test-Path $tempRedirectFile) {
     Write-Log ("Content of " + $tempRedirectFile + ":") # Use concatenation
-    Get-Content $tempRedirectFile | Out-File -Append $outputLogFile
+    Get-Content $tempRedirectFile -Encoding UTF8 | Out-File -Append $outputLogFile # Specify Encoding
     Remove-Item $tempRedirectFile # Cleanup
 } else {
     Write-Log "ERROR: $tempRedirectFile was not created."
@@ -155,7 +155,7 @@ if (Test-Path $tempRedirectFile) {
 
 if (Test-Path $tempAppendFile) {
     Write-Log ("Content of " + $tempAppendFile + ":") # Use concatenation
-    Get-Content $tempAppendFile | Out-File -Append $outputLogFile
+    Get-Content $tempAppendFile -Encoding UTF8 | Out-File -Append $outputLogFile # Specify Encoding
     Remove-Item $tempAppendFile # Cleanup
 } else {
     Write-Log "ERROR: $tempAppendFile was not created."

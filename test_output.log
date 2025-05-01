@@ -1,8 +1,8 @@
-[2025-05-02 02:28:26] Starting ArbSh v0.6.0 Feature Test...
-[2025-05-02 02:28:26] Building ArbSh project...
-[2025-05-02 02:28:31] Build successful.
-[2025-05-02 02:28:31] Executing ArbSh with test commands...
-[2025-05-02 02:28:31] --- ArbSh Start Output ---
+[2025-05-02 02:43:32] Starting ArbSh v0.6.0 Feature Test...
+[2025-05-02 02:43:32] Building ArbSh project...
+[2025-05-02 02:43:37] Build successful.
+[2025-05-02 02:43:37] Executing ArbSh with test commands...
+[2025-05-02 02:43:37] --- ArbSh Start Output ---
 Welcome to ArbSh (C# Prototype)!
 Type 'exit' to quit.
 ArbSh> DEBUG: Received command: # --- Basic Commands ---
@@ -24,8 +24,8 @@ DEBUG (Discovery): Found cmdlet 'Get-Help' -> ArbSh.Console.Commands.GetHelpCmdl
 DEBUG (Discovery): Found cmdlet 'Test-Array-Binding' -> ArbSh.Console.Commands.TestArrayBindingCmdlet
 DEBUG (Discovery): Found cmdlet 'Write-Output' -> ArbSh.Console.Commands.WriteOutputCmdlet
 DEBUG (Discovery): Cache built with 4 commands.
-DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Get-Command'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Binder): Binding parameters for GetCommandCmdlet...
 DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Get-Command' finished processing.
@@ -58,27 +58,45 @@ DEBUG (Executor Pipeline): Final pipeline output to Console:
 Hello from Write-Output!
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
-ArbSh> DEBUG: Received command: Test-Array-BindingCmdlet one two three
-DEBUG (Parser): Parsing 'Test-Array-BindingCmdlet one two three'...
-DEBUG (Parser): Processing statement: 'Test-Array-BindingCmdlet one two three'
+ArbSh> DEBUG: Received command: Test-Array-Binding one two three
+DEBUG (Parser): Parsing 'Test-Array-Binding one two three'...
+DEBUG (Parser): Processing statement: 'Test-Array-Binding one two three'
 DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
 DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (1 command(s)) ---
-DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-BindingCmdlet'...
-Command not found: Test-Array-BindingCmdlet. Halting pipeline setup for this statement.
-DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).
+DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-Binding'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Test-Array-Binding'...
+DEBUG (Binder): Binding parameters for TestArrayBindingCmdlet...
+DEBUG (Binder): Bound 3 remaining positional argument(s) starting at 0 to array parameter 'InputStrings' (Type: String[])
+DEBUG (Executor Task): 'Test-Array-Binding' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Test-Array-Binding' finished processing.
+DEBUG (Executor Task): Stage 'Test-Array-Binding' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+MySwitch value: False
+Received 3 strings:
+  [0]: 'one'
+  [1]: 'two'
+  [2]: 'three'
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
-ArbSh> DEBUG: Received command: Test-Array-BindingCmdlet -MySwitch four five
-DEBUG (Parser): Parsing 'Test-Array-BindingCmdlet -MySwitch four five'...
-DEBUG (Parser): Processing statement: 'Test-Array-BindingCmdlet -MySwitch four five'
+ArbSh> DEBUG: Received command: Test-Array-Binding -MySwitch four five
+DEBUG (Parser): Parsing 'Test-Array-Binding -MySwitch four five'...
+DEBUG (Parser): Processing statement: 'Test-Array-Binding -MySwitch four five'
 DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
 DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (1 command(s)) ---
-DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-BindingCmdlet'...
-Command not found: Test-Array-BindingCmdlet. Halting pipeline setup for this statement.
+DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-Binding'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Test-Array-Binding'...
+DEBUG (Binder): Binding parameters for TestArrayBindingCmdlet...
+DEBUG (Binder): Bound 1 remaining positional argument(s) starting at 0 to array parameter 'InputStrings' (Type: String[])
+Task Error (ParameterBinding) in 'Test-Array-Binding': A value 'four' cannot be specified for the boolean (switch) parameter '-MySwitch'.
+DEBUG (Executor Task): Stage 'Test-Array-Binding' completed adding output.
+ERROR (Executor): One or more pipeline tasks failed:
 DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
@@ -144,11 +162,11 @@ DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (1 command(s)) ---
 DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Help'...
-DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Get-Help'...
 DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Binder): Bound positional parameter at 0 ('Write-Output') to property 'CommandName' (Type: String)
-DEBUG (Binder): Bound switch parameter '-Full' to true (no value provided).
+DEBUG (Binder): Bound switch parameter '-Full' to True.
 DEBUG (Executor Task): 'Get-Help' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Get-Help' finished processing.
 DEBUG (Executor Task): Stage 'Get-Help' completed adding output.
@@ -174,9 +192,9 @@ PARAMETERS
 
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
-ArbSh> DEBUG: Received command: Get-Help Test-Array-BindingCmdlet -Full
-DEBUG (Parser): Parsing 'Get-Help Test-Array-BindingCmdlet -Full'...
-DEBUG (Parser): Processing statement: 'Get-Help Test-Array-BindingCmdlet -Full'
+ArbSh> DEBUG: Received command: Get-Help Test-Array-Binding -Full
+DEBUG (Parser): Parsing 'Get-Help Test-Array-Binding -Full'...
+DEBUG (Parser): Processing statement: 'Get-Help Test-Array-Binding -Full'
 DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
 DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
@@ -185,14 +203,37 @@ DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Help'...
 DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Get-Help'...
 DEBUG (Binder): Binding parameters for GetHelpCmdlet...
-DEBUG (Binder): Bound positional parameter at 0 ('Test-Array-BindingCmdlet') to property 'CommandName' (Type: String)
-DEBUG (Binder): Bound switch parameter '-Full' to true (no value provided).
+DEBUG (Binder): Bound positional parameter at 0 ('Test-Array-Binding') to property 'CommandName' (Type: String)
+DEBUG (Binder): Bound switch parameter '-Full' to True.
 DEBUG (Executor Task): 'Get-Help' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Get-Help' finished processing.
 DEBUG (Executor Task): Stage 'Get-Help' completed adding output.
 DEBUG (Executor): All pipeline tasks for the statement completed.
 DEBUG (Executor Pipeline): Final pipeline output to Console:
-Help Error: Command 'Test-Array-BindingCmdlet' not found.
+
+NAME
+    Test-Array-Binding
+
+SYNOPSIS
+    (Synopsis for Test-Array-Binding not available)
+
+SYNTAX
+    Test-Array-Binding [-InputStrings <String[]>] [-MySwitch]
+
+PARAMETERS
+    -InputStrings <String[]>
+        Accepts multiple string arguments.
+        Required?                    False
+        Position?                    0
+        Accepts pipeline input?      False
+
+    -MySwitch <Boolean>
+        An optional switch.
+        Required?                    False
+        Position?                    Named
+        Accepts pipeline input?      False
+
+
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 ArbSh> DEBUG: Received command: Get-Help NonExistentCommand
@@ -229,14 +270,14 @@ DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (2 command(s)) ---
 DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
 DEBUG (Executor Pipeline): Preparing stage 1: 'Write-Output'...
-DEBUG (Executor): Waiting for 2 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Get-Command'...
 DEBUG (Binder): Binding parameters for GetCommandCmdlet...
-DEBUG (Executor Task): Starting task for 'Write-Output'...
-DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
 DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Get-Command' finished processing.
 DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Executor): Waiting for 2 task(s) in the pipeline to complete...
 DEBUG (Executor Task): 'Write-Output' consuming input...
 DEBUG (Executor Task): 'Write-Output' finished consuming input.
 DEBUG (Executor Task): 'Write-Output' finished processing.
@@ -254,20 +295,31 @@ DEBUG (Parser): Parsing '# Test pipeline binding (CommandInfo object to Write-Ou
 DEBUG (Parser): Parsed into 0 statement(s).
 DEBUG (Executor): Executing 0 statement(s)...
 DEBUG (Executor): All statements executed.
-ArbSh> DEBUG: Received command: Get-Command | Test-Array-BindingCmdlet # This should show 0 strings, as CommandInfo doesnt match string[]
-DEBUG (Parser): Parsing 'Get-Command | Test-Array-BindingCmdlet # This should show 0 strings, as CommandInfo doesnt match string[]'...
-DEBUG (Parser): Processing statement: 'Get-Command | Test-Array-BindingCmdlet'
+ArbSh> DEBUG: Received command: Get-Command | Test-Array-Binding # This should show 0 strings, as CommandInfo doesnt match string[]
+DEBUG (Parser): Parsing 'Get-Command | Test-Array-Binding # This should show 0 strings, as CommandInfo doesnt match string[]'...
+DEBUG (Parser): Processing statement: 'Get-Command | Test-Array-Binding'
 DEBUG (Parser): Statement parsed into 2 pipeline stage(s).
 DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (2 command(s)) ---
 DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
-DEBUG (Executor Pipeline): Preparing stage 1: 'Test-Array-BindingCmdlet'...
+DEBUG (Executor Pipeline): Preparing stage 1: 'Test-Array-Binding'...
+DEBUG (Executor): Waiting for 2 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Get-Command'...
-Command not found: Test-Array-BindingCmdlet. Halting pipeline setup for this statement.
 DEBUG (Binder): Binding parameters for GetCommandCmdlet...
 DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
-DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).
+DEBUG (Executor Task): Starting task for 'Test-Array-Binding'...
+DEBUG (Executor Task): 'Get-Command' finished processing.
+DEBUG (Binder): Binding parameters for TestArrayBindingCmdlet...
+DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
+DEBUG (Executor Task): 'Test-Array-Binding' consuming input...
+DEBUG (Executor Task): 'Test-Array-Binding' finished consuming input.
+DEBUG (Executor Task): 'Test-Array-Binding' finished processing.
+DEBUG (Executor Task): Stage 'Test-Array-Binding' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+MySwitch value: False
+Received no strings.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 ArbSh> ArbSh> DEBUG: Received command: # --- Statement Separator ---
@@ -439,8 +491,6 @@ Literal $testVar -> \$testVar
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 ArbSh> DEBUG: Received command: Write-Output 'Literal Pipe -> \|'
-Task Error in 'Get-Command': ObjectDisposedException - Cannot access a disposed object.
-Object name: 'System.Collections.Concurrent.BlockingCollection`1[[ArbSh.Console.PipelineObject, ArbSh.Console, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
 DEBUG (Parser): Parsing 'Write-Output 'Literal Pipe -> \|''...
 DEBUG (Parser): Processing statement: 'Write-Output 'Literal Pipe -> \|''
 DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
@@ -567,15 +617,20 @@ Placeholder general help message. Try 'Get-Help <Command-Name>'.
 Example: Get-Help Get-Command
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
-ArbSh> DEBUG: Received command: Test-Array-BindingCmdlet -InputStrings should fail
-DEBUG (Parser): Parsing 'Test-Array-BindingCmdlet -InputStrings should fail'...
-DEBUG (Parser): Processing statement: 'Test-Array-BindingCmdlet -InputStrings should fail'
+ArbSh> DEBUG: Received command: Test-Array-Binding -InputStrings should fail
+DEBUG (Parser): Parsing 'Test-Array-Binding -InputStrings should fail'...
+DEBUG (Parser): Processing statement: 'Test-Array-Binding -InputStrings should fail'
 DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
 DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (1 command(s)) ---
-DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-BindingCmdlet'...
-Command not found: Test-Array-BindingCmdlet. Halting pipeline setup for this statement.
+DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-Binding'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Test-Array-Binding'...
+DEBUG (Binder): Binding parameters for TestArrayBindingCmdlet...
+Task Error (ParameterBinding) in 'Test-Array-Binding': Cannot process argument transformation for parameter '-InputStrings'. Cannot convert value "should" to type "System.String[]".
+DEBUG (Executor Task): Stage 'Test-Array-Binding' completed adding output.
+ERROR (Executor): One or more pipeline tasks failed:
 DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
@@ -670,15 +725,15 @@ DEBUG (Executor): Executing 0 statement(s)...
 DEBUG (Executor): All statements executed.
 ArbSh> Exiting ArbSh.
 
-[2025-05-02 02:28:35] --- ArbSh End Output ---
-[2025-05-02 02:28:35] ArbSh process exited with code 0.
-[2025-05-02 02:28:35] Verifying redirection files...
-[2025-05-02 02:28:35] Content of temp_redirect_test.txt:
+[2025-05-02 02:43:41] --- ArbSh End Output ---
+[2025-05-02 02:43:41] ArbSh process exited with code 0.
+[2025-05-02 02:43:41] Verifying redirection files...
+[2025-05-02 02:43:41] Content of temp_redirect_test.txt:
 T e s t i n g   o v e r w r i t e   r e d i r e c t i o n  
- [2025-05-02 02:28:35] Content of temp_append_test.txt:
+ [2025-05-02 02:43:41] Content of temp_append_test.txt:
 G e t - C o m m a n d  
  G e t - H e l p  
  T e s t - A r r a y - B i n d i n g  
  W r i t e - O u t p u t  
  A p p e n d i n g   a n o t h e r   l i n e  
- [2025-05-02 02:28:35] Test script finished.
+ [2025-05-02 02:43:41] Test script finished.

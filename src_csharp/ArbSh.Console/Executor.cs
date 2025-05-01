@@ -213,8 +213,9 @@ namespace ArbSh.Console
                         {
                             try
                             {
-                                // Using UTF8 encoding by default, ensure directory exists maybe?
-                                redirectWriter = new StreamWriter(lastCommandConfig.OutputRedirectPath, lastCommandConfig.AppendOutput, System.Text.Encoding.UTF8);
+                                // Use UTF8 encoding *without* BOM
+                                var utf8NoBom = new System.Text.UTF8Encoding(false);
+                                redirectWriter = new StreamWriter(lastCommandConfig.OutputRedirectPath, lastCommandConfig.AppendOutput, utf8NoBom);
                                 System.Console.WriteLine($"DEBUG (Executor): Redirecting final output {(lastCommandConfig.AppendOutput ? ">>" : ">")} {lastCommandConfig.OutputRedirectPath}");
                             }
                             catch (Exception ex)
@@ -320,30 +321,31 @@ namespace ArbSh.Console
                      // Handle boolean switch parameters
                      if (prop.PropertyType == typeof(bool))
                      {
-                         // If parameter name is present, it implies true unless a value $false is explicitly given
-                         if (string.IsNullOrEmpty(namedValue)) // e.g., -Full
+                         // Switch is present if its name exists in the parsed parameters.
+                         // Only consider the associated value if it's explicitly true/false.
+                         if (!string.IsNullOrEmpty(namedValue)) // Check if parser associated a value
                          {
-                             valueToSet = true;
-                             found = true;
-                             System.Console.WriteLine($"DEBUG (Binder): Bound switch parameter '{paramName}' to true (no value provided).");
-                         }
-                         else // e.g., -Full $true, -Full $false, -Full someValue
-                         {
+                             // Try parsing the associated value as bool
                              if (bool.TryParse(namedValue, out bool boolValue))
                              {
-                                 valueToSet = boolValue;
-                                 found = true;
-                                 System.Console.WriteLine($"DEBUG (Binder): Bound boolean parameter '{paramName}' to explicit value '{valueToSet}'.");
+                                 valueToSet = boolValue; // Assign $true or $false if provided
                              }
                              else
                              {
-                                 // Value provided for bool param, but it's not 'true' or 'false' - this is an error.
+                                 // Any other value associated with a switch is an error
                                  throw new ParameterBindingException($"A value '{namedValue}' cannot be specified for the boolean (switch) parameter '{paramName}'.");
                              }
                          }
+                         else
+                         {
+                             // Switch name was present, but no value followed it (or value was empty string)
+                             valueToSet = true; // Default behavior for a present switch
+                         }
+                         found = true;
+                         System.Console.WriteLine($"DEBUG (Binder): Bound switch parameter '{paramName}' to {valueToSet}.");
                      }
-                     // Attempt type conversion for parameters with non-empty values
-                     else if (!string.IsNullOrEmpty(namedValue))
+                     // Handle non-boolean named parameters
+                     else if (!string.IsNullOrEmpty(namedValue)) // Only bind if parser provided a non-empty value
                      {
                          try
                          {

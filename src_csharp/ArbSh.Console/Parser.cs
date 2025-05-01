@@ -7,7 +7,6 @@ namespace ArbSh.Console
 {
     /// <summary>
     /// Responsible for parsing user input strings into executable commands/structures.
-    /// (Placeholder implementation)
     /// </summary>
     public static class Parser
     {
@@ -127,31 +126,36 @@ namespace ArbSh.Console
             System.Console.WriteLine($"DEBUG (Parser): Processing statement: '{statementInput}'");
             var commandsInStatement = new List<ParsedCommand>();
             int stageStart = 0;
-            bool inQuotes = false; // Track quotes specifically for pipeline splitting
+            bool inDoubleQuotes = false; // Track quotes specifically for pipeline splitting
+            bool inSingleQuotes = false; // Track single quotes for pipeline splitting
 
             for (int i = 0; i < statementInput.Length; i++)
             {
                 char c = statementInput[i];
 
-                if (c == '\\' && i + 1 < statementInput.Length)
+                // Handle escaping (only outside single quotes)
+                if (c == '\\' && !inSingleQuotes && i + 1 < statementInput.Length)
                 {
-                    // Skip escaped character
-                    i++;
+                    i++; // Skip escaped character for pipeline splitting logic
                     continue;
                 }
 
-                if (c == '"')
+                // Toggle quote states
+                if (c == '"' && !inSingleQuotes)
                 {
-                    inQuotes = !inQuotes;
+                    inDoubleQuotes = !inDoubleQuotes;
+                }
+                 else if (c == '\'' && !inDoubleQuotes)
+                {
+                    inSingleQuotes = !inSingleQuotes;
                 }
 
-                if (c == '|' && !inQuotes)
+                // Split pipeline only if outside *both* types of quotes
+                if (c == '|' && !inDoubleQuotes && !inSingleQuotes)
                 {
-                    // Found a pipeline separator
                     string stageInput = statementInput.Substring(stageStart, i - stageStart).Trim();
                     if (!string.IsNullOrWhiteSpace(stageInput))
                     {
-                        // Process this stage
                         ParsedCommand? command = ParseSinglePipelineStage(stageInput);
                         if (command != null) commandsInStatement.Add(command);
                     }
@@ -175,84 +179,72 @@ namespace ArbSh.Console
 
         /// <summary>
         /// Parses a single pipeline stage string into a ParsedCommand object.
-        /// Handles tokenization, redirection, arguments, parameters, and variable expansion for the stage.
+        /// Handles tokenization, redirection, arguments, parameters.
         /// </summary>
-        /// <param name="stageInput">The string representing a single pipeline stage.</param>
-        /// <returns>A ParsedCommand object, or null if the stage is empty or invalid.</returns>
         private static ParsedCommand? ParseSinglePipelineStage(string stageInput)
         {
-             // Tokenize the current pipeline stage input (respects quotes/escapes)
-                List<string> tokens = TokenizeInput(stageInput);
-                if (tokens.Count == 0) return null; // If stage is empty after tokenization, return null
+             // Tokenize the current pipeline stage input using the state machine
+                List<string> tokens = TokenizeInput(stageInput); // Use the new tokenizer
+                if (tokens.Count == 0) return null;
 
                 string commandName = tokens[0];
-                List<string> commandTokens = tokens.Skip(1).ToList(); // Tokens after command name
+                List<string> commandTokens = tokens.Skip(1).ToList();
                 string? redirectPath = null;
                 bool append = false;
 
-                // Find redirection operator and path, separating them from command tokens
+                // --- Redirection Parsing (Basic) ---
+                // TODO: Make redirection parsing more robust (e.g., handle 2>&1, allow anywhere)
                 int redirectOperatorIndex = -1;
                 for (int i = 0; i < commandTokens.Count; i++)
                 {
-                    // Check for redirection operators ONLY if not escaped
-                    if ((commandTokens[i] == ">" || commandTokens[i] == ">>") && (i == 0 || commandTokens[i-1] != "\\")) // Basic check for preceding escape
+                    // Check for redirection operators (simple check, assumes space separation)
+                    if (commandTokens[i] == ">" || commandTokens[i] == ">>")
                     {
                         redirectOperatorIndex = i;
                         append = (commandTokens[i] == ">>");
                         if (i + 1 < commandTokens.Count)
                         {
                             redirectPath = commandTokens[i + 1];
-                            // Remove the operator and path from commandTokens
-                            commandTokens.RemoveRange(i, 2);
+                            commandTokens.RemoveRange(i, 2); // Remove operator and path
                         }
                         else
                         {
                             System.Console.WriteLine($"WARN (Parser): Redirection operator '{commandTokens[i]}' found without a target path.");
-                            // Remove just the operator
-                            commandTokens.RemoveAt(i);
+                            commandTokens.RemoveAt(i); // Remove just the operator
                         }
-                        // TODO: Handle multiple redirection operators? For now, only first is processed.
-                        break;
+                        break; // Handle only the first redirection found for now
                     }
                 }
 
-                // Now parse the remaining commandTokens into arguments and parameters
+                // --- Argument/Parameter Parsing ---
                 List<string> arguments = new List<string>();
                 Dictionary<string, string> parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                 for (int i = 0; i < commandTokens.Count; i++)
                 {
                     string currentToken = commandTokens[i];
-                    string expandedToken = currentToken; // Start with original
 
-                    // Variable expansion is now handled during tokenization.
-                    // The expandedToken is just the token received from the tokenizer.
-
-                    if (currentToken.StartsWith("-") && currentToken.Length > 1) // Check for parameter name
+                    // Check for parameter name (starts with '-' and has more chars)
+                    if (currentToken.StartsWith("-") && currentToken.Length > 1)
                     {
-                        string paramName = currentToken; // Parameter name itself is not expanded
+                        string paramName = currentToken;
                         string? paramValue = null;
 
+                        // Check if the next token exists and is not another parameter
                         if (i + 1 < commandTokens.Count && !commandTokens[i + 1].StartsWith("-"))
                         {
-                            string potentialValueToken = commandTokens[i + 1];
-                            // Variable expansion is now handled during tokenization.
-                            string expandedValueToken = potentialValueToken;
-
-                            paramValue = expandedValueToken; // Assign the token value
+                            paramValue = commandTokens[i + 1]; // Assign the next token as value
                             i++; // Consume the value token
                         }
-                        // Use the *original* token (before expansion) as the parameter name key
-                        parameters[paramName] = paramValue ?? string.Empty;
+                        parameters[paramName] = paramValue ?? string.Empty; // Store even if value is null (for switch parameters)
                     }
                     else // It's an argument
                     {
-                        // Use the potentially expanded token
-                        arguments.Add(expandedToken);
+                        arguments.Add(currentToken);
                     }
                 }
 
-                // Create the command object and set redirection if found
+                // Create the command object
                 var parsedCommand = new ParsedCommand(commandName, arguments, parameters);
                 if (redirectPath != null)
                 {
@@ -260,114 +252,102 @@ namespace ArbSh.Console
                     System.Console.WriteLine($"DEBUG (Parser): Found redirection: {(append ? ">>" : ">")} '{redirectPath}'");
                 }
                 return parsedCommand;
-            // Return null if stage was empty after tokenization
-            return null;
         }
+
+
+        // --- State Machine Tokenizer Implementation ---
+        private enum TokenizerStateSM { Default, InDoubleQuotes, InSingleQuotes, EscapeNextDefault, EscapeNextDouble }
 
         /// <summary>
-        /// Tokenizes a single pipeline stage input string, respecting quotes and handling escapes.
+        /// Tokenizes a single pipeline stage input string using a state machine.
+        /// Respects single quotes (literal content), double quotes (allows escapes and variable expansion),
+        /// and escape character '\' (makes next character literal).
         /// </summary>
-        private static List<string> TokenizeInput(string stageInput)
-        {
+        private static List<string> TokenizeInput(string stageInput) {
             var tokens = new List<string>();
             var currentToken = new StringBuilder();
-            bool inDoubleQuotes = false;
-            bool inSingleQuotes = false;
-            bool treatNextCharLiteral = false; // Flag for escape character '\'
+            TokenizerStateSM state = TokenizerStateSM.Default;
 
-            for (int i = 0; i < stageInput.Length; i++)
-            {
+            for (int i = 0; i < stageInput.Length; i++) {
                 char c = stageInput[i];
 
-                // --- Escape Character Handling ---
-                // If the previous char was '\' (and we're not inside single quotes)
-                if (treatNextCharLiteral)
-                {
-                    // Add this char literally, regardless of what it is
-                    currentToken.Append(c);
-                    treatNextCharLiteral = false;
-                    continue;
-                }
+                switch (state) {
+                    case TokenizerStateSM.Default:
+                        if (char.IsWhiteSpace(c)) {
+                            // Finalize previous token if exists
+                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
+                        } else if (c == '"') {
+                            state = TokenizerStateSM.InDoubleQuotes; // Enter double quotes
+                        } else if (c == '\'') {
+                            state = TokenizerStateSM.InSingleQuotes; // Enter single quotes
+                        } else if (c == '\\') {
+                            state = TokenizerStateSM.EscapeNextDefault; // Expecting next char to be escaped
+                        } else if (c == '$' && i + 1 < stageInput.Length) {
+                            // Attempt variable expansion
+                            int varNameStart = i + 1; int varNameEnd = varNameStart;
+                            while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_')) { varNameEnd++; }
+                            if (varNameEnd > varNameStart) { // Found variable
+                                string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart); string varValue = GetVariableValue(varName); currentToken.Append(varValue);
+                                System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}'"); i = varNameEnd - 1;
+                            } else { currentToken.Append(c); } // Append '$' literally
+                        } else {
+                            currentToken.Append(c); // Append normal char
+                        }
+                        break;
 
-                // If current char is '\' (and not inside single quotes)
-                if (c == '\\' && !inSingleQuotes && i + 1 < stageInput.Length)
-                {
-                    // Set flag to treat the *next* character literally
-                    treatNextCharLiteral = true;
-                    // Do not append the backslash itself *yet* - let the next iteration handle the escaped char
-                    continue;
-                }
+                    case TokenizerStateSM.InDoubleQuotes:
+                         if (c == '"') {
+                            state = TokenizerStateSM.Default; // Exit double quotes
+                        } else if (c == '\\') {
+                            state = TokenizerStateSM.EscapeNextDouble; // Expecting next char to be escaped
+                        } else if (c == '$' && i + 1 < stageInput.Length) {
+                             // Attempt variable expansion inside double quotes
+                            int varNameStart = i + 1; int varNameEnd = varNameStart;
+                            while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_')) { varNameEnd++; }
+                            if (varNameEnd > varNameStart) { // Found variable
+                                string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart); string varValue = GetVariableValue(varName); currentToken.Append(varValue);
+                                System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}' (in double quotes)"); i = varNameEnd - 1;
+                            } else { currentToken.Append(c); } // Append '$' literally
+                        } else {
+                            currentToken.Append(c); // Append normal char
+                        }
+                        break;
 
-                // --- Quoting ---
-                if (c == '"' && !inSingleQuotes) // Toggle double quotes if not inside single quotes
-                {
-                    inDoubleQuotes = !inDoubleQuotes;
-                    // Don't add the quote mark itself to the token
-                    continue;
-                }
-                if (c == '\'' && !inDoubleQuotes) // Toggle single quotes if not inside double quotes
-                {
-                    inSingleQuotes = !inSingleQuotes;
-                    // Don't add the quote mark itself to the token
-                    continue;
-                }
+                    case TokenizerStateSM.InSingleQuotes:
+                        if (c == '\'') {
+                            state = TokenizerStateSM.Default; // Exit single quotes
+                        } else {
+                            currentToken.Append(c); // Append literally (no escapes or variables)
+                        }
+                        break;
 
-                // --- Token Splitting ---
-                // Split on whitespace only if *outside both* single and double quotes
-                if (char.IsWhiteSpace(c) && !inDoubleQuotes && !inSingleQuotes)
-                {
-                    if (currentToken.Length > 0)
-                    {
-                        tokens.Add(currentToken.ToString());
-                        currentToken.Clear();
-                    }
-                    // Skip the whitespace character itself
-                    continue;
+                    case TokenizerStateSM.EscapeNextDefault: // After '\' in Default state
+                        // Append the escaped character literally.
+                        currentToken.Append(c);
+                        state = TokenizerStateSM.Default; // Return to Default state.
+                        break;
+
+                     case TokenizerStateSM.EscapeNextDouble: // After '\' in InDoubleQuotes state
+                        // Append the escaped character literally. Handles \", \\, \$ etc.
+                        currentToken.Append(c);
+                        state = TokenizerStateSM.InDoubleQuotes; // Return to InDoubleQuotes state.
+                        break;
                 }
-
-                // --- Variable Expansion ---
-                // Expand $variable only if *outside single quotes* and not escaped
-                if (c == '$' && !inSingleQuotes && i + 1 < stageInput.Length)
-                {
-                    int varNameStart = i + 1;
-                    int varNameEnd = varNameStart;
-                    // Basic variable name: letters, numbers, underscore
-                    while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_'))
-                    {
-                        varNameEnd++;
-                    }
-
-                    if (varNameEnd > varNameStart) // Found a potential variable name
-                    {
-                        string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart);
-                        string varValue = GetVariableValue(varName);
-                        currentToken.Append(varValue); // Append the value
-                        System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}'");
-                        i = varNameEnd - 1; // Move index past the variable name
-                        continue; // Continue to next character after variable
-                    }
-                    // else: Fall through to treat '$' as a literal character if not followed by valid var name
-                }
-
-                // --- Character Appending ---
-                // If none of the above conditions met, append the character to the current token
-                currentToken.Append(c);
             }
 
-            // Add the last token if any
-            if (currentToken.Length > 0)
-            {
-                tokens.Add(currentToken.ToString());
-            }
+            // Finalize last token if it exists
+            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); }
 
-            // TODO: Handle unterminated quotes more robustly (e.g., throw a specific parsing error)
-            if (inDoubleQuotes || inSingleQuotes)
-            {
-                 System.Console.WriteLine("WARN (Tokenizer): Unterminated quote detected in pipeline stage.");
-                 // Decide how to handle this - error or treat as literal? For now, let it pass.
+            // Check for unterminated states
+            if (state == TokenizerStateSM.EscapeNextDefault || state == TokenizerStateSM.EscapeNextDouble) {
+                System.Console.WriteLine("WARN (Tokenizer): Input ended with an escape character.");
+                // Append the trailing backslash? Or ignore? Let's ignore for now.
+            } else if (state != TokenizerStateSM.Default) {
+                System.Console.WriteLine("WARN (Tokenizer): Unterminated quote detected.");
+                // Consider throwing FormatException("Unterminated quote in input.");
             }
-
             return tokens;
         }
+
     }
 }
