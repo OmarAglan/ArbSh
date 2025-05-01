@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
+- **Parser Refinements (2025-05-01):**
+  - Implemented basic variable expansion (`$varName`) during tokenization.
+  - Implemented statement splitting (`;`) respecting quotes/escapes.
+  - Implemented pipeline splitting (`|`) respecting quotes/escapes.
+  - Implemented general escape character (`\`) handling (including inside quotes).
+  - Updated `Executor` to process multiple statements sequentially.
 - **Start of C#/.NET Refactoring:**
   - Created new C# solution (`src_csharp/ArbSh.sln`) and console project (`src_csharp/ArbSh.Console`).
   - Added placeholder classes for core pipeline (`PipelineObject`, `CmdletBase`) and execution (`Parser`, `Executor`).

@@ -19,15 +19,14 @@ namespace ArbSh.Console
     public static class Executor
     {
         /// <summary>
-        /// Executes a list of parsed commands.
-        /// (Placeholder - needs actual execution logic)
+        /// Executes a list of statements, where each statement is a list of parsed commands forming a pipeline.
         /// </summary>
-        /// <param name="parsedCommands">A list of ParsedCommand objects representing the commands to execute.</param>
-        public static void Execute(List<ParsedCommand> parsedCommands)
+        /// <param name="allStatements">A list where each element is a list of ParsedCommand objects for a single statement's pipeline.</param>
+        public static void Execute(List<List<ParsedCommand>> allStatements)
         {
             // TODO: Implement actual execution logic.
             // This should handle:
-            // - Iterating through commands (if separated by ';')
+            // - Iterating through statements (separated by ';')
             // - Setting up pipeline stages (if separated by '|')
             // - Finding and instantiating the correct CmdletBase derived classes based on command name.
             // - Binding parameters to cmdlet properties.
@@ -36,16 +35,25 @@ namespace ArbSh.Console
             // - Handling output, errors, warnings.
             // - Executing external processes if the command is not a cmdlet.
 
-            System.Console.WriteLine($"DEBUG (Executor): Executing {parsedCommands.Count} command(s)...");
+            System.Console.WriteLine($"DEBUG (Executor): Executing {allStatements.Count} statement(s)...");
 
-            // TODO: This currently executes commands sequentially.
-            // Real pipeline execution requires concurrent execution and data streaming.
-            BlockingCollection<PipelineObject>? currentInput = null; // Input for the *first* command is null initially
-
-            for (int i = 0; i < parsedCommands.Count; i++)
+            foreach (var statementCommands in allStatements)
             {
-                var command = parsedCommands[i];
-                bool isLastCommand = (i == parsedCommands.Count - 1);
+                if (statementCommands == null || statementCommands.Count == 0)
+                {
+                    continue; // Skip empty statements
+                }
+
+                System.Console.WriteLine($"DEBUG (Executor): --- Executing Statement ({statementCommands.Count} command(s)) ---");
+
+                // TODO: This currently executes pipeline stages sequentially within a statement.
+                // Real pipeline execution requires concurrent execution and data streaming.
+                BlockingCollection<PipelineObject>? currentInput = null; // Input for the *first* command in *each statement* is null
+
+                for (int i = 0; i < statementCommands.Count; i++)
+                {
+                    var command = statementCommands[i];
+                    bool isLastCommand = (i == statementCommands.Count - 1);
 
                 string commandName = command.CommandName;
                 List<string> arguments = command.Arguments; // Use arguments from ParsedCommand
@@ -165,14 +173,14 @@ namespace ArbSh.Console
                         System.Console.ResetColor();
                         break; // Stop processing further commands if one is not found
                     }
-            } // End of pipeline loop
+                } // End of inner pipeline loop for the current statement
 
-            // --- Output Handling ---
-            // Handle output from the last command in the pipeline
-            if (currentInput != null)
-            {
-                ParsedCommand lastCommand = parsedCommands.Last(); // Get the last command for redirection info
-                StreamWriter? redirectWriter = null;
+                // --- Output Handling for the current statement ---
+                // Handle output from the last command in the statement's pipeline
+                if (currentInput != null)
+                {
+                    ParsedCommand lastCommand = statementCommands.Last(); // Get the last command of the *current statement* for redirection info
+                    StreamWriter? redirectWriter = null;
 
                 try
                 {
@@ -224,8 +232,13 @@ namespace ArbSh.Console
                  {
                      redirectWriter?.Dispose(); // Ensure file stream is closed
                  }
-            }
-             System.Console.WriteLine($"DEBUG (Executor): Pipeline execution finished.");
+                 // Dispose the final collection for the statement
+                 currentInput?.Dispose();
+                }
+                 System.Console.WriteLine($"DEBUG (Executor): --- Statement execution finished ---");
+
+            } // End of loop for all statements
+             System.Console.WriteLine($"DEBUG (Executor): All statements executed.");
         }
 
         /// <summary>

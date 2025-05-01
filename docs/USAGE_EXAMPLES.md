@@ -146,20 +146,106 @@ Write-Output [<arguments...>]
     DEBUG (Executor): Pipeline execution finished.
     ```
 
+## Escape Characters (`\`)
+
+The backslash (`\`) is used as an escape character. It causes the character immediately following it to be treated literally, ignoring its special meaning (like space, `$`, `;`, `|`, `"`). This works both outside and inside double quotes.
+
+**Examples:**
+
+*   **Escaping Operators:**
+    ```powershell
+    ArbSh> Write-Output Command1 \| Command2 ; Write-Output Argument\;WithSemicolon
+    # ... (DEBUG output) ...
+    Command1 | Command2
+    Argument;WithSemicolon
+    ```
+*   **Escaping Quotes Inside Quotes:**
+    ```powershell
+    ArbSh> Write-Output "Argument with \"escaped quote\""
+    # ... (DEBUG output) ...
+    Argument with "escaped quote"
+    ```
+*   **Escaping Backslash:**
+    ```powershell
+    ArbSh> Write-Output Argument\\WithBackslash
+    # ... (DEBUG output) ...
+    Argument\WithBackslash
+    ```
+*   **Escaping Variable Expansion:**
+    ```powershell
+    ArbSh> Write-Output \$testVar
+    # ... (DEBUG output) ...
+    $testVar
+    ```
+*   **Escaping Space:**
+    ```powershell
+    ArbSh> Write-Output Argument\ WithSpace
+    # ... (DEBUG output) ...
+    Argument WithSpace
+    ```
+
 ## Basic Pipeline and Redirection
 
-*   **Pipeline (`|`):** Passes the output of one command to the input of the next.
+*   **Pipeline (`|`):** Passes the output of one command to the input of the next. The parser correctly handles pipes inside quotes or when escaped.
     ```powershell
-    ArbSh> Get-Command | Get-Help # Tries to get help for each command name from Get-Command (limited use currently)
+    ArbSh> Get-Command | Write-Output # Standard pipeline
+    # ... (DEBUG output) ...
+    Get-Command
+    Get-Help
+    Write-Output
+
+    ArbSh> Write-Output "Value is | this" | Write-Output "Next stage" # Pipe inside quotes is ignored by parser
+    # ... (DEBUG output) ...
+    Value is | this
     ```
-*   **Output Redirection (`>` Overwrite, `>>` Append):** Writes the final output to a file instead of the console.
+*   **Output Redirection (`>` Overwrite, `>>` Append):** Writes the final output to a file instead of the console. (Note: Redirection parsing is still basic and happens *after* tokenization).
     ```powershell
     ArbSh> Get-Command > commands.txt
     ArbSh> Write-Output "Adding this line" >> commands.txt
     ```
 *   **Command Separator (`;`):** Executes commands sequentially (currently only the *first* command before a `;` is processed).
     ```powershell
-    ArbSh> Get-Command ; Write-Output "This part is currently ignored"
+    ArbSh> Write-Output "First part; still first part" ; Write-Output Second part # Semicolon outside quotes separates statements
+    # ... (DEBUG output) ...
+    First part; still first part
+    Second part
+    ```
+
+## Variable Expansion (`$variableName`)
+
+The parser now supports basic variable expansion. Variables start with `$` followed by their name. The parser replaces the variable token with its stored value *before* the token is used as an argument or a parameter value.
+
+**Note:** Variable storage is currently a placeholder within the parser itself. A proper session state management system is needed for user-defined variables. The following examples use predefined test variables: `$testVar`, `$pathExample`, `$emptyVar`.
+
+**Examples:**
+
+*   **Simple Expansion:**
+    ```powershell
+    ArbSh> Write-Output $testVar
+    DEBUG: Received command: Write-Output $testVar
+    # ... (parser/executor debug output) ...
+    Value from $testVar!
+    ```
+*   **Expansion with Literals:** (Note: String interpolation like `"Path: $pathExample"` is not yet supported, variables must be separate tokens)
+    ```powershell
+    ArbSh> Write-Output Path is: $pathExample
+    DEBUG: Received command: Write-Output Path is: $pathExample
+    # ... (parser/executor debug output) ...
+    Path is: C:\Users
+    ```
+*   **Undefined Variable:**
+    ```powershell
+    ArbSh> Write-Output $nonExistentVar
+    DEBUG: Received command: Write-Output $nonExistentVar
+    # ... (parser/executor debug output) ...
+    # (Output is an empty line)
+    ```
+*   **Expansion in Parameter Value:**
+    ```powershell
+    ArbSh> Get-Help -CommandName $testVar
+    DEBUG: Received command: Get-Help -CommandName $testVar
+    # ... (parser/executor debug output) ...
+    Help Error: Command 'Value from $testVar!' not found.
     ```
 
 This covers the basic usage of the commands available in the current prototype.

@@ -11,43 +11,143 @@ namespace ArbSh.Console
     /// </summary>
     public static class Parser
     {
+        // Placeholder for variable storage (replace with proper session state later)
+        // TODO: Implement proper session state for variables
+        private static Dictionary<string, string> _variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "testVar", "Value from $testVar!" },
+            { "pathExample", "C:\\Users" },
+            { "emptyVar", "" }
+        };
+
+        // Basic variable lookup (replace with proper session state access)
+        private static string GetVariableValue(string variableName)
+        {
+            // Basic lookup, returns empty string if not found (like PowerShell)
+            return _variables.TryGetValue(variableName, out var value) ? value : string.Empty;
+        }
+
+
         /// <summary>
-        /// Parses a line of input into a list of command representations for a single pipeline.
+        /// Parses a line of input into a list of statements, where each statement is a list of commands for a pipeline.
         /// </summary>
         /// <param name="inputLine">The raw input line from the user.</param>
-        /// <returns>A list of ParsedCommand objects representing the commands in the pipeline.</returns>
-        public static List<ParsedCommand> Parse(string inputLine)
+        /// <returns>A list where each element is a list of ParsedCommand objects representing a single statement's pipeline.</returns>
+        public static List<List<ParsedCommand>> Parse(string inputLine)
         {
             System.Console.WriteLine($"DEBUG (Parser): Parsing '{inputLine}'...");
-            var parsedPipeline = new List<ParsedCommand>();
+            var allStatementsCommands = new List<List<ParsedCommand>>();
+            var statementBuilder = new StringBuilder();
+            bool inQuotes = false;
+            int start = 0;
 
-            // Split into potential statements separated by ';'
-            // TODO: This basic split doesn't handle quoted ';' characters.
-            // TODO: Executor needs updating to handle multiple statements.
-            string[] statements = inputLine.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-
-            if (statements.Length == 0)
+            for (int i = 0; i < inputLine.Length; i++)
             {
-                return parsedPipeline; // Return empty list if input was empty or just semicolons
+                char c = inputLine[i];
+
+                if (c == '\\' && i + 1 < inputLine.Length)
+                {
+                    // Skip the escaped character
+                    i++;
+                    continue; // Skip escape character logic for statement splitting
+                }
+
+                if (c == '"')
+                {
+                    inQuotes = !inQuotes;
+                }
+
+                if (c == ';' && !inQuotes)
+                {
+                    // Found a statement separator
+                    string statement = inputLine.Substring(start, i - start).Trim();
+                    if (!string.IsNullOrWhiteSpace(statement))
+                    {
+                        allStatementsCommands.Add(ParseSingleStatement(statement));
+                    }
+                    start = i + 1; // Start next statement after the semicolon
+                }
             }
 
-            // --- Process only the FIRST statement for now ---
-            string firstStatement = statements[0];
-            System.Console.WriteLine($"DEBUG (Parser): Processing statement: '{firstStatement}'");
-            if (statements.Length > 1)
+            // Add the last statement (or the only statement if no semicolons)
+            string lastStatement = inputLine.Substring(start).Trim();
+            if (!string.IsNullOrWhiteSpace(lastStatement))
             {
-                 System.Console.WriteLine($"WARN (Parser): Multiple statements detected (';'), only processing the first one currently.");
+                allStatementsCommands.Add(ParseSingleStatement(lastStatement));
             }
 
-            // Split the first statement into pipeline stages based on '|'
-            // TODO: This basic split doesn't handle quoted '|' characters.
-            string[] pipelineStages = firstStatement.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            // TODO: Handle unterminated quotes at the statement level?
 
-            foreach (string stageInput in pipelineStages)
+            System.Console.WriteLine($"DEBUG (Parser): Parsed into {allStatementsCommands.Count} statement(s).");
+            // TODO: Executor currently only processes the first statement list.
+            return allStatementsCommands;
+        }
+
+        /// <summary>
+        /// Parses a single statement (which might contain a pipeline) into a list of commands.
+        /// </summary>
+        private static List<ParsedCommand> ParseSingleStatement(string statementInput)
+        {
+            System.Console.WriteLine($"DEBUG (Parser): Processing statement: '{statementInput}'");
+            var commandsInStatement = new List<ParsedCommand>();
+            int stageStart = 0;
+            bool inQuotes = false; // Track quotes specifically for pipeline splitting
+
+            for (int i = 0; i < statementInput.Length; i++)
             {
-                // Tokenize the current pipeline stage input
+                char c = statementInput[i];
+
+                if (c == '\\' && i + 1 < statementInput.Length)
+                {
+                    // Skip escaped character
+                    i++;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inQuotes = !inQuotes;
+                }
+
+                if (c == '|' && !inQuotes)
+                {
+                    // Found a pipeline separator
+                    string stageInput = statementInput.Substring(stageStart, i - stageStart).Trim();
+                    if (!string.IsNullOrWhiteSpace(stageInput))
+                    {
+                        // Process this stage
+                        ParsedCommand? command = ParseSinglePipelineStage(stageInput);
+                        if (command != null) commandsInStatement.Add(command);
+                    }
+                    stageStart = i + 1; // Start next stage after the pipe
+                }
+            }
+
+            // Process the last stage
+            string lastStageInput = statementInput.Substring(stageStart).Trim();
+            if (!string.IsNullOrWhiteSpace(lastStageInput))
+            {
+                ParsedCommand? command = ParseSinglePipelineStage(lastStageInput);
+                if (command != null) commandsInStatement.Add(command);
+            }
+
+            // TODO: Handle unterminated quotes within the statement?
+
+            System.Console.WriteLine($"DEBUG (Parser): Statement parsed into {commandsInStatement.Count} pipeline stage(s).");
+            return commandsInStatement;
+        }
+
+        /// <summary>
+        /// Parses a single pipeline stage string into a ParsedCommand object.
+        /// Handles tokenization, redirection, arguments, parameters, and variable expansion for the stage.
+        /// </summary>
+        /// <param name="stageInput">The string representing a single pipeline stage.</param>
+        /// <returns>A ParsedCommand object, or null if the stage is empty or invalid.</returns>
+        private static ParsedCommand? ParseSinglePipelineStage(string stageInput)
+        {
+             // Tokenize the current pipeline stage input (respects quotes/escapes)
                 List<string> tokens = TokenizeInput(stageInput);
-                if (tokens.Count == 0) continue;
+                if (tokens.Count == 0) return null; // If stage is empty after tokenization, return null
 
                 string commandName = tokens[0];
                 List<string> commandTokens = tokens.Skip(1).ToList(); // Tokens after command name
@@ -87,20 +187,32 @@ namespace ArbSh.Console
                 for (int i = 0; i < commandTokens.Count; i++)
                 {
                     string currentToken = commandTokens[i];
-                    if (currentToken.StartsWith("-") && currentToken.Length > 1) // Ensure it's not just "-"
+                    string expandedToken = currentToken; // Start with original
+
+                    // Variable expansion is now handled during tokenization.
+                    // The expandedToken is just the token received from the tokenizer.
+
+                    if (currentToken.StartsWith("-") && currentToken.Length > 1) // Check for parameter name
                     {
-                        string paramName = currentToken;
+                        string paramName = currentToken; // Parameter name itself is not expanded
                         string? paramValue = null;
+
                         if (i + 1 < commandTokens.Count && !commandTokens[i + 1].StartsWith("-"))
                         {
-                            paramValue = commandTokens[i + 1];
-                            i++;
+                            string potentialValueToken = commandTokens[i + 1];
+                            // Variable expansion is now handled during tokenization.
+                            string expandedValueToken = potentialValueToken;
+
+                            paramValue = expandedValueToken; // Assign the token value
+                            i++; // Consume the value token
                         }
+                        // Use the *original* token (before expansion) as the parameter name key
                         parameters[paramName] = paramValue ?? string.Empty;
                     }
-                    else
+                    else // It's an argument
                     {
-                        arguments.Add(currentToken);
+                        // Use the potentially expanded token
+                        arguments.Add(expandedToken);
                     }
                 }
 
@@ -111,12 +223,9 @@ namespace ArbSh.Console
                     parsedCommand.SetOutputRedirection(redirectPath, append);
                     System.Console.WriteLine($"DEBUG (Parser): Found redirection: {(append ? ">>" : ">")} '{redirectPath}'");
                 }
-                parsedPipeline.Add(parsedCommand);
-
-            } // End foreach pipeline stage
-
-            System.Console.WriteLine($"DEBUG (Parser): Parsed into {parsedPipeline.Count} pipeline stage(s).");
-            return parsedPipeline;
+                return parsedCommand;
+            // Return null if stage was empty after tokenization
+            return null;
         }
 
         /// <summary>
@@ -128,33 +237,54 @@ namespace ArbSh.Console
             var tokens = new List<string>();
             var currentToken = new StringBuilder();
             bool inQuotes = false;
+            bool treatNextCharLiteral = false; // Flag for escape character
 
             for (int i = 0; i < inputLine.Length; i++)
             {
                 char c = inputLine[i];
 
+                if (treatNextCharLiteral)
+                {
+                    // Previous char was '\', add this char literally
+                    currentToken.Append(c);
+                    treatNextCharLiteral = false;
+                    continue;
+                }
+
+                // Allow escaping inside quotes as well
                 if (c == '\\' && i + 1 < inputLine.Length)
                 {
-                    // Handle potential escape sequence for specific characters
-                    char nextChar = inputLine[i + 1];
-                    bool escaped = false;
-                    switch (nextChar)
-                    {
-                        case '"':
-                        case '\\':
-                        case '|':
-                        case ';':
-                        case '>':
-                        // Potentially add '<' later for input redirection
-                            currentToken.Append(nextChar);
-                            i++; // Consume the escaped character
-                            escaped = true;
-                            break;
-                    }
-                    if (escaped) continue;
+                    // Set flag to treat the *next* character literally
+                    treatNextCharLiteral = true;
+                    // Do not append the backslash itself
+                    continue;
+                }
 
-                    // If not escaping a special character, treat backslash literally
-                    currentToken.Append(c); // Append the backslash itself
+                // Handle variable expansion ($) only outside quotes
+                if (c == '$' && !inQuotes && i + 1 < inputLine.Length)
+                {
+                    int varNameStart = i + 1;
+                    int varNameEnd = varNameStart;
+                    // Basic variable name: letters, numbers, underscore (can be refined)
+                    while (varNameEnd < inputLine.Length && (char.IsLetterOrDigit(inputLine[varNameEnd]) || inputLine[varNameEnd] == '_'))
+                    {
+                        varNameEnd++;
+                    }
+
+                    if (varNameEnd > varNameStart) // Found a potential variable name
+                    {
+                        string varName = inputLine.Substring(varNameStart, varNameEnd - varNameStart);
+                        string varValue = GetVariableValue(varName);
+                        currentToken.Append(varValue); // Append the value
+                        System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}'");
+                        i = varNameEnd - 1; // Move index past the variable name
+                        continue; // Continue to next character after variable
+                    }
+                    else
+                    {
+                        // Just a literal '$' not followed by a valid variable name start
+                        currentToken.Append(c);
+                    }
                 }
                 else if (c == '"')
                 {

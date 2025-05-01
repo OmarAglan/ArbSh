@@ -31,7 +31,7 @@ To create a powerful, extensible shell environment built on .NET that:
 -   [✅] Implement fundamental built-in cmdlets placeholders (`Write-Output`, `Get-Help`, `Get-Command`) with basic logic.
 -   [✅] Implement basic command discovery (`CommandDiscovery.cs`).
 -   [✅] Implement basic sequential pipeline execution simulation (`Executor.cs`).
--   [🟡] **Refine Parser:** Handle escaped quotes/operators, command separators (`;`), redirection (`>`), variable expansion (`$var`). (In Progress: Basic ';', '\"', '\|', '\>', redirection parsing added)
+-   [✅] **Refine Parser (Basic):** Handled basic variable expansion (`$var`), statement separators (`;`), pipeline operators (`|`), and escape characters (`\`) respecting quotes.
 -   [ ] **Refine Pipeline Execution:** Implement true concurrent execution, manage streams more effectively.
 -   [ ] **Implement Cmdlet Logic:** Add real logic to placeholder cmdlets (e.g., `Get-Help` parameter details).
 -   [ ] **Further Refine Parameter Binding:** Add support for more complex types (arrays, enums), improve error reporting.
@@ -41,6 +41,7 @@ To create a powerful, extensible shell environment built on .NET that:
 -   [ ] Extend the C# parser and tokenizer to correctly identify and handle commands, parameters, and potentially string literals written in Arabic script.
 -   [ ] Implement mechanisms to map Arabic command names (e.g., `احصل-محتوى`) to their corresponding C# cmdlet classes.
 -   [ ] Handle potential ambiguities or interactions between Arabic and English syntax elements.
+-   [ ] **Refine Parser (Advanced):** Implement more robust parsing for complex cases (e.g., advanced redirection `2>&1`, sub-expressions `$(...)`, type literals `[int]`, etc.).
 
 **Phase 4: Porting ArbSh UTF-8 & BiDi Algorithms to C#**
 
