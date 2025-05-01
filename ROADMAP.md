@@ -41,7 +41,9 @@ To create a powerful, extensible shell environment built on .NET that:
 -   [ ] Extend the C# parser and tokenizer to correctly identify and handle commands, parameters, and potentially string literals written in Arabic script.
 -   [ ] Implement mechanisms to map Arabic command names (e.g., `احصل-محتوى`) to their corresponding C# cmdlet classes.
 -   [ ] Handle potential ambiguities or interactions between Arabic and English syntax elements.
--   [ ] **Refine Parser (Advanced):** Implement more robust parsing for complex cases (e.g., advanced redirection `2>&1`, sub-expressions `$(...)`, type literals `[int]`, etc.).
+-   [ ] **Refine Parser (Advanced):**
+    -   [ ] Implement more robust parsing for complex cases (e.g., advanced redirection `2>&1`, sub-expressions `$(...)`, type literals `[int]`, etc.).
+    -   [ ] Fix complex escape sequence handling in tokenizer (e.g., `\\"`, `\\ `). (Deferred from Phase 2)
 
 **Phase 4: Porting ArbSh UTF-8 & BiDi Algorithms to C#**
 

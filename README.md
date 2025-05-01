@@ -77,13 +77,19 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
 
 ## Known Issues and Limitations (Current State)
 
--   Parsing logic is still basic (e.g., only simple variable expansion, rudimentary redirection handling, no complex expression parsing).
--   Type conversion in parameter binding is basic (relies on `TypeConverter` and `Convert.ChangeType`, no complex type handling like script blocks or hashtables).
--   Parameter binding does not yet support named array parameters or advanced pipeline binding scenarios (e.g., binding specific properties of complex input objects without `ValueFromPipelineByPropertyName`).
--   Error handling is rudimentary (basic exceptions caught, but no rich `ErrorRecord` objects like PowerShell).
--   No Arabic language support (commands or text rendering) is implemented in the C# version yet.
--   No external process execution support yet.
--   No scripting features (variables are hardcoded in Parser).
+-   **Parsing/Tokenization:**
+    -   Logic is still basic (e.g., only simple variable expansion, rudimentary redirection handling, no complex expression parsing like sub-expressions `$(...)`).
+    -   Complex escape sequence handling in the tokenizer is incomplete (e.g., `\\"`, `\\ ` are not parsed correctly). (See Roadmap Phase 3)
+-   **Parameter Binding:**
+    -   Type conversion is basic (relies on `TypeConverter` and `Convert.ChangeType`, no complex type handling like script blocks or hashtables).
+    -   Does not yet support named array parameters or advanced pipeline binding scenarios (e.g., binding specific properties of complex input objects without `ValueFromPipelineByPropertyName`).
+    -   Unknown named parameters are currently ignored instead of causing an error.
+-   **Error Handling:** Rudimentary (basic exceptions caught, but no rich `ErrorRecord` objects like PowerShell).
+-   **Features:**
+    -   No Arabic language support (commands or text rendering) is implemented yet.
+    -   No external process execution support yet.
+    -   No scripting features (variables are hardcoded in Parser, no functions, flow control, etc.).
+    -   No tab completion, history, or aliasing.
 
 ## Conclusion
 

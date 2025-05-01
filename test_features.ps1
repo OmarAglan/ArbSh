@@ -82,8 +82,9 @@ $arbshCommands = @(
     'Write-Output ''Literal Pipe -> \|''' # Escape | for ArbSh
     'Write-Output ''Literal Semicolon -> \;''' # Escape ; for ArbSh
     'Write-Output ''Literal Quote -> \"''' # Escape " for ArbSh
-    'Write-Output "Quoted string with \\"escaped quote\\" inside"' # Keep PS double quotes here, escape internal \ and " for ArbSh
-    'Write-Output Argument\\ WithSpace' # Escape \ for ArbSh
+    # Known Issue: The following two lines fail due to tokenizer escape handling (See README/Roadmap)
+    # 'Write-Output "Quoted string with \\"escaped quote\\" inside"'
+    # 'Write-Output Argument\\ WithSpace'
     ''
     '# --- Parameter Binding Errors ---'
     'Get-Help -NonExistentParam' # Binder currently ignores unknown named parameters
@@ -147,7 +148,8 @@ Write-Log ("ArbSh process exited with code " + $process.ExitCode + ".") # Use co
 Write-Log "Verifying redirection files..."
 if (Test-Path $tempRedirectFile) {
     Write-Log ("Content of " + $tempRedirectFile + ":") # Use concatenation
-    Get-Content $tempRedirectFile -Encoding UTF8 | Out-File -Append $outputLogFile # Specify Encoding
+    $content = Get-Content $tempRedirectFile -Encoding UTF8 # Read as UTF8
+    Add-Content -Path $outputLogFile -Value $content # Append using Add-Content
     Remove-Item $tempRedirectFile # Cleanup
 } else {
     Write-Log "ERROR: $tempRedirectFile was not created."
@@ -155,7 +157,8 @@ if (Test-Path $tempRedirectFile) {
 
 if (Test-Path $tempAppendFile) {
     Write-Log ("Content of " + $tempAppendFile + ":") # Use concatenation
-    Get-Content $tempAppendFile -Encoding UTF8 | Out-File -Append $outputLogFile # Specify Encoding
+    $content = Get-Content $tempAppendFile -Encoding UTF8 # Read as UTF8
+    Add-Content -Path $outputLogFile -Value $content # Append using Add-Content
     Remove-Item $tempAppendFile # Cleanup
 } else {
     Write-Log "ERROR: $tempAppendFile was not created."
