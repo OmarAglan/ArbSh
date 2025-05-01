@@ -52,6 +52,19 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
 
 The project now uses the standard .NET build tools (`dotnet build`). The CMake build system in `old_c_code/` is deprecated.
 
+## Creating a Release
+
+A PowerShell script (`create-release.ps1`) is available in the project root to automate the creation of a release build and archive.
+
+1.  Open PowerShell in the project root directory.
+2.  Run the script, providing the desired version number:
+    ```powershell
+    .\create-release.ps1 -Version "x.y.z"
+    ```
+    (Replace `x.y.z` with the actual semantic version number).
+
+This will update the changelog, create a self-contained `win-x64` build, and package it into a zip file in the `releases/` directory.
+
 ## Roadmap Overview
 
 Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refactoring and feature implementation plan.

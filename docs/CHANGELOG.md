@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
+- (Future changes go here)
+
+## [0.5.0] - 2025-05-02
+
+### Added
 - **Parser Refinements (2025-05-01):**
   - Implemented basic variable expansion (`$varName`) during tokenization.
   - Implemented statement splitting (`;`) respecting quotes/escapes.
