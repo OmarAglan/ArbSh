@@ -2,7 +2,7 @@
 
 **Note:** This project is currently undergoing a major refactoring. The goal is to transition from the original C-based implementation to a new **C#/.NET PowerShell-inspired shell** with first-class support for **Arabic commands and full Arabic text handling (UTF-8, BiDi/RTL)**.
 
-This document provides an overview of the new direction and the status of the refactoring effort. The original C implementation remains in the `src/` directory for reference, particularly its i18n components which are being ported to C#.
+This document provides an overview of the new direction and the status of the refactoring effort. The original C implementation has been moved to the `old_c_code/` directory for reference.
 
 ## New Project Overview
 
@@ -19,32 +19,31 @@ This shell aims to provide a seamless and powerful command-line experience for A
 
 ## Current Refactoring Status
 
-The project is in the **early stages** of the C# refactoring (Phase 1 complete, starting Phase 2):
+The project is in the **early stages** of the C# refactoring (Phase 1 complete, Phase 2 in progress):
 
 -   **C# Project Structure:** A new .NET solution (`src_csharp/ArbSh.sln`) and console application project (`src_csharp/ArbSh.Console/`) have been created.
 -   **Core Placeholders:** Initial classes for the object pipeline (`PipelineObject`, `CmdletBase`), parsing (`Parser`, `ParsedCommand`), and execution (`Executor`) are in place.
 -   **Basic REPL:** A functional Read-Eval-Print Loop exists in `Program.cs`.
--   **Basic Parsing:** The parser (`Parser.cs`, `TokenizeInput`) can now handle basic double-quoted arguments, differentiate command names/arguments/parameters, and split commands based on the pipeline operator (`|`).
--   **Parameter Binding:** Added `ParameterAttribute` and implemented basic parameter binding in the `Executor` using reflection. Supports named/positional parameters and basic type conversion (e.g., string to bool for switches like `Get-Help -Full`).
+-   **Basic Parsing:** The parser (`Parser.cs`, `TokenizeInput`) can now handle basic double-quoted arguments with escaped quotes (`\"`), differentiate command names/arguments/parameters, and split commands based on the pipeline operator (`|`).
+-   **Parameter Binding:** Added `ParameterAttribute` and implemented basic parameter binding in the `Executor` using reflection. Supports named/positional parameters, basic type conversion (string, bool, int), and checks for mandatory parameters (throwing `ParameterBindingException`).
 -   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation.
 -   **Basic Pipeline:** `CmdletBase` now collects output internally. The `Executor` simulates sequential pipeline execution by passing output collections between cmdlets (verified with `Get-Command | Write-Output`).
--   **Placeholder Cmdlets:** Basic `Write-Output`, `Get-Help`, and `Get-Command` cmdlets have been added and are discoverable. Cmdlets use the `[Parameter]` attribute.
+-   **Basic Cmdlets:** `Write-Output`, `Get-Help`, and `Get-Command` have basic functional implementations. `Get-Help` uses reflection to display syntax/parameters based on `[Parameter]` attributes. `Get-Command` uses `CommandDiscovery`.
 -   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, etc.) has been updated to reflect the C# refactoring.
--   **C Code Reference:** The original C source code (`src/`, `include/`) is preserved as a reference for porting the i18n algorithms.
+-   **C Code Reference:** The original C source code and build files have been moved to the `old_c_code/` directory for reference during the porting process.
 
-*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse simple commands with quoted arguments and pipelines, discover cmdlets, perform basic parameter binding with simple type conversion, and simulate pipeline flow. However, advanced parsing (escaped quotes, robust pipeline handling), true concurrent pipeline execution, robust type conversion, error handling, and Arabic support are still needed.*
+*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse simple commands with quoted arguments (including escaped quotes) and pipelines, discover cmdlets, perform basic parameter binding (with type conversion and mandatory checks), simulate pipeline flow, and execute basic `Get-Help` and `Get-Command`. However, advanced parsing, true concurrent pipeline execution, robust type conversion, comprehensive error handling, and Arabic support are still needed.*
 
 ## New Code Structure
 
 -   **`src_csharp/`**: Contains the new C#/.NET solution and projects.
     -   `ArbSh.Console/`: The main console application executable.
     -   (Future libraries for core logic, cmdlets, i18n ports will reside here).
--   **`src/`**: Contains the original C source code (preserved for reference, especially `src/i18n/` and `src/utils/`). Will likely be removed or archived once porting is complete.
--   **`include/`**: Original C headers (preserved for reference).
--   **`docs/`**: Project documentation (being updated).
--   **`tests/`**: Original C tests (preserved for reference, new C# tests needed).
+-   **`old_c_code/`**: Contains the original C/C++ source, headers, tests, and CMake build files, preserved for reference.
+-   **`docs/`**: Project documentation (updated for C#).
+-   **`.gitignore`**: Updated for C#.
 
-The project will transition away from the CMake build system towards the standard .NET build tools (`dotnet build`).
+The project now uses the standard .NET build tools (`dotnet build`). The CMake build system in `old_c_code/` is deprecated.
 
 ## Roadmap Overview
 
@@ -52,15 +51,17 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
 
 ## Technical Challenges (Porting Focus)
 
--   **Porting BiDi Algorithm:** Accurately translating the complex UAX #9 logic from `src/i18n/bidi/bidi.c` to C# requires careful attention to detail.
+-   **Porting BiDi Algorithm:** Accurately translating the complex UAX #9 logic from `old_c_code/src/i18n/bidi/bidi.c` to C# requires careful attention to detail.
 -   **Console Rendering:** Integrating the ported BiDi logic with .NET console output mechanisms (`System.Console` or potentially libraries like `Spectre.Console`) to achieve correct RTL/mixed text rendering.
 -   **Arabic Command Parsing:** Designing and implementing a robust parser in C# that correctly handles Arabic script alongside potential English keywords/parameters and object syntax.
 
 ## Known Issues and Limitations (Current State)
 
--   The C# shell is currently non-functional and in the very early stages of development.
+-   Parsing logic is still basic (e.g., no robust handling of quoted pipeline operators, no variable expansion).
+-   Pipeline execution is sequential, not concurrent.
+-   Type conversion in parameter binding is limited.
+-   Error handling is rudimentary.
 -   No Arabic language support (commands or text rendering) is implemented in the C# version yet.
--   No object pipeline or cmdlet execution is implemented yet.
 
 ## Conclusion
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq; // Needed for Skip
+using System.Text; // Needed for StringBuilder
 
 namespace ArbSh.Console
 {
@@ -21,17 +22,14 @@ namespace ArbSh.Console
             // TODO: Implement actual parsing logic.
             // This should handle:
             // - Splitting commands (e.g., by ';')
-            // - Splitting pipeline stages (e.g., by '|')
             // - Identifying command names (verbs/nouns, potentially Arabic)
-            // - Parsing parameters and their values (handling quotes, types)
+            // - Parsing parameters and their values (handling types)
             // - Handling redirection (>, >>, <)
             // - Variable expansion ($var)
 
             System.Console.WriteLine($"DEBUG (Parser): Parsing '{inputLine}'...");
 
             var parsedCommands = new List<ParsedCommand>();
-
-            // TODO: Implement splitting by ';' for multiple commands on one line.
 
             // Split the input line into pipeline stages based on '|'
             // TODO: This basic split doesn't handle quoted '|' characters.
@@ -80,27 +78,41 @@ namespace ArbSh.Console
         }
 
         /// <summary>
-        /// Tokenizes the input line, respecting double quotes.
+        /// Tokenizes the input line, respecting double quotes and handling escaped quotes.
         /// (Basic implementation)
         /// </summary>
         private static List<string> TokenizeInput(string inputLine)
         {
             var tokens = new List<string>();
-            var currentToken = new System.Text.StringBuilder();
+            var currentToken = new StringBuilder();
             bool inQuotes = false;
-            char? prevChar = null;
 
-            foreach (char c in inputLine)
+            for (int i = 0; i < inputLine.Length; i++)
             {
-                if (c == '"')
+                char c = inputLine[i];
+
+                if (c == '\\' && i + 1 < inputLine.Length)
                 {
-                    // TODO: Handle escaped quotes (\")
+                    // Handle potential escape sequence
+                    char nextChar = inputLine[i + 1];
+                    if (nextChar == '"' || nextChar == '\\')
+                    {
+                        // It's an escaped quote or backslash, add the escaped char
+                        currentToken.Append(nextChar);
+                        i++; // Skip the next character as it was part of the escape sequence
+                        continue; // Continue to next character in loop
+                    }
+                    // If it's not an escaped quote or backslash, treat backslash literally
+                    currentToken.Append(c); // Append the backslash itself
+                }
+                else if (c == '"')
+                {
                     inQuotes = !inQuotes;
-                    // Don't add the quote itself to the token unless escaped
+                    // Don't add the quote itself to the token
                 }
                 else if (char.IsWhiteSpace(c) && !inQuotes)
                 {
-                    // End of a token
+                    // End of a token if outside quotes
                     if (currentToken.Length > 0)
                     {
                         tokens.Add(currentToken.ToString());
@@ -109,9 +121,9 @@ namespace ArbSh.Console
                 }
                 else
                 {
+                    // Append character if it's part of a token or inside quotes
                     currentToken.Append(c);
                 }
-                prevChar = c;
             }
 
             // Add the last token if any
@@ -120,7 +132,12 @@ namespace ArbSh.Console
                 tokens.Add(currentToken.ToString());
             }
 
-            // TODO: Handle unterminated quotes
+            // TODO: Handle unterminated quotes (e.g., throw an error)
+            if (inQuotes)
+            {
+                 System.Console.WriteLine("WARN (Tokenizer): Unterminated quote detected.");
+                 // Decide how to handle this - error or treat as literal?
+            }
 
             return tokens;
         }

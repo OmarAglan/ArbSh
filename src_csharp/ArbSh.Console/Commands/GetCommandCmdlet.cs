@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq; // Added for LINQ methods
 
 namespace ArbSh.Console.Commands
 {
@@ -15,37 +16,36 @@ namespace ArbSh.Console.Commands
 
         public override void EndProcessing()
         {
-            // TODO: Implement logic to discover commands (e.g., via reflection, modules)
-            // For now, just list the hardcoded known commands
+            // Get discovered commands from the CommandDiscovery cache
+            // Need access to the cache - let's add a helper method to CommandDiscovery
+            var discoveredCommands = CommandDiscovery.GetAllCommands(); // Assuming this method exists
 
-            var knownCommands = new List<string> { "Write-Output", "Get-Help", "Get-Command" };
+            IEnumerable<KeyValuePair<string, Type>> commandsToDisplay = discoveredCommands;
 
             if (!string.IsNullOrEmpty(Name))
             {
-                // Basic filtering simulation
-                var filteredCommands = knownCommands
-                    .Where(cmd => cmd.Equals(Name, StringComparison.OrdinalIgnoreCase) || cmd.StartsWith(Name, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                if (filteredCommands.Any())
-                {
-                    foreach (var cmd in filteredCommands)
-                    {
-                        WriteObject($"Cmdlet: {cmd}"); // TODO: Output richer command info objects
-                    }
-                }
-                else
-                {
-                     WriteObject($"Command not found: {Name}");
-                }
+                // Filter based on the Name parameter (can use wildcards later)
+                // Basic filtering for now: exact match or starts with
+                 commandsToDisplay = discoveredCommands
+                    .Where(kvp => kvp.Key.Equals(Name, StringComparison.OrdinalIgnoreCase) || kvp.Key.StartsWith(Name, StringComparison.OrdinalIgnoreCase));
             }
-            else // List all known commands
+
+            if (commandsToDisplay.Any())
             {
-                 WriteObject("Available Commands (Placeholder):");
-                 foreach(var cmd in knownCommands)
+                 if (string.IsNullOrEmpty(Name)) // Only print header if listing all
                  {
-                     WriteObject($"  {cmd}");
+                     WriteObject("Available Commands:");
                  }
+                 foreach (var kvp in commandsToDisplay)
+                 {
+                     // TODO: Output richer command info objects (Name, Type, Module, etc.)
+                     WriteObject($"  {kvp.Key} (Type: {kvp.Value.Name})");
+                 } // <-- Added missing closing brace
+            }
+            else
+            {
+                 // Use WriteError or similar mechanism in the future
+                 WriteObject($"Command not found matching: {Name ?? "*"}");
             }
         }
     }

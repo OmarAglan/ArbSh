@@ -33,6 +33,22 @@ namespace ArbSh.Console
         }
 
         /// <summary>
+        /// Gets a read-only dictionary of all discovered commands.
+        /// Builds the cache if it hasn't been built yet.
+        /// </summary>
+        /// <returns>A read-only dictionary mapping command names to cmdlet types.</returns>
+        public static IReadOnlyDictionary<string, Type> GetAllCommands()
+        {
+            if (_commandCache == null)
+            {
+                BuildCache();
+            }
+            // Ensure null forgiveness operator is used safely or cache is guaranteed non-null
+            return _commandCache!;
+        }
+
+
+        /// <summary>
         /// Builds the cache of available commands by scanning the assembly.
         /// </summary>
         private static void BuildCache()

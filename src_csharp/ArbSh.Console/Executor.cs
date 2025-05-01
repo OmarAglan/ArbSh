@@ -72,11 +72,32 @@ namespace ArbSh.Console
 
                 if (cmdlet != null)
                     {
-                        // --- Parameter Binding Step ---
-                        BindParameters(cmdlet, command);
-                        // -----------------------------
+                        bool bindingSuccessful = true;
+                        try
+                        {
+                            // --- Parameter Binding Step ---
+                            BindParameters(cmdlet, command);
+                            // -----------------------------
+                        }
+                        catch (ParameterBindingException bindEx)
+                        {
+                            System.Console.ForegroundColor = ConsoleColor.Red;
+                            System.Console.WriteLine($"ParameterBindingError: {bindEx.Message}");
+                            System.Console.ResetColor();
+                            bindingSuccessful = false;
+                            // Stop processing this pipeline stage
+                        }
+                        catch (Exception ex) // Catch other potential reflection errors during binding
+                        {
+                             System.Console.ForegroundColor = ConsoleColor.Red;
+                             System.Console.WriteLine($"Unexpected Binding Error: {ex.Message}");
+                             System.Console.ResetColor();
+                             bindingSuccessful = false;
+                        }
 
-                        // Prepare output collection for this cmdlet
+                        if (bindingSuccessful)
+                        {
+                            // Prepare output collection for this cmdlet
                         var outputCollection = new BlockingCollection<PipelineObject>();
                         cmdlet.OutputCollection = outputCollection; // Assign it to the cmdlet instance
 
@@ -121,8 +142,15 @@ namespace ArbSh.Console
                             outputCollection.CompleteAdding();
                         }
 
-                        // Set the output of this command as the input for the next
-                        currentInput = outputCollection;
+                            // Set the output of this command as the input for the next
+                            currentInput = outputCollection;
+                        }
+                        else
+                        {
+                            // If binding failed, stop processing this pipeline
+                             System.Console.WriteLine($"DEBUG (Executor): Halting pipeline due to parameter binding error.");
+                             break;
+                        }
 
                     }
                     else // Cmdlet not found
@@ -182,20 +210,41 @@ namespace ArbSh.Console
                      string? namedValue = command.Parameters[paramName]; // May be empty for switch parameters
 
                      // Handle boolean switch parameters (presence implies true)
-                     if (prop.PropertyType == typeof(bool) && string.IsNullOrEmpty(namedValue))
+                     if (prop.PropertyType == typeof(bool))
                      {
-                         valueToSet = true;
+                         // If value is null/empty, treat as true switch. If value is provided, try parsing it.
+                         if (string.IsNullOrEmpty(namedValue))
+                         {
+                             valueToSet = true;
+                         }
+                         else if (bool.TryParse(namedValue, out bool boolValue)) // Handle -Param:$true/$false
+                         {
+                             valueToSet = boolValue;
+                         }
+                         else
+                         {
+                              System.Console.WriteLine($"WARN (Binder): Invalid boolean value '{namedValue}' for switch parameter '{paramName}'. Treating as true.");
+                              valueToSet = true; // Default switch behavior if value is invalid bool
+                         }
                          found = true;
-                         System.Console.WriteLine($"DEBUG (Binder): Bound switch parameter '{paramName}' to true");
+                         System.Console.WriteLine($"DEBUG (Binder): Bound boolean parameter '{paramName}' to value '{valueToSet}'");
                      }
-                     // Attempt type conversion for parameters with values
+                     // Attempt type conversion for parameters with non-empty values
                      else if (!string.IsNullOrEmpty(namedValue))
                      {
                          try
                          {
-                             // Use Convert.ChangeType for basic conversions (string, int, bool, etc.)
-                             // TODO: Add more robust type conversion (collections, custom types)
-                             valueToSet = Convert.ChangeType(namedValue, prop.PropertyType);
+                             // Explicit handling for int, fallback to Convert.ChangeType
+                             if (prop.PropertyType == typeof(int))
+                             {
+                                 valueToSet = int.Parse(namedValue); // Use Parse for clearer exceptions
+                             }
+                             else
+                             {
+                                 // Use Convert.ChangeType for other basic conversions (string, etc.)
+                                 // TODO: Add more robust type conversion (collections, custom types)
+                                 valueToSet = Convert.ChangeType(namedValue, prop.PropertyType);
+                             }
                              found = true;
                              System.Console.WriteLine($"DEBUG (Binder): Bound named parameter '{paramName}' to value '{valueToSet}' (Type: {prop.PropertyType.Name})");
                          }
@@ -212,8 +261,20 @@ namespace ArbSh.Console
                      string positionalValue = command.Arguments[paramAttr.Position];
                      try
                      {
-                         // Use Convert.ChangeType for basic conversions
-                         valueToSet = Convert.ChangeType(positionalValue, prop.PropertyType);
+                         // Explicit handling for int, fallback to Convert.ChangeType
+                         if (prop.PropertyType == typeof(int))
+                         {
+                             valueToSet = int.Parse(positionalValue);
+                         }
+                         else if (prop.PropertyType == typeof(bool)) // Positional bool doesn't make much sense, but handle anyway
+                         {
+                             valueToSet = bool.Parse(positionalValue);
+                         }
+                         else
+                         {
+                             // Use Convert.ChangeType for other basic conversions
+                             valueToSet = Convert.ChangeType(positionalValue, prop.PropertyType);
+                         }
                          found = true;
                          usedPositionalArgs[paramAttr.Position] = true; // Mark as used
                          System.Console.WriteLine($"DEBUG (Binder): Bound positional parameter at {paramAttr.Position} ('{positionalValue}') to property '{prop.Name}' (Type: {prop.PropertyType.Name})");
@@ -237,11 +298,14 @@ namespace ArbSh.Console
                      }
                  }
 
-                 // 4. TODO: Check for Mandatory parameters that were not bound
+                 // 4. Check for Mandatory parameters that were not bound
                  if (!found && paramAttr.Mandatory)
                  {
-                      System.Console.WriteLine($"ERROR (Binder): Mandatory parameter '{paramName}' (or position {paramAttr.Position}) not provided.");
-                      // TODO: Throw an exception or set error state
+                      // Throw an exception to stop execution
+                      throw new ParameterBindingException($"Missing mandatory parameter '{paramName}' for cmdlet '{cmdlet.GetType().Name}'.")
+                      {
+                          ParameterName = prop.Name // Store the property name
+                      };
                  }
              }
 

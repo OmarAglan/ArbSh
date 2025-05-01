@@ -14,27 +14,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented basic REPL loop in `Program.cs`.
   - Added basic `WriteOutputCmdlet` placeholder.
   - Added `ParsedCommand.cs` to represent parsed command structure, including basic support for named parameters.
-  - Updated `Parser.cs` with basic tokenization logic (`TokenizeInput`) to handle double-quoted arguments and differentiate positional arguments from named parameters (starting with `-`).
+  - Updated `Parser.cs` with improved tokenization logic (`TokenizeInput`) to handle double-quoted arguments and basic escaped quotes (`\"`). Differentiates positional arguments from named parameters (starting with `-`).
   - Added `ParameterAttribute.cs` for marking cmdlet parameters.
   - Updated `GetHelpCmdlet.cs` and `GetCommandCmdlet.cs` to use `[Parameter]` attribute.
-  - Implemented basic parameter binding logic in `Executor.cs` using reflection, including basic type conversion (e.g., string to bool for switch parameters) via `Convert.ChangeType`.
+  - Implemented basic parameter binding logic in `Executor.cs` using reflection, including basic type conversion (e.g., string to bool/int) and mandatory parameter checking (throwing `ParameterBindingException`).
   - Added `CommandDiscovery.cs` to find available cmdlets using reflection.
-  - Updated `Executor.cs` to use `CommandDiscovery` for dynamic cmdlet instantiation.
+  - Updated `Executor.cs` to use `CommandDiscovery`, handle `ParameterBindingException`, and use the updated binding logic.
   - Updated `CmdletBase.cs` to collect output internally using `BlockingCollection`.
   - Updated `Executor.cs` with basic sequential pipeline logic (passing output of one command to the input of the next via `BlockingCollection`), confirmed working with `Get-Command | Write-Output`.
   - Updated `Parser.cs` to handle the pipeline operator (`|`).
-  - Added basic `GetHelpCmdlet` placeholder and integrated into `Executor`.
-  - Added basic `GetCommandCmdlet` placeholder and integrated into `Executor`.
+  - Implemented basic logic for `GetHelpCmdlet` using reflection to display command syntax and parameters.
+  - Implemented basic logic for `GetCommandCmdlet` using `CommandDiscovery` to list commands.
 - Updated documentation (`README.md`, `ROADMAP.md`, `docs/PROJECT_ORGANIZATION.md`, `docs/DOCUMENTATION_INDEX.md`, `CONTRIBUTING.md`, `docs/CHANGELOG.md`) to reflect the new C# direction and refactoring status.
 - Updated `.gitignore` for C#/.NET development.
 
 ### Changed
 - Project direction shifted towards a PowerShell-inspired C# shell with Arabic command support.
-- Build system transitioning from CMake to .NET CLI.
+- Build system transitioned from CMake to .NET CLI.
+- Moved original C/C++ source, include, tests, cmake, build files into `old_c_code/` directory for reference.
 
 ### Deprecated
-- The existing C implementation (`src/`, `include/`) is now considered legacy and primarily serves as a reference for porting i18n logic.
-- CMake build system (`CMakeLists.txt`, `cmake/`).
+- The existing C implementation (now in `old_c_code/`) is considered legacy and primarily serves as a reference for porting i18n logic.
+- CMake build system (now in `old_c_code/`).
 
 ## Previous C Implementation [Unreleased] - Before C# Refactor
 

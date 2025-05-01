@@ -12,23 +12,28 @@ To create a powerful, extensible shell environment built on .NET that:
 
 ## Development Phases
 
-**Phase 1: C# Project Setup, Core Object Pipeline Design, Documentation Update (Current Phase)**
+**Phase 1: C# Project Setup, Core Object Pipeline Design, Documentation Update (Completed)**
 
 -   [✅] Create new C#/.NET solution (`src_csharp/ArbSh.sln`) and console project (`src_csharp/ArbSh.Console/`).
 -   [✅] Update `README.md` to reflect the new project direction.
 -   [✅] Update this `ROADMAP.md` file.
--   [ ] Define core C# interfaces/base classes for the object pipeline (`PipelineObject`, `CmdletBase`).
--   [ ] Design the basic structure for cmdlet discovery and loading.
--   [ ] Update `.gitignore` for C# artifacts.
--   [ ] Update `docs/PROJECT_ORGANIZATION.md`.
+-   [✅] Define core C# interfaces/base classes for the object pipeline (`PipelineObject`, `CmdletBase`).
+-   [✅] Design the basic structure for cmdlet discovery and loading (`CommandDiscovery.cs`).
+-   [✅] Update `.gitignore` for C# artifacts.
+-   [✅] Update `docs/PROJECT_ORGANIZATION.md`.
 
-**Phase 2: Basic Cmdlet Framework & Execution Engine (C#)**
+**Phase 2: Basic Cmdlet Framework & Execution Engine (C#) (Current Phase)**
 
--   [ ] Implement the core pipeline execution engine in C#.
--   [ ] Develop the initial C# parser for simple English `Verb-Noun -Parameter Value` syntax.
--   [ ] Implement basic cmdlet parameter binding.
--   [ ] Implement fundamental built-in cmdlets (e.g., `Write-Output`, `Get-Help`, `Get-Command`).
--   [ ] Basic REPL (Read-Eval-Print Loop) implementation in `ArbSh.Console`.
+-   [✅] Basic REPL (Read-Eval-Print Loop) implementation in `ArbSh.Console`.
+-   [✅] Develop the initial C# parser (`Parser.cs`) for simple syntax, handling quoted args, parameters (`-`), and pipelines (`|`).
+-   [✅] Implement basic cmdlet parameter binding (`Executor.BindParameters`) using reflection and `[Parameter]` attribute, with basic type conversion.
+-   [✅] Implement fundamental built-in cmdlets placeholders (`Write-Output`, `Get-Help`, `Get-Command`) with basic logic.
+-   [✅] Implement basic command discovery (`CommandDiscovery.cs`).
+-   [✅] Implement basic sequential pipeline execution simulation (`Executor.cs`).
+-   [🟡] **Refine Parameter Binding:** Improve type conversion, handle mandatory parameters, switch parameters more robustly. (In Progress)
+-   [ ] **Refine Parser:** Handle escaped quotes/operators, command separators (`;`), redirection (`>`), variable expansion (`$var`).
+-   [ ] **Refine Pipeline Execution:** Implement true concurrent execution, manage streams more effectively.
+-   [ ] **Implement Cmdlet Logic:** Add real logic to placeholder cmdlets.
 
 **Phase 3: Arabic Command Parsing & Tokenization (C#)**
 
