@@ -1,0 +1,684 @@
+[2025-05-02 02:28:26] Starting ArbSh v0.6.0 Feature Test...
+[2025-05-02 02:28:26] Building ArbSh project...
+[2025-05-02 02:28:31] Build successful.
+[2025-05-02 02:28:31] Executing ArbSh with test commands...
+[2025-05-02 02:28:31] --- ArbSh Start Output ---
+Welcome to ArbSh (C# Prototype)!
+Type 'exit' to quit.
+ArbSh> DEBUG: Received command: # --- Basic Commands ---
+DEBUG (Parser): Parsing '# --- Basic Commands ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Command
+DEBUG (Parser): Parsing 'Get-Command'...
+DEBUG (Parser): Processing statement: 'Get-Command'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
+DEBUG (Discovery): Building command cache...
+DEBUG (Discovery): Found cmdlet 'Get-Command' -> ArbSh.Console.Commands.GetCommandCmdlet
+DEBUG (Discovery): Found cmdlet 'Get-Help' -> ArbSh.Console.Commands.GetHelpCmdlet
+DEBUG (Discovery): Found cmdlet 'Test-Array-Binding' -> ArbSh.Console.Commands.TestArrayBindingCmdlet
+DEBUG (Discovery): Found cmdlet 'Write-Output' -> ArbSh.Console.Commands.WriteOutputCmdlet
+DEBUG (Discovery): Cache built with 4 commands.
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Command'...
+DEBUG (Binder): Binding parameters for GetCommandCmdlet...
+DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Command' finished processing.
+DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Get-Command
+Get-Help
+Test-Array-Binding
+Write-Output
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output 'Hello from Write-Output!'
+DEBUG (Parser): Parsing 'Write-Output 'Hello from Write-Output!''...
+DEBUG (Parser): Processing statement: 'Write-Output 'Hello from Write-Output!''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Hello from Write-Output!') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Hello from Write-Output!
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Test-Array-BindingCmdlet one two three
+DEBUG (Parser): Parsing 'Test-Array-BindingCmdlet one two three'...
+DEBUG (Parser): Processing statement: 'Test-Array-BindingCmdlet one two three'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-BindingCmdlet'...
+Command not found: Test-Array-BindingCmdlet. Halting pipeline setup for this statement.
+DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Test-Array-BindingCmdlet -MySwitch four five
+DEBUG (Parser): Parsing 'Test-Array-BindingCmdlet -MySwitch four five'...
+DEBUG (Parser): Processing statement: 'Test-Array-BindingCmdlet -MySwitch four five'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-BindingCmdlet'...
+Command not found: Test-Array-BindingCmdlet. Halting pipeline setup for this statement.
+DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> ArbSh> DEBUG: Received command: # --- Help System ---
+DEBUG (Parser): Parsing '# --- Help System ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Help
+DEBUG (Parser): Parsing 'Get-Help'...
+DEBUG (Parser): Processing statement: 'Get-Help'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Help'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Help'...
+DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+DEBUG (Executor Task): 'Get-Help' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Help' finished processing.
+DEBUG (Executor Task): Stage 'Get-Help' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Placeholder general help message. Try 'Get-Help <Command-Name>'.
+Example: Get-Help Get-Command
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Help Get-Command
+DEBUG (Parser): Parsing 'Get-Help Get-Command'...
+DEBUG (Parser): Processing statement: 'Get-Help Get-Command'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Help'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Help'...
+DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Get-Command') to property 'CommandName' (Type: String)
+DEBUG (Executor Task): 'Get-Help' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Help' finished processing.
+DEBUG (Executor Task): Stage 'Get-Help' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+
+NAME
+    Get-Command
+
+SYNOPSIS
+    (Synopsis for Get-Command not available)
+
+SYNTAX
+    Get-Command
+
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Help Write-Output -Full
+DEBUG (Parser): Parsing 'Get-Help Write-Output -Full'...
+DEBUG (Parser): Processing statement: 'Get-Help Write-Output -Full'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Help'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Help'...
+DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Write-Output') to property 'CommandName' (Type: String)
+DEBUG (Binder): Bound switch parameter '-Full' to true (no value provided).
+DEBUG (Executor Task): 'Get-Help' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Help' finished processing.
+DEBUG (Executor Task): Stage 'Get-Help' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+
+NAME
+    Write-Output
+
+SYNOPSIS
+    (Synopsis for Write-Output not available)
+
+SYNTAX
+    Write-Output [-InputObject <Object>]
+
+PARAMETERS
+    -InputObject <Object>
+        The object(s) to write to the output stream.
+        Required?                    False
+        Position?                    0
+        Accepts pipeline input?      True (By Value)
+
+
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Help Test-Array-BindingCmdlet -Full
+DEBUG (Parser): Parsing 'Get-Help Test-Array-BindingCmdlet -Full'...
+DEBUG (Parser): Processing statement: 'Get-Help Test-Array-BindingCmdlet -Full'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Help'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Help'...
+DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Test-Array-BindingCmdlet') to property 'CommandName' (Type: String)
+DEBUG (Binder): Bound switch parameter '-Full' to true (no value provided).
+DEBUG (Executor Task): 'Get-Help' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Help' finished processing.
+DEBUG (Executor Task): Stage 'Get-Help' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Help Error: Command 'Test-Array-BindingCmdlet' not found.
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Help NonExistentCommand
+DEBUG (Parser): Parsing 'Get-Help NonExistentCommand'...
+DEBUG (Parser): Processing statement: 'Get-Help NonExistentCommand'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Help'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Help'...
+DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('NonExistentCommand') to property 'CommandName' (Type: String)
+DEBUG (Executor Task): 'Get-Help' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Help' finished processing.
+DEBUG (Executor Task): Stage 'Get-Help' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Help Error: Command 'NonExistentCommand' not found.
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> ArbSh> DEBUG: Received command: # --- Pipeline ---
+DEBUG (Parser): Parsing '# --- Pipeline ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Command | Write-Output
+DEBUG (Parser): Parsing 'Get-Command | Write-Output'...
+DEBUG (Parser): Processing statement: 'Get-Command | Write-Output'
+DEBUG (Parser): Statement parsed into 2 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (2 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
+DEBUG (Executor Pipeline): Preparing stage 1: 'Write-Output'...
+DEBUG (Executor): Waiting for 2 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Command'...
+DEBUG (Binder): Binding parameters for GetCommandCmdlet...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Command' finished processing.
+DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
+DEBUG (Executor Task): 'Write-Output' consuming input...
+DEBUG (Executor Task): 'Write-Output' finished consuming input.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Get-Command
+Get-Help
+Test-Array-Binding
+Write-Output
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: # Test pipeline binding (CommandInfo object to Write-Outputs InputObject)
+DEBUG (Parser): Parsing '# Test pipeline binding (CommandInfo object to Write-Outputs InputObject)'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Command | Test-Array-BindingCmdlet # This should show 0 strings, as CommandInfo doesnt match string[]
+DEBUG (Parser): Parsing 'Get-Command | Test-Array-BindingCmdlet # This should show 0 strings, as CommandInfo doesnt match string[]'...
+DEBUG (Parser): Processing statement: 'Get-Command | Test-Array-BindingCmdlet'
+DEBUG (Parser): Statement parsed into 2 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (2 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
+DEBUG (Executor Pipeline): Preparing stage 1: 'Test-Array-BindingCmdlet'...
+DEBUG (Executor Task): Starting task for 'Get-Command'...
+Command not found: Test-Array-BindingCmdlet. Halting pipeline setup for this statement.
+DEBUG (Binder): Binding parameters for GetCommandCmdlet...
+DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> ArbSh> DEBUG: Received command: # --- Statement Separator ---
+DEBUG (Parser): Parsing '# --- Statement Separator ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output 'Statement 1'; Write-Output 'Statement 2'
+DEBUG (Parser): Parsing 'Write-Output 'Statement 1'; Write-Output 'Statement 2''...
+DEBUG (Parser): Processing statement: 'Write-Output 'Statement 1''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Processing statement: 'Write-Output 'Statement 2''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 2 statement(s).
+DEBUG (Executor): Executing 2 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Statement 1') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Statement 1
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Statement 2') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Statement 2
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Command; Write-Output 'After Get-Command'
+DEBUG (Parser): Parsing 'Get-Command; Write-Output 'After Get-Command''...
+DEBUG (Parser): Processing statement: 'Get-Command'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Processing statement: 'Write-Output 'After Get-Command''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 2 statement(s).
+DEBUG (Executor): Executing 2 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Command'...
+DEBUG (Binder): Binding parameters for GetCommandCmdlet...
+DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Command' finished processing.
+DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Get-Command
+Get-Help
+Test-Array-Binding
+Write-Output
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('After Get-Command') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+After Get-Command
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> ArbSh> DEBUG: Received command: # --- Variable Expansion (Using hardcoded $testVar) ---
+DEBUG (Parser): Parsing '# --- Variable Expansion (Using hardcoded $testVar) ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output $testVar
+DEBUG (Parser): Parsing 'Write-Output $testVar'...
+DEBUG (Parser): Processing statement: 'Write-Output $testVar'
+DEBUG (Tokenizer): Expanded variable '$testVar' to 'Value from $testVar!'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Value from $testVar!') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Value from $testVar!
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output ValueIs:$testVar
+DEBUG (Parser): Parsing 'Write-Output ValueIs:$testVar'...
+DEBUG (Parser): Processing statement: 'Write-Output ValueIs:$testVar'
+DEBUG (Tokenizer): Expanded variable '$testVar' to 'Value from $testVar!'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('ValueIs:Value from $testVar!') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+ValueIs:Value from $testVar!
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output $nonExistentVar # Should be empty
+DEBUG (Parser): Parsing 'Write-Output $nonExistentVar # Should be empty'...
+DEBUG (Parser): Processing statement: 'Write-Output $nonExistentVar'
+DEBUG (Tokenizer): Expanded variable '$nonExistentVar' to ''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> ArbSh> DEBUG: Received command: # --- Escape Characters ---
+DEBUG (Parser): Parsing '# --- Escape Characters ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output 'Literal $testVar -> \$testVar'
+DEBUG (Parser): Parsing 'Write-Output 'Literal $testVar -> \$testVar''...
+DEBUG (Parser): Processing statement: 'Write-Output 'Literal $testVar -> \$testVar''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Literal $testVar -> \$testVar') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Literal $testVar -> \$testVar
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output 'Literal Pipe -> \|'
+Task Error in 'Get-Command': ObjectDisposedException - Cannot access a disposed object.
+Object name: 'System.Collections.Concurrent.BlockingCollection`1[[ArbSh.Console.PipelineObject, ArbSh.Console, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+DEBUG (Parser): Parsing 'Write-Output 'Literal Pipe -> \|''...
+DEBUG (Parser): Processing statement: 'Write-Output 'Literal Pipe -> \|''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Literal Pipe -> \|') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Literal Pipe -> \|
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output 'Literal Semicolon -> \;'
+DEBUG (Parser): Parsing 'Write-Output 'Literal Semicolon -> \;''...
+DEBUG (Parser): Processing statement: 'Write-Output 'Literal Semicolon -> \;''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Literal Semicolon -> \;') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Literal Semicolon -> \;
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output 'Literal Quote -> \"'
+DEBUG (Parser): Parsing 'Write-Output 'Literal Quote -> \"''...
+DEBUG (Parser): Processing statement: 'Write-Output 'Literal Quote -> \"''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Literal Quote -> \"') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Literal Quote -> \"
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output "Quoted string with \\"escaped quote\\" inside"
+DEBUG (Parser): Parsing 'Write-Output "Quoted string with \\"escaped quote\\" inside"'...
+DEBUG (Parser): Processing statement: 'Write-Output "Quoted string with \\"escaped quote\\" inside"'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Quoted string with \escaped') to property 'InputObject' (Type: Object)
+WARN (Binder): Unused positional argument detected: quote\ inside
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Quoted string with \escaped
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output Argument\\ WithSpace
+DEBUG (Parser): Parsing 'Write-Output Argument\\ WithSpace'...
+DEBUG (Parser): Processing statement: 'Write-Output Argument\\ WithSpace'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Argument\') to property 'InputObject' (Type: Object)
+WARN (Binder): Unused positional argument detected: WithSpace
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Argument\
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> ArbSh> DEBUG: Received command: # --- Parameter Binding Errors ---
+DEBUG (Parser): Parsing '# --- Parameter Binding Errors ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Help -NonExistentParam
+DEBUG (Parser): Parsing 'Get-Help -NonExistentParam'...
+DEBUG (Parser): Processing statement: 'Get-Help -NonExistentParam'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Help'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Help'...
+DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+DEBUG (Executor Task): 'Get-Help' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Help' finished processing.
+DEBUG (Executor Task): Stage 'Get-Help' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+Placeholder general help message. Try 'Get-Help <Command-Name>'.
+Example: Get-Help Get-Command
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Test-Array-BindingCmdlet -InputStrings should fail
+DEBUG (Parser): Parsing 'Test-Array-BindingCmdlet -InputStrings should fail'...
+DEBUG (Parser): Processing statement: 'Test-Array-BindingCmdlet -InputStrings should fail'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Test-Array-BindingCmdlet'...
+Command not found: Test-Array-BindingCmdlet. Halting pipeline setup for this statement.
+DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output -InputObject '@(1,2)'
+DEBUG (Parser): Parsing 'Write-Output -InputObject '@(1,2)''...
+DEBUG (Parser): Processing statement: 'Write-Output -InputObject '@(1,2)''
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound named parameter '-InputObject' to value '@(1,2)' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor Pipeline): Final pipeline output to Console:
+@(1,2)
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> ArbSh> DEBUG: Received command: # --- Redirection ---
+DEBUG (Parser): Parsing '# --- Redirection ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output 'Testing overwrite redirection' > temp_redirect_test.txt
+DEBUG (Parser): Parsing 'Write-Output 'Testing overwrite redirection' > temp_redirect_test.txt'...
+DEBUG (Parser): Processing statement: 'Write-Output 'Testing overwrite redirection' > temp_redirect_test.txt'
+DEBUG (Parser): Found redirection: > 'temp_redirect_test.txt'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Testing overwrite redirection') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor): Redirecting final output > temp_redirect_test.txt
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Get-Command >> temp_append_test.txt
+DEBUG (Parser): Parsing 'Get-Command >> temp_append_test.txt'...
+DEBUG (Parser): Processing statement: 'Get-Command >> temp_append_test.txt'
+DEBUG (Parser): Found redirection: >> 'temp_append_test.txt'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Command'...
+DEBUG (Binder): Binding parameters for GetCommandCmdlet...
+DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Command' finished processing.
+DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor): Redirecting final output >> temp_append_test.txt
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> DEBUG: Received command: Write-Output 'Appending another line' >> temp_append_test.txt
+DEBUG (Parser): Parsing 'Write-Output 'Appending another line' >> temp_append_test.txt'...
+DEBUG (Parser): Processing statement: 'Write-Output 'Appending another line' >> temp_append_test.txt'
+DEBUG (Parser): Found redirection: >> 'temp_append_test.txt'
+DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
+DEBUG (Parser): Parsed into 1 statement(s).
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('Appending another line') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' finished processing.
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor): Redirecting final output >> temp_append_test.txt
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+ArbSh> ArbSh> DEBUG: Received command: # --- Exit ---
+DEBUG (Parser): Parsing '# --- Exit ---'...
+DEBUG (Parser): Parsed into 0 statement(s).
+DEBUG (Executor): Executing 0 statement(s)...
+DEBUG (Executor): All statements executed.
+ArbSh> Exiting ArbSh.
+
+[2025-05-02 02:28:35] --- ArbSh End Output ---
+[2025-05-02 02:28:35] ArbSh process exited with code 0.
+[2025-05-02 02:28:35] Verifying redirection files...
+[2025-05-02 02:28:35] Content of temp_redirect_test.txt:
+T e s t i n g   o v e r w r i t e   r e d i r e c t i o n  
+ [2025-05-02 02:28:35] Content of temp_append_test.txt:
+G e t - C o m m a n d  
+ G e t - H e l p  
+ T e s t - A r r a y - B i n d i n g  
+ W r i t e - O u t p u t  
+ A p p e n d i n g   a n o t h e r   l i n e  
+ [2025-05-02 02:28:35] Test script finished.

@@ -2,7 +2,7 @@
 
 This document provides examples for the currently implemented commands in the ArbSh C# prototype.
 
-**Note:** The shell is in early development. Features like advanced parsing, full pipeline support, error handling, and Arabic language support are still under development.
+**Note:** The shell is in early development (v0.6.0). Features like advanced parsing, robust error handling, and Arabic language support are still under development. Pipeline execution is now concurrent.
 
 ## Running ArbSh
 
@@ -26,15 +26,25 @@ Get-Command
 
 ```powershell
 ArbSh> Get-Command
-DEBUG (Executor): Executing 1 command(s)...
-DEBUG (Executor Pipeline): Processing stage 0: 'Get-Command'...
+DEBUG (Executor): Executing 1 statement(s)...
+DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
+DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor Task): Starting task for 'Get-Command'...
 DEBUG (Binder): Binding parameters for GetCommandCmdlet...
+DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Command' finished processing.
+DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
+DEBUG (Executor): All pipeline tasks for the statement completed.
 DEBUG (Executor Pipeline): Final pipeline output to Console:
 Get-Command
 Get-Help
 Write-Output
-DEBUG (Executor): Pipeline execution finished.
+DEBUG (Executor): --- Statement execution finished ---
+DEBUG (Executor): All statements executed.
+
 ```
+*(Note: The output objects are now `ArbSh.Console.Models.CommandInfo`, although their default string representation is the command name.)*
 
 ### 2. Get-Help
 
@@ -49,27 +59,23 @@ Get-Help [[-CommandName] <string>] [-Full]
 **Parameters:**
 
 *   `-CommandName <string>` (Positional 0): The name of the command to get help for. If omitted, general help is shown.
-*   `-Full`: Displays detailed parameter information (if available).
+*   `-Full`: Displays detailed parameter information, including pipeline input acceptance.
 
 **Examples:**
 
 *   **General Help:**
     ```powershell
     ArbSh> Get-Help
-    DEBUG (Executor): Executing 1 command(s)...
-    DEBUG (Executor Pipeline): Processing stage 0: 'Get-Help'...
-    DEBUG (Binder): Binding parameters for GetHelpCmdlet...
-    DEBUG (Executor Pipeline): Final pipeline output to Console:
+    # ... (Executor debug output similar to Get-Command example) ...
     Placeholder general help message. Try 'Get-Help <Command-Name>'.
     Example: Get-Help Get-Command
-    DEBUG (Executor): Pipeline execution finished.
+    # ... (Executor debug output) ...
     ```
 *   **Help for a specific command:**
     ```powershell
     ArbSh> Get-Help Get-Command
-    DEBUG (Executor): Executing 1 command(s)...
-    DEBUG (Executor Pipeline): Processing stage 0: 'Get-Help'...
-    DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+    ArbSh> Get-Help Get-Command
+    # ... (Executor debug output) ...
     DEBUG (Binder): Bound positional parameter at 0 ('Get-Command') to property 'CommandName' (Type: String)
 
     NAME
@@ -86,9 +92,8 @@ Get-Help [[-CommandName] <string>] [-Full]
 *   **Full help for a specific command:**
     ```powershell
     ArbSh> Get-Help -CommandName Write-Output -Full
-    DEBUG (Executor): Executing 1 command(s)...
-    DEBUG (Executor Pipeline): Processing stage 0: 'Get-Help'...
-    DEBUG (Binder): Binding parameters for GetHelpCmdlet...
+    ArbSh> Get-Help -CommandName Write-Output -Full
+    # ... (Executor debug output) ...
     DEBUG (Binder): Bound named parameter '-CommandName' to value 'Write-Output' (Type: String)
     DEBUG (Binder): Bound switch parameter '-Full' to true (no value provided).
 
@@ -99,52 +104,60 @@ Get-Help [[-CommandName] <string>] [-Full]
         (Synopsis for Write-Output not available)
 
     SYNTAX
-        Write-Output
+        Write-Output [-InputObject <Object>]
 
     PARAMETERS
-        (No parameters defined for Write-Output yet)
+        -InputObject <Object>
+            The object(s) to write to the output stream.
+            Required?                    False
+            Position?                    0
+            Accepts pipeline input?      True (By Value)
 
-    DEBUG (Executor): Pipeline execution finished.
+    # ... (Executor debug output) ...
     ```
-    *(Note: Parameter details depend on the target cmdlet having `[Parameter]` attributes defined)*
 
 ### 3. Write-Output
 
-Writes objects or strings to the output (currently the console or redirected file). It primarily processes pipeline input but can also take direct arguments.
+Writes objects or strings to the output (console or redirected file). It accepts pipeline input or direct arguments via its `-InputObject` parameter.
 
 **Syntax:**
 
 ```powershell
-Write-Output [<arguments...>]
+Write-Output [-InputObject <Object>]
 <PipelineInput> | Write-Output
 ```
 
 **Examples:**
 
-*   **Writing arguments directly:**
+*   **Writing arguments directly (positional binding to -InputObject):**
     ```powershell
-    ArbSh> Write-Output Hello ArbSh User!
-    DEBUG (Executor): Executing 1 command(s)...
-    DEBUG (Executor Pipeline): Processing stage 0: 'Write-Output'...
-    DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
-    DEBUG (Executor Pipeline): Final pipeline output to Console:
+    ArbSh> Write-Output "Hello ArbSh User!"
+    # ... (Executor debug output) ...
+    DEBUG (Binder): Bound positional parameter at 0 ('Hello ArbSh User!') to property 'InputObject' (Type: Object)
+    # ...
     Hello ArbSh User!
-    DEBUG (Executor): Pipeline execution finished.
+    # ...
     ```
-*   **Using in a pipeline:**
+*   **Using in a pipeline (Get-Command output objects piped to Write-Output):**
     ```powershell
     ArbSh> Get-Command | Write-Output
-    DEBUG (Executor): Executing 2 command(s)...
-    DEBUG (Executor Pipeline): Processing stage 0: 'Get-Command'...
-    DEBUG (Binder): Binding parameters for GetCommandCmdlet...
-    DEBUG (Executor Pipeline): Processing stage 1: 'Write-Output'...
-    DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
-    DEBUG (Executor Pipeline): Final pipeline output to Console:
+    # ... (Executor debug output showing concurrent tasks) ...
+    DEBUG (Executor Task): 'Write-Output' consuming input...
+    DEBUG (Executor Task): 'Write-Output' finished consuming input.
+    # ...
     Get-Command
     Get-Help
     Write-Output
-    DEBUG (Executor): Pipeline execution finished.
+    # ...
     ```
+*   **Binding multiple positional arguments to an array parameter (Example - if a cmdlet had `[Parameter(Position=0)] public string[] Paths { get; set; }`):**
+    ```powershell
+    ArbSh> Some-Cmdlet file1.txt file2.log path/to/dir
+    # ... (Executor debug output) ...
+    DEBUG (Binder): Bound 3 remaining positional argument(s) starting at 0 to array parameter 'Paths' (Type: String[])
+    # ...
+    ```
+    *(Note: This array binding currently works for positional parameters.)*
 
 ## Escape Characters (`\`)
 
@@ -198,17 +211,21 @@ The backslash (`\`) is used as an escape character. It causes the character imme
     # ... (DEBUG output) ...
     Value is | this
     ```
-*   **Output Redirection (`>` Overwrite, `>>` Append):** Writes the final output to a file instead of the console. (Note: Redirection parsing is still basic and happens *after* tokenization).
+*   **Output Redirection (`>` Overwrite, `>>` Append):** Writes the final output of a pipeline to a file instead of the console.
     ```powershell
-    ArbSh> Get-Command > commands.txt
+    ArbSh> Get-Command | Write-Output > commands.txt
     ArbSh> Write-Output "Adding this line" >> commands.txt
     ```
-*   **Command Separator (`;`):** Executes commands sequentially (currently only the *first* command before a `;` is processed).
+*   **Command Separator (`;`):** Executes multiple statements sequentially. Each statement can contain its own pipeline, which runs concurrently within that statement.
     ```powershell
-    ArbSh> Write-Output "First part; still first part" ; Write-Output Second part # Semicolon outside quotes separates statements
-    # ... (DEBUG output) ...
-    First part; still first part
-    Second part
+    ArbSh> Write-Output "Statement 1"; Get-Command | Write-Output
+    # ... (Executor debug output for statement 1) ...
+    Statement 1
+    # ... (Executor debug output for statement 2 pipeline) ...
+    Get-Command
+    Get-Help
+    Write-Output
+    # ...
     ```
 
 ## Variable Expansion (`$variableName`)

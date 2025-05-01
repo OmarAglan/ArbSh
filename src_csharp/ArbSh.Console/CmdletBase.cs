@@ -1,63 +1,218 @@
-using System; // Added for ArgumentNullException
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Concurrent; // Using ConcurrentQueue for potential thread safety later
+using System.ComponentModel;
+using System.Reflection;
 
 namespace ArbSh.Console
 {
     /// <summary>
-    /// Base class for all cmdlets in ArbSh.
-    /// Provides the basic structure for processing input and producing output.
+    /// Base class for all cmdlets. Provides common functionality.
     /// Inspired by System.Management.Automation.Cmdlet.
     /// </summary>
     public abstract class CmdletBase
     {
-        // --- Internal Properties for Execution ---
-
         /// <summary>
-        /// Internal collection to store objects written by WriteObject.
-        /// This will be consumed by the next stage in the pipeline or the host.
-        /// Using ConcurrentQueue for potential future parallel execution scenarios.
+        /// Internal collection for cmdlet output. The Executor assigns this.
         /// </summary>
-        internal BlockingCollection<PipelineObject> OutputCollection { get; set; } = new BlockingCollection<PipelineObject>();
-
-        // --- Lifecycle Methods ---
+        internal BlockingCollection<PipelineObject>? OutputCollection { get; set; }
 
         /// <summary>
-        /// Method called once at the beginning of pipeline processing for this cmdlet instance.
+        /// Called once before ProcessRecord is invoked for the first time.
+        /// Override for one-time initialization tasks.
         /// </summary>
         public virtual void BeginProcessing() { }
 
         /// <summary>
-        /// Method called for each object coming from the pipeline.
+        /// Called for each object piped into the cmdlet.
+        /// Override to implement the main processing logic for each input object.
+        /// If the cmdlet doesn't accept pipeline input, this might be called once with null.
         /// </summary>
-        /// <param name="inputObject">The input object from the pipeline.</param>
-        public virtual void ProcessRecord(PipelineObject inputObject) { }
+        /// <param name="input">The input object from the pipeline (can be null).</param>
+        public virtual void ProcessRecord(PipelineObject? input) { }
 
         /// <summary>
-        /// Method called once after all pipeline input has been processed.
-        /// Used for cmdlets that need to perform an action after collecting all input.
+        /// Called once after all calls to ProcessRecord are complete.
+        /// Override for one-time cleanup or final output tasks.
         /// </summary>
         public virtual void EndProcessing() { }
 
         /// <summary>
-        /// Writes an object to the output pipeline (internal collection).
+        /// Writes a single object to the output pipeline.
         /// </summary>
-        /// <param name="outputObject">The object to write.</param>
-        protected void WriteObject(object? outputObject)
+        /// <param name="output">The object to write.</param>
+        protected void WriteObject(object? output)
         {
-            // Wrap the raw object in a PipelineObject if it isn't already
-            PipelineObject pipelineObject = outputObject is PipelineObject po ? po : new PipelineObject(outputObject);
-
-            if (OutputCollection == null)
+            if (OutputCollection != null && !OutputCollection.IsAddingCompleted)
             {
-                // This shouldn't happen if the executor sets it up correctly
-                throw new InvalidOperationException("Output collection is not initialized.");
+                try
+                {
+                    OutputCollection.Add(new PipelineObject(output));
+                }
+                catch (InvalidOperationException)
+                {
+                    // Ignore if collection was completed concurrently, though ideally Executor manages this.
+                    System.Console.WriteLine("WARN (CmdletBase): Attempted to write to completed output collection.");
+                }
             }
-            OutputCollection.Add(pipelineObject);
+            else
+            {
+                // Fallback or error? If OutputCollection is null, something is wrong in Executor setup.
+                // If IsAddingCompleted, the cmdlet is trying to write after EndProcessing or after pipeline completion signal.
+                 System.Console.WriteLine($"WARN (CmdletBase): OutputCollection not available or completed. Cannot write object: {output}");
+            }
         }
 
-        // TODO: Add methods for writing errors, warnings, verbose output, etc.
-        // TODO: Add mechanisms for parameter binding.
-        // TODO: Add access to session state, variables, etc.
+        /// <summary>
+        /// Writes multiple objects to the output pipeline.
+        /// </summary>
+        /// <param name="output">The collection of objects to write.</param>
+        /// <param name="enumerateCollection">If true, enumerates the collection and writes each element individually.</param>
+        protected void WriteObject(IEnumerable<object?> output, bool enumerateCollection)
+        {
+            if (!enumerateCollection)
+            {
+                WriteObject((object?)output);
+            }
+            else
+            {
+                foreach (var item in output)
+                {
+                    WriteObject(item);
+                }
+            }
+        }
+
+        // TODO: Add WriteError, WriteWarning, WriteVerbose, WriteDebug methods
+
+        /// <summary>
+        /// Internal method called by the Executor before ProcessRecord for each pipeline object.
+        /// Attempts to bind pipeline input to parameters marked with ValueFromPipeline=true
+        /// or ValueFromPipelineByPropertyName=true.
+        /// </summary>
+        /// <param name="input">The current pipeline input object.</param>
+        internal virtual void BindPipelineParameters(PipelineObject? input)
+        {
+            if (input?.Value == null) return; // Nothing to bind from
+
+            var cmdletType = this.GetType();
+            var properties = cmdletType.GetProperties()
+                .Select(p => new { Property = p, Attr = p.GetCustomAttribute<ParameterAttribute>() })
+                .Where(p => p.Attr != null && (p.Attr.ValueFromPipeline || p.Attr.ValueFromPipelineByPropertyName))
+                .ToList();
+
+            if (!properties.Any()) return; // No pipeline parameters defined
+
+            object inputValue = input.Value;
+            Type? inputType = inputValue?.GetType();
+
+            // System.Console.WriteLine($"DEBUG (BindPipeline): Attempting pipeline binding for input type {inputType?.Name ?? "null"} to {cmdletType.Name}");
+
+            foreach (var propInfo in properties)
+            {
+                object? valueToSet = null;
+                bool bound = false;
+
+                // 1. Try ValueFromPipeline = true
+                if (propInfo.Attr!.ValueFromPipeline)
+                {
+                    // Check if the target property type is assignable from the input object's type
+                    if (propInfo.Property.PropertyType.IsAssignableFrom(inputType))
+                    {
+                        valueToSet = inputValue;
+                        bound = true;
+                        // System.Console.WriteLine($"DEBUG (BindPipeline): Bound '{propInfo.Property.Name}' ByValue.");
+                    }
+                    else
+                    {
+                        // Attempt type conversion if direct assignment isn't possible
+                        try
+                        {
+                            TypeConverter converter = TypeDescriptor.GetConverter(propInfo.Property.PropertyType);
+                            if (converter != null && converter.CanConvertFrom(inputType))
+                            {
+                                valueToSet = converter.ConvertFrom(inputValue);
+                                bound = true;
+                                // System.Console.WriteLine($"DEBUG (BindPipeline): Converted and bound '{propInfo.Property.Name}' ByValue.");
+                            }
+                            else if (inputValue is IConvertible) // Fallback using IConvertible
+                            {
+                                valueToSet = Convert.ChangeType(inputValue, propInfo.Property.PropertyType);
+                                bound = true;
+                                // System.Console.WriteLine($"DEBUG (BindPipeline): ChangeType and bound '{propInfo.Property.Name}' ByValue.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                             System.Console.WriteLine($"WARN (BindPipeline): Failed to convert pipeline input type '{inputType?.Name}' to parameter '{propInfo.Property.Name}' type '{propInfo.Property.PropertyType.Name}' for ByValue binding. Error: {ex.Message}");
+                        }
+                    }
+                }
+
+                // 2. Try ValueFromPipelineByPropertyName = true (only if not already bound by value)
+                if (!bound && propInfo.Attr!.ValueFromPipelineByPropertyName && inputType != null)
+                {
+                    // Find a property on the *input object* that matches the *parameter name*
+                    PropertyInfo? inputObjectProperty = inputType.GetProperty(propInfo.Property.Name, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+                    if (inputObjectProperty != null)
+                    {
+                        object? sourceValue = inputObjectProperty.GetValue(inputValue);
+
+                        // Check if the target parameter property type is assignable from the source property type
+                        if (sourceValue != null && propInfo.Property.PropertyType.IsAssignableFrom(inputObjectProperty.PropertyType))
+                        {
+                            valueToSet = sourceValue;
+                            bound = true;
+                            // System.Console.WriteLine($"DEBUG (BindPipeline): Bound '{propInfo.Property.Name}' ByPropertyName.");
+                        }
+                        else if (sourceValue != null) // Attempt conversion
+                        {
+                            try
+                            {
+                                TypeConverter converter = TypeDescriptor.GetConverter(propInfo.Property.PropertyType);
+                                if (converter != null && converter.CanConvertFrom(inputObjectProperty.PropertyType))
+                                {
+                                    valueToSet = converter.ConvertFrom(sourceValue);
+                                    bound = true;
+                                    // System.Console.WriteLine($"DEBUG (BindPipeline): Converted and bound '{propInfo.Property.Name}' ByPropertyName.");
+                                }
+                                else if (sourceValue is IConvertible)
+                                {
+                                     valueToSet = Convert.ChangeType(sourceValue, propInfo.Property.PropertyType);
+                                     bound = true;
+                                     // System.Console.WriteLine($"DEBUG (BindPipeline): ChangeType and bound '{propInfo.Property.Name}' ByPropertyName.");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                 System.Console.WriteLine($"WARN (BindPipeline): Failed to convert pipeline input property '{inputObjectProperty.Name}' type '{inputObjectProperty.PropertyType.Name}' to parameter '{propInfo.Property.Name}' type '{propInfo.Property.PropertyType.Name}' for ByPropertyName binding. Error: {ex.Message}");
+                            }
+                        }
+                        else if (sourceValue == null && propInfo.Property.PropertyType.IsClass || Nullable.GetUnderlyingType(propInfo.Property.PropertyType) != null)
+                        {
+                            // Allow setting null if the source property is null and the target is nullable/class
+                            valueToSet = null;
+                            bound = true;
+                            // System.Console.WriteLine($"DEBUG (BindPipeline): Bound null '{propInfo.Property.Name}' ByPropertyName.");
+                        }
+                    }
+                }
+
+                // 3. Set the property value if bound
+                if (bound)
+                {
+                    try
+                    {
+                        propInfo.Property.SetValue(this, valueToSet);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Error setting the property value
+                         System.Console.WriteLine($"ERROR (BindPipeline): Failed to set pipeline-bound property '{propInfo.Property.Name}': {ex.Message}");
+                    }
+                }
+            }
+        }
     }
 }

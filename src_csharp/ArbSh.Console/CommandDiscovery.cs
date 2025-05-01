@@ -96,26 +96,20 @@ namespace ArbSh.Console
         /// </summary>
         private static string ConvertToVerbNoun(string name)
         {
-            // Find the position of the first uppercase letter after the first character
-            int splitIndex = -1;
+            if (string.IsNullOrEmpty(name)) return name;
+
+            // Insert hyphen before uppercase letters (except the first char)
+            var result = new System.Text.StringBuilder();
+            result.Append(name[0]);
             for (int i = 1; i < name.Length; i++)
             {
                 if (char.IsUpper(name[i]))
                 {
-                    splitIndex = i;
-                    break;
+                    result.Append('-');
                 }
+                result.Append(name[i]);
             }
-
-            if (splitIndex > 0)
-            {
-                return $"{name.Substring(0, splitIndex)}-{name.Substring(splitIndex)}";
-            }
-            else
-            {
-                // If no second uppercase letter found, return as is (or handle differently)
-                return name;
-            }
+            return result.ToString();
         }
     }
 }

@@ -30,11 +30,11 @@ To create a powerful, extensible shell environment built on .NET that:
 -   [✅] Refined Parameter Binding: Added basic type conversion (`TypeConverter`/`Convert.ChangeType`), mandatory parameter checks, and stricter boolean switch handling.
 -   [✅] Implement fundamental built-in cmdlets placeholders (`Write-Output`, `Get-Help`, `Get-Command`) with basic logic.
 -   [✅] Implement basic command discovery (`CommandDiscovery.cs`).
--   [✅] Implement basic sequential pipeline execution simulation (`Executor.cs`).
+-   [✅] Implement basic sequential pipeline execution simulation (`Executor.cs`). (Superseded)
 -   [✅] **Refine Parser (Basic):** Handled basic variable expansion (`$var`), statement separators (`;`), pipeline operators (`|`), and escape characters (`\`) respecting quotes.
--   [ ] **Refine Pipeline Execution:** Implement true concurrent execution, manage streams more effectively.
--   [ ] **Implement Cmdlet Logic:** Add real logic to placeholder cmdlets (e.g., `Get-Help` parameter details).
--   [ ] **Further Refine Parameter Binding:** Add support for more complex types (arrays, enums), improve error reporting.
+-   [✅] **Refine Pipeline Execution:** Implemented true concurrent execution using `Task` and `BlockingCollection` in `Executor.cs`.
+-   [✅] **Implement Cmdlet Logic:** Added functional logic to `Get-Help` (displaying detailed parameter info including pipeline), `Get-Command` (outputting `CommandInfo` objects), and `Write-Output` (handling pipeline/parameter input).
+-   [✅] **Further Refine Parameter Binding:** Improved error reporting for type conversion failures and added support for binding remaining positional arguments to array parameters. Added pipeline binding support (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`) via `CmdletBase.BindPipelineParameters`.
 
 **Phase 3: Arabic Command Parsing & Tokenization (C#)**
 

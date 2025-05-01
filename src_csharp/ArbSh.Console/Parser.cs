@@ -38,30 +38,48 @@ namespace ArbSh.Console
             System.Console.WriteLine($"DEBUG (Parser): Parsing '{inputLine}'...");
             var allStatementsCommands = new List<List<ParsedCommand>>();
             var statementBuilder = new StringBuilder();
-            bool inQuotes = false;
+            bool inDoubleQuotes = false;
+            bool inSingleQuotes = false; // Add tracking for single quotes
             int start = 0;
 
             for (int i = 0; i < inputLine.Length; i++)
             {
                 char c = inputLine[i];
 
-                if (c == '\\' && i + 1 < inputLine.Length)
+                // Handle comments: If # is encountered outside quotes, ignore the rest of the line
+                if (c == '#' && !inDoubleQuotes && !inSingleQuotes)
                 {
-                    // Skip the escaped character
+                    // If # is the first char of the potential statement, ignore the whole line segment
+                    if (i == start || string.IsNullOrWhiteSpace(inputLine.Substring(start, i - start)))
+                    {
+                        start = inputLine.Length; // Effectively skip the rest
+                    }
+                    break; // Ignore rest of the current line segment being processed
+                }
+
+                // Handle escaping - skip next char if escaped (only applies outside single quotes)
+                if (c == '\\' && !inSingleQuotes && i + 1 < inputLine.Length)
+                {
                     i++;
                     continue; // Skip escape character logic for statement splitting
                 }
 
-                if (c == '"')
+                // Toggle quote states
+                if (c == '"' && !inSingleQuotes)
                 {
-                    inQuotes = !inQuotes;
+                    inDoubleQuotes = !inDoubleQuotes;
+                }
+                else if (c == '\'' && !inDoubleQuotes) // Add single quote handling
+                {
+                    inSingleQuotes = !inSingleQuotes;
                 }
 
-                if (c == ';' && !inQuotes)
+                // Split statements only if outside *both* types of quotes
+                if (c == ';' && !inDoubleQuotes && !inSingleQuotes)
                 {
-                    // Found a statement separator
                     string statement = inputLine.Substring(start, i - start).Trim();
-                    if (!string.IsNullOrWhiteSpace(statement))
+                    // Ignore empty statements or statements that were just comments
+                    if (!string.IsNullOrWhiteSpace(statement) && !statement.TrimStart().StartsWith("#"))
                     {
                         allStatementsCommands.Add(ParseSingleStatement(statement));
                     }
@@ -71,15 +89,33 @@ namespace ArbSh.Console
 
             // Add the last statement (or the only statement if no semicolons)
             string lastStatement = inputLine.Substring(start).Trim();
-            if (!string.IsNullOrWhiteSpace(lastStatement))
+            // Ignore empty statements or statements that were just comments
+            if (!string.IsNullOrWhiteSpace(lastStatement) && !lastStatement.TrimStart().StartsWith("#"))
             {
-                allStatementsCommands.Add(ParseSingleStatement(lastStatement));
+                 // Also ignore if the remaining part starts with # after trimming whitespace
+                 int commentIndex = lastStatement.IndexOf('#');
+                 if (commentIndex == 0) { /* Ignore */ }
+                 else if (commentIndex > 0) {
+                     // If comment is present but not at start, parse the part before it
+                     string beforeComment = lastStatement.Substring(0, commentIndex).Trim();
+                     if (!string.IsNullOrWhiteSpace(beforeComment)) {
+                         allStatementsCommands.Add(ParseSingleStatement(beforeComment));
+                     }
+                 } else {
+                     // No comment found
+                     allStatementsCommands.Add(ParseSingleStatement(lastStatement));
+                 }
             }
 
+
             // TODO: Handle unterminated quotes at the statement level?
+            if (inDoubleQuotes || inSingleQuotes) {
+                 System.Console.WriteLine("WARN (Parser): Unterminated quote detected at end of input line.");
+                 // Potentially throw error or try to recover?
+            }
+
 
             System.Console.WriteLine($"DEBUG (Parser): Parsed into {allStatementsCommands.Count} statement(s).");
-            // TODO: Executor currently only processes the first statement list.
             return allStatementsCommands;
         }
 
@@ -229,82 +265,93 @@ namespace ArbSh.Console
         }
 
         /// <summary>
-        /// Tokenizes the input line, respecting double quotes and handling escaped quotes/operators.
-        /// (Basic implementation)
+        /// Tokenizes a single pipeline stage input string, respecting quotes and handling escapes.
         /// </summary>
-        private static List<string> TokenizeInput(string inputLine)
+        private static List<string> TokenizeInput(string stageInput)
         {
             var tokens = new List<string>();
             var currentToken = new StringBuilder();
-            bool inQuotes = false;
-            bool treatNextCharLiteral = false; // Flag for escape character
+            bool inDoubleQuotes = false;
+            bool inSingleQuotes = false;
+            bool treatNextCharLiteral = false; // Flag for escape character '\'
 
-            for (int i = 0; i < inputLine.Length; i++)
+            for (int i = 0; i < stageInput.Length; i++)
             {
-                char c = inputLine[i];
+                char c = stageInput[i];
 
+                // --- Escape Character Handling ---
+                // If the previous char was '\' (and we're not inside single quotes)
                 if (treatNextCharLiteral)
                 {
-                    // Previous char was '\', add this char literally
+                    // Add this char literally, regardless of what it is
                     currentToken.Append(c);
                     treatNextCharLiteral = false;
                     continue;
                 }
 
-                // Allow escaping inside quotes as well
-                if (c == '\\' && i + 1 < inputLine.Length)
+                // If current char is '\' (and not inside single quotes)
+                if (c == '\\' && !inSingleQuotes && i + 1 < stageInput.Length)
                 {
                     // Set flag to treat the *next* character literally
                     treatNextCharLiteral = true;
-                    // Do not append the backslash itself
+                    // Do not append the backslash itself *yet* - let the next iteration handle the escaped char
                     continue;
                 }
 
-                // Handle variable expansion ($) only outside quotes
-                if (c == '$' && !inQuotes && i + 1 < inputLine.Length)
+                // --- Quoting ---
+                if (c == '"' && !inSingleQuotes) // Toggle double quotes if not inside single quotes
+                {
+                    inDoubleQuotes = !inDoubleQuotes;
+                    // Don't add the quote mark itself to the token
+                    continue;
+                }
+                if (c == '\'' && !inDoubleQuotes) // Toggle single quotes if not inside double quotes
+                {
+                    inSingleQuotes = !inSingleQuotes;
+                    // Don't add the quote mark itself to the token
+                    continue;
+                }
+
+                // --- Token Splitting ---
+                // Split on whitespace only if *outside both* single and double quotes
+                if (char.IsWhiteSpace(c) && !inDoubleQuotes && !inSingleQuotes)
+                {
+                    if (currentToken.Length > 0)
+                    {
+                        tokens.Add(currentToken.ToString());
+                        currentToken.Clear();
+                    }
+                    // Skip the whitespace character itself
+                    continue;
+                }
+
+                // --- Variable Expansion ---
+                // Expand $variable only if *outside single quotes* and not escaped
+                if (c == '$' && !inSingleQuotes && i + 1 < stageInput.Length)
                 {
                     int varNameStart = i + 1;
                     int varNameEnd = varNameStart;
-                    // Basic variable name: letters, numbers, underscore (can be refined)
-                    while (varNameEnd < inputLine.Length && (char.IsLetterOrDigit(inputLine[varNameEnd]) || inputLine[varNameEnd] == '_'))
+                    // Basic variable name: letters, numbers, underscore
+                    while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_'))
                     {
                         varNameEnd++;
                     }
 
                     if (varNameEnd > varNameStart) // Found a potential variable name
                     {
-                        string varName = inputLine.Substring(varNameStart, varNameEnd - varNameStart);
+                        string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart);
                         string varValue = GetVariableValue(varName);
                         currentToken.Append(varValue); // Append the value
                         System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}'");
                         i = varNameEnd - 1; // Move index past the variable name
                         continue; // Continue to next character after variable
                     }
-                    else
-                    {
-                        // Just a literal '$' not followed by a valid variable name start
-                        currentToken.Append(c);
-                    }
+                    // else: Fall through to treat '$' as a literal character if not followed by valid var name
                 }
-                else if (c == '"')
-                {
-                    inQuotes = !inQuotes;
-                    // Don't add the quote itself to the token
-                }
-                else if (char.IsWhiteSpace(c) && !inQuotes)
-                {
-                    // End of a token if outside quotes
-                    if (currentToken.Length > 0)
-                    {
-                        tokens.Add(currentToken.ToString());
-                        currentToken.Clear();
-                    }
-                }
-                else
-                {
-                    // Append character if it's part of a token or inside quotes
-                    currentToken.Append(c);
-                }
+
+                // --- Character Appending ---
+                // If none of the above conditions met, append the character to the current token
+                currentToken.Append(c);
             }
 
             // Add the last token if any
@@ -313,11 +360,11 @@ namespace ArbSh.Console
                 tokens.Add(currentToken.ToString());
             }
 
-            // TODO: Handle unterminated quotes (e.g., throw an error)
-            if (inQuotes)
+            // TODO: Handle unterminated quotes more robustly (e.g., throw a specific parsing error)
+            if (inDoubleQuotes || inSingleQuotes)
             {
-                 System.Console.WriteLine("WARN (Tokenizer): Unterminated quote detected.");
-                 // Decide how to handle this - error or treat as literal?
+                 System.Console.WriteLine("WARN (Tokenizer): Unterminated quote detected in pipeline stage.");
+                 // Decide how to handle this - error or treat as literal? For now, let it pass.
             }
 
             return tokens;

@@ -32,14 +32,14 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
     -   Differentiate command names, arguments, and named parameters (`-`).
     -   Perform basic variable expansion (`$varName`) during tokenization (respecting escapes `\$`).
     -   Detect basic output redirection (`>`, `>>`) (parsing still rudimentary).
--   **Parameter Binding:** Added `ParameterAttribute` and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks (throwing `ParameterBindingException`), stricter boolean switch handling, and improved type conversion using `TypeConverter` / `Convert.ChangeType`.
+-   **Parameter Binding:** Added `ParameterAttribute` (with pipeline support flags) and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks, boolean switches, basic type conversion (`TypeConverter`/`Convert.ChangeType`), improved error reporting for conversion failures, and binding remaining positional arguments to array parameters.
 -   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation.
--   **Basic Pipeline:** `CmdletBase` now collects output internally. The `Executor` simulates sequential pipeline execution by passing output collections between cmdlets (verified with `Get-Command | Write-Output`).
--   **Basic Cmdlets:** `Write-Output`, `Get-Help`, and `Get-Command` have basic functional implementations. `Get-Help` uses reflection to display syntax/parameters based on `[Parameter]` attributes. `Get-Command` uses `CommandDiscovery`.
--   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, etc.) has been updated to reflect the C# refactoring.
+-   **Concurrent Pipeline:** The `Executor` now uses `Task` and `BlockingCollection` to execute pipeline stages concurrently within each statement. `CmdletBase` includes logic (`BindPipelineParameters`) to handle binding pipeline input (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`).
+-   **Basic Cmdlets:** `Write-Output`, `Get-Help`, and `Get-Command` have functional implementations. `Get-Help` displays detailed parameter info (including pipeline acceptance). `Get-Command` outputs structured `CommandInfo` objects.
+-   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, `CHANGELOG.md`, etc.) has been updated to reflect the C# refactoring status.
 -   **C Code Reference:** The original C source code and build files have been moved to the `old_c_code/` directory for reference during the porting process.
 
-*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse commands with quoted arguments, escape sequences, basic variable expansion (`$var`), pipelines (`|`), and statement separators (`;`), discover cmdlets, perform parameter binding (with improved type conversion and mandatory checks), simulate sequential pipeline flow for each statement, and execute basic `Get-Help` and `Get-Command`. However, advanced parsing (complex variable expansion, robust redirection), true concurrent pipeline execution, robust type conversion, comprehensive error handling, and Arabic support are still needed.*
+*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse commands with quoted arguments, escape sequences, basic variable expansion (`$var`), pipelines (`|`), and statement separators (`;`), discover cmdlets, perform parameter binding (including pipeline input and basic arrays), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. However, advanced parsing (complex variable expansion, robust redirection), more robust type conversion, comprehensive error handling, and Arabic support are still needed.*
 
 ## New Code Structure
 
@@ -78,10 +78,12 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
 ## Known Issues and Limitations (Current State)
 
 -   Parsing logic is still basic (e.g., only simple variable expansion, rudimentary redirection handling, no complex expression parsing).
--   Pipeline execution is sequential within statements, not concurrent.
--   Type conversion in parameter binding is limited.
--   Error handling is rudimentary.
+-   Type conversion in parameter binding is basic (relies on `TypeConverter` and `Convert.ChangeType`, no complex type handling like script blocks or hashtables).
+-   Parameter binding does not yet support named array parameters or advanced pipeline binding scenarios (e.g., binding specific properties of complex input objects without `ValueFromPipelineByPropertyName`).
+-   Error handling is rudimentary (basic exceptions caught, but no rich `ErrorRecord` objects like PowerShell).
 -   No Arabic language support (commands or text rendering) is implemented in the C# version yet.
+-   No external process execution support yet.
+-   No scripting features (variables are hardcoded in Parser).
 
 ## Conclusion
 

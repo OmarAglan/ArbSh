@@ -33,6 +33,18 @@ namespace ArbSh.Console
         /// </summary>
         public string? HelpMessage { get; set; }
 
-        // TODO: Add properties like ValueFromPipeline, ValueFromPipelineByPropertyName, etc.
+        /// <summary>
+        /// Gets or sets a value indicating whether the parameter accepts input from the pipeline.
+        /// The input object itself is bound to the parameter.
+        /// </summary>
+        public bool ValueFromPipeline { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the parameter accepts input from the pipeline
+        /// based on the property name matching a property of the input object.
+        /// </summary>
+        public bool ValueFromPipelineByPropertyName { get; set; } = false;
+
+        // TODO: Add Aliases property?
     }
 }

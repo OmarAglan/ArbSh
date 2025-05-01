@@ -118,7 +118,8 @@ namespace ArbSh.Console.Commands
                     }
                     helpBuilder.AppendLine($"        Required?                    {(paramInfo.Attr.Mandatory ? "True" : "False")}");
                     helpBuilder.AppendLine($"        Position?                    {(paramInfo.Attr.Position >= 0 ? paramInfo.Attr.Position.ToString() : "Named")}");
-                    // TODO: Add Default value, Accepts pipeline input? etc.
+                    helpBuilder.AppendLine($"        Accepts pipeline input?      {(paramInfo.Attr.ValueFromPipeline ? "True (By Value)" : (paramInfo.Attr.ValueFromPipelineByPropertyName ? "True (By Property Name)" : "False"))}");
+                    // TODO: Add Default value? Aliases?
                     helpBuilder.AppendLine();
                 }
             }

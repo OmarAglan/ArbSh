@@ -1,52 +1,43 @@
 using System;
 using System.Collections.Generic;
-using System.Linq; // Added for LINQ methods
+using System.Linq;
+using ArbSh.Console.Models; // Added to use CommandInfo
 
 namespace ArbSh.Console.Commands
 {
     /// <summary>
-    /// Placeholder implementation for a Get-Command cmdlet.
-    /// Lists available commands (currently hardcoded).
+    /// Basic implementation of a cmdlet similar to PowerShell's Get-Command.
+    /// Retrieves information about available commands.
     /// </summary>
     public class GetCommandCmdlet : CmdletBase
     {
-        // TODO: Add parameters like -Name, -Verb, -Noun, etc.
-        [Parameter(Position = 0)]
-        public string? Name { get; set; } // Example parameter for filtering by name
+        // TODO: Add parameters like -Name, -Noun, -Verb to filter commands
 
+        /// <summary>
+        /// Called once after pipeline input processing is complete.
+        /// Retrieves and outputs command information.
+        /// </summary>
         public override void EndProcessing()
         {
-            // Get discovered commands from the CommandDiscovery cache
-            // Need access to the cache - let's add a helper method to CommandDiscovery
-            var discoveredCommands = CommandDiscovery.GetAllCommands(); // Assuming this method exists
+            // Get all discovered commands (mapping name to type)
+            var allCommands = CommandDiscovery.GetAllCommands();
 
-            IEnumerable<KeyValuePair<string, Type>> commandsToDisplay = discoveredCommands;
-
-            if (!string.IsNullOrEmpty(Name))
+            if (allCommands == null || !allCommands.Any())
             {
-                // Filter based on the Name parameter (can use wildcards later)
-                // Basic filtering for now: exact match or starts with
-                 commandsToDisplay = discoveredCommands
-                    .Where(kvp => kvp.Key.Equals(Name, StringComparison.OrdinalIgnoreCase) || kvp.Key.StartsWith(Name, StringComparison.OrdinalIgnoreCase));
+                // TODO: Write Warning?
+                System.Console.WriteLine("No commands found.");
+                return;
             }
 
-            if (commandsToDisplay.Any())
+            // Create CommandInfo objects and write them to the pipeline
+            // Order by name for consistent output
+            foreach (var kvp in allCommands.OrderBy(c => c.Key))
             {
-                 if (string.IsNullOrEmpty(Name)) // Only print header if listing all
-                 {
-                     WriteObject("Available Commands:");
-                 }
-                 foreach (var kvp in commandsToDisplay)
-                 {
-                     // TODO: Output richer command info objects (Name, Type, Module, etc.)
-                     WriteObject($"  {kvp.Key} (Type: {kvp.Value.Name})");
-                 } // <-- Added missing closing brace
-            }
-            else
-            {
-                 // Use WriteError or similar mechanism in the future
-                 WriteObject($"Command not found matching: {Name ?? "*"}");
+                var commandInfo = new CommandInfo(kvp.Key, kvp.Value);
+                WriteObject(commandInfo);
             }
         }
+
+        // No BeginProcessing or ProcessRecord needed as it generates output in EndProcessing
     }
 }

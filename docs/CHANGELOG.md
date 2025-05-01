@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - (Future changes go here)
 
+## [0.6.0] - 2025-05-02
+
+### Changed
+- **Pipeline Execution:** Refactored the `Executor` to use `System.Threading.Tasks.Task` and `System.Collections.Concurrent.BlockingCollection` for true concurrent execution of pipeline stages within a statement, replacing the previous sequential simulation. Each cmdlet now runs in its own task, improving potential parallelism. Includes basic error handling for task failures using `Task.WhenAll` and `AggregateException`.
+- **Cmdlet Logic & Pipeline Binding:**
+  - Enhanced `ParameterAttribute` to include `ValueFromPipeline` and `ValueFromPipelineByPropertyName` flags.
+  - Added `BindPipelineParameters` virtual method to `CmdletBase` to handle binding pipeline input to parameters based on the new flags (called by Executor before `ProcessRecord`).
+  - Updated `GetHelpCmdlet` to display pipeline input acceptance details for parameters when using the `-Full` switch.
+  - Updated `WriteOutputCmdlet` to declare `ValueFromPipeline=true` for its `InputObject` parameter and handle processing pipeline input vs. direct parameter value.
+  - Updated `GetCommandCmdlet` to output structured `Models.CommandInfo` objects instead of just strings.
+  - Refined parameter binding in `Executor.cs` to throw specific `ParameterBindingException` on type conversion errors (named and positional) instead of just logging warnings.
+  - Added support in `Executor.cs` for binding remaining positional arguments to a parameter with an array type (e.g., `string[]`).
+
 ## [0.5.0] - 2025-05-02
 
 ### Added
