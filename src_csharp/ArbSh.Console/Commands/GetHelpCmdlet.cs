@@ -9,6 +9,7 @@ namespace ArbSh.Console.Commands
     /// <summary>
     /// Placeholder implementation for a Get-Help cmdlet.
     /// </summary>
+    [ArabicName("احصل-مساعدة")] // Added Arabic name attribute
     public class GetHelpCmdlet : CmdletBase
     {
         [Parameter(Position = 0, HelpMessage = "The name of the command to get help for.")]

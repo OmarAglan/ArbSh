@@ -26,6 +26,19 @@ namespace ArbSh.Console
             return _variables.TryGetValue(variableName, out var value) ? value : string.Empty;
         }
 
+        /// <summary>
+        /// Checks if a character is within the standard Arabic Unicode range.
+        /// </summary>
+        /// <param name="c">The character to check.</param>
+        /// <returns>True if the character is an Arabic letter, false otherwise.</returns>
+        private static bool IsArabicLetter(char c)
+        {
+            // Standard Arabic range: U+0600 to U+06FF
+            // Includes letters, digits, punctuation, diacritics etc. within this block.
+            // Consider refining if only specific letter sub-ranges are desired.
+            return (c >= '\u0600' && c <= '\u06FF');
+        }
+
 
         /// <summary>
         /// Parses a line of input into a list of statements, where each statement is a list of commands for a pipeline.
@@ -310,9 +323,35 @@ namespace ArbSh.Console
                             }
                             else { currentToken.Append(c); } // Append '$' literally
                         }
-                        else
+                        else // Character is not whitespace, quote, escape, or $
                         {
-                            currentToken.Append(c); // Append normal char
+                            // Check if it's a valid character for a command/argument token
+                            // Allowing letters (Latin & Arabic), digits, underscore, and hyphen (for command names like Get-Help)
+                            if (char.IsLetterOrDigit(c) || IsArabicLetter(c) || c == '_' || c == '-')
+                            {
+                                currentToken.Append(c); // Append valid token character
+                            }
+                            else // It's likely an operator or other delimiter not handled above
+                            {
+                                // Finalize the previous token (command/argument) if any
+                                if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
+
+                                // Handle the operator/delimiter itself
+                                // Special case for >> redirection
+                                if (c == '>' && i + 1 < stageInput.Length && stageInput[i + 1] == '>')
+                                {
+                                    tokens.Add(">>"); // Add '>>' as a single token
+                                    i++; // Skip the next '>'
+                                }
+                                else
+                                {
+                                    // Add other operators/delimiters (like '>', '|', ';', '(', ')') as single-character tokens
+                                    // Note: Semicolon handling for statement splitting happens earlier,
+                                    // but it might appear here if parsing only a single stage directly.
+                                    tokens.Add(c.ToString());
+                                }
+                                // Operator token is finalized immediately, currentToken remains empty for the next iteration.
+                            }
                         }
                         break;
 

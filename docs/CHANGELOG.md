@@ -1,18 +1,14 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - YYYY-MM-DD
-
-### Added
-- (Future changes go here)
-
 ## [0.6.0] - 2025-05-02
 
 ### Changed
+
 - **Pipeline Execution:** Refactored the `Executor` to use `System.Threading.Tasks.Task` and `System.Collections.Concurrent.BlockingCollection` for true concurrent execution of pipeline stages within a statement, replacing the previous sequential simulation. Each cmdlet now runs in its own task, improving potential parallelism. Includes basic error handling for task failures using `Task.WhenAll` and `AggregateException`.
 - **Cmdlet Logic & Pipeline Binding:**
   - Enhanced `ParameterAttribute` to include `ValueFromPipeline` and `ValueFromPipelineByPropertyName` flags.
@@ -26,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2025-05-02
 
 ### Added
+
 - **Parser Refinements (2025-05-01):**
   - Implemented basic variable expansion (`$varName`) during tokenization.
   - Implemented statement splitting (`;`) respecting quotes/escapes.
@@ -54,11 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `.gitignore` for C#/.NET development.
 
 ### Changed
+
 - Project direction shifted towards a PowerShell-inspired C# shell with Arabic command support.
 - Build system transitioned from CMake to .NET CLI.
 - Moved original C/C++ source, include, tests, cmake, build files into `old_c_code/` directory for reference.
 
 ### Deprecated
+
 - The existing C implementation (now in `old_c_code/`) is considered legacy and primarily serves as a reference for porting i18n logic.
 - CMake build system (now in `old_c_code/`).
 

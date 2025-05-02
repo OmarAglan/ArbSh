@@ -75,6 +75,7 @@ namespace ArbSh.Console
                     // This is very simplistic and needs improvement (e.g., using attributes)
                     string commandName = ConvertToVerbNoun(potentialCommandName);
 
+                    // Add English name (derived from class name)
                     if (!_commandCache.ContainsKey(commandName))
                     {
                         _commandCache.Add(commandName, type);
@@ -82,11 +83,32 @@ namespace ArbSh.Console
                     }
                     else
                     {
-                         System.Console.WriteLine($"WARN (Discovery): Duplicate command name '{commandName}' detected for type {type.FullName}.");
+                         System.Console.WriteLine($"WARN (Discovery): Duplicate English command name '{commandName}' detected for type {type.FullName}.");
+                    }
+
+                    // Check for and add Arabic name from attribute
+                    var arabicNameAttr = type.GetCustomAttribute<ArabicNameAttribute>();
+                    if (arabicNameAttr != null)
+                    {
+                        string arabicName = arabicNameAttr.Name;
+                        if (!_commandCache.ContainsKey(arabicName))
+                        {
+                            _commandCache.Add(arabicName, type);
+                             System.Console.WriteLine($"DEBUG (Discovery): Found Arabic alias '{arabicName}' -> {type.FullName}");
+                        }
+                        else
+                        {
+                            // Check if the duplicate is for the *same* type (benign) or a different type (conflict)
+                            if (_commandCache[arabicName] != type)
+                            {
+                                System.Console.WriteLine($"WARN (Discovery): Duplicate Arabic command name '{arabicName}' detected. It conflicts between {type.FullName} and {_commandCache[arabicName].FullName}.");
+                            }
+                            // If it maps to the same type, it might have been added via English name first if they happen to be the same - unlikely but possible.
+                        }
                     }
                 }
             }
-             System.Console.WriteLine($"DEBUG (Discovery): Cache built with {_commandCache.Count} commands.");
+             System.Console.WriteLine($"DEBUG (Discovery): Cache built with {_commandCache.Count} total command name entries (including aliases).");
         }
 
         /// <summary>
