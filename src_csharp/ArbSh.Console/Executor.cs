@@ -225,36 +225,40 @@ namespace ArbSh.Console
                                  System.Console.ResetColor();
                                  // Don't proceed with output if redirection failed, but ensure collection is disposed later
                             }
-                        }
+                         }
 
-                        // Consume the final output from the last stage's collection
-                        if (redirectWriter == null) {
-                             // Only print header if there's likely output and not redirecting
-                             // Check IsCompleted AND Count > 0 might be needed for accuracy, but GetConsumingEnumerable handles empty/completed state.
-                             System.Console.WriteLine("DEBUG (Executor Pipeline): Final pipeline output to Console:");
-                        }
+                         // Consume the final output from the last stage's collection
+                         System.Console.WriteLine($"DEBUG (Executor Output): Checking final output. IsCompleted={outputOfLastStage.IsCompleted}, Count={outputOfLastStage.Count}, IsAddingCompleted={outputOfLastStage.IsAddingCompleted}"); // Added Debug
+                         if (redirectWriter == null) {
+                              System.Console.WriteLine("DEBUG (Executor Output): Writing final output to Console...");
+                         } else {
+                              System.Console.WriteLine($"DEBUG (Executor Output): Writing final output to file '{lastCommandConfig.OutputRedirectPath}'..."); // Added Debug
+                         }
 
-                        foreach (var finalOutput in outputOfLastStage.GetConsumingEnumerable())
-                        {
-                            // TODO: Implement proper formatting based on object type (ToString() is basic)
-                            string outputString = finalOutput?.ToString() ?? string.Empty;
+                         int outputCount = 0; // Added Debug
+                         foreach (var finalOutput in outputOfLastStage.GetConsumingEnumerable())
+                         {
+                             outputCount++; // Added Debug
+                             string outputString = finalOutput?.ToString() ?? string.Empty;
+                             System.Console.WriteLine($"DEBUG (Executor Output): Processing output item #{outputCount}: '{outputString}'"); // Added Debug
 
-                            if (redirectWriter != null)
-                            {
-                                // Write to file, handle potential IO exceptions here?
-                                try
-                                {
-                                    redirectWriter.WriteLine(outputString);
-                                }
-                                catch (IOException ioEx)
-                                {
-                                     System.Console.ForegroundColor = ConsoleColor.Red;
-                                     System.Console.WriteLine($"ERROR: Failed writing to redirect file: {ioEx.Message}");
-                                     System.Console.ResetColor();
-                                     // Stop redirecting?
-                                     redirectWriter.Dispose();
-                                     redirectWriter = null;
-                                }
+                             if (redirectWriter != null)
+                             {
+                                 System.Console.WriteLine($"DEBUG (Executor Output): Writing item #{outputCount} to file..."); // Added Debug
+                                 try
+                                 {
+                                     redirectWriter.WriteLine(outputString);
+                                     redirectWriter.Flush(); // Explicitly flush after write
+                                     System.Console.WriteLine($"DEBUG (Executor Output): Item #{outputCount} written and flushed to file."); // Updated Debug
+                                 }
+                                 catch (Exception ex) // Catch broader exceptions
+                                 {
+                                      System.Console.ForegroundColor = ConsoleColor.Red;
+                                      System.Console.WriteLine($"ERROR: Failed writing/flushing to redirect file '{redirectWriter.BaseStream}': {ex.GetType().Name} - {ex.Message}"); // More details
+                                      System.Console.ResetColor();
+                                      try { redirectWriter.Dispose(); } catch { /* Ignore dispose error */ } // Attempt dispose even after error
+                                      redirectWriter = null; // Stop further attempts
+                                 }
                             }
                             else
                             {
@@ -273,7 +277,19 @@ namespace ArbSh.Console
                     }
                     finally
                     {
-                        redirectWriter?.Dispose(); // Ensure file stream is closed if it was opened
+                        if (redirectWriter != null)
+                        {
+                             System.Console.WriteLine($"DEBUG (Executor Output): Flushing and Disposing StreamWriter for '{lastCommandConfig.OutputRedirectPath}'."); // Added Debug
+                             try
+                             {
+                                 redirectWriter.Flush(); // Ensure flush before dispose
+                                 redirectWriter.Dispose();
+                             } catch (Exception ex) {
+                                 System.Console.ForegroundColor = ConsoleColor.Red;
+                                 System.Console.WriteLine($"ERROR: Exception during final flush/dispose of redirect file: {ex.Message}");
+                                 System.Console.ResetColor();
+                             }
+                        }
                         outputOfLastStage.Dispose(); // Dispose the final collection
                     }
                 }

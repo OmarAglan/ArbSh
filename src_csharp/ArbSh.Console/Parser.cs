@@ -27,16 +27,44 @@ namespace ArbSh.Console
         }
 
         /// <summary>
-        /// Checks if a character is within the standard Arabic Unicode range.
+        /// Checks if a character is an Arabic letter (U+0621 to U+064A).
         /// </summary>
-        /// <param name="c">The character to check.</param>
-        /// <returns>True if the character is an Arabic letter, false otherwise.</returns>
-        private static bool IsArabicLetter(char c)
+        private static bool IsArabicLetterChar(char c)
         {
-            // Standard Arabic range: U+0600 to U+06FF
-            // Includes letters, digits, punctuation, diacritics etc. within this block.
-            // Consider refining if only specific letter sub-ranges are desired.
-            return (c >= '\u0600' && c <= '\u06FF');
+            // Arabic letters range U+0621 to U+064A.
+            // Consider adding U+0660-U+0669 for Eastern Arabic numerals if needed in identifiers.
+            return (c >= '\u0621' && c <= '\u064A');
+            // Note: The previous broader check (U+0600-U+06FF) included many non-letter characters.
+        }
+
+        /// <summary>
+        /// Checks if a character is valid *within* an identifier (command name, parameter name, variable name).
+        /// Allows Latin letters, digits, Arabic letters, underscore, and hyphen.
+        /// </summary>
+        private static bool IsValidIdentifierChar(char c)
+        {
+            return char.IsLetterOrDigit(c) || IsArabicLetterChar(c) || c == '_' || c == '-';
+        }
+
+        /// <summary>
+        /// Checks if a character is valid *within* a general argument or path token.
+        /// Allows identifier characters plus common path characters like '.', '\', '/'.
+        /// </summary>
+        private static bool IsValidArgumentChar(char c)
+        {
+            // Extend identifier chars with common path/argument chars
+            return IsValidIdentifierChar(c) || c == '.' || c == '\\' || c == '/';
+            // TODO: Consider adding other potentially valid argument chars if needed.
+        }
+
+        /// <summary>
+        /// Checks if a character is valid to *start* an identifier.
+        /// Allows Latin letters, Arabic letters, and underscore.
+        /// (Typically identifiers don't start with digits or hyphens).
+        /// </summary>
+        private static bool IsValidIdentifierStartChar(char c)
+        {
+             return char.IsLetter(c) || IsArabicLetterChar(c) || c == '_';
         }
 
 
@@ -210,31 +238,48 @@ namespace ArbSh.Console
             string? redirectPath = null;
             bool append = false;
 
-            // --- Redirection Parsing (Basic) ---
-            // TODO: Make redirection parsing more robust (e.g., handle 2>&1, allow anywhere)
+            // --- Redirection Parsing (Revised) ---
+            // Find the *first* redirection operator and its associated path token.
+            // Assumes operator and path are separate tokens from the tokenizer.
             int redirectOperatorIndex = -1;
             for (int i = 0; i < commandTokens.Count; i++)
             {
-                // Check for redirection operators (simple check, assumes space separation)
                 if (commandTokens[i] == ">" || commandTokens[i] == ">>")
                 {
                     redirectOperatorIndex = i;
-                    append = (commandTokens[i] == ">>");
-                    if (i + 1 < commandTokens.Count)
-                    {
-                        redirectPath = commandTokens[i + 1];
-                        commandTokens.RemoveRange(i, 2); // Remove operator and path
-                    }
-                    else
-                    {
-                        System.Console.WriteLine($"WARN (Parser): Redirection operator '{commandTokens[i]}' found without a target path.");
-                        commandTokens.RemoveAt(i); // Remove just the operator
-                    }
-                    break; // Handle only the first redirection found for now
+                    break; // Found the first operator
                 }
             }
 
-            // --- Argument/Parameter Parsing ---
+            if (redirectOperatorIndex != -1)
+            {
+                string redirectOperator = commandTokens[redirectOperatorIndex];
+                append = (redirectOperator == ">>");
+
+                // Check if a path token exists immediately after the operator
+                if (redirectOperatorIndex + 1 < commandTokens.Count)
+                {
+                    // The next token is the path
+                    redirectPath = commandTokens[redirectOperatorIndex + 1];
+                    System.Console.WriteLine($"DEBUG (Parser): Found redirection: {redirectOperator} '{redirectPath}'");
+
+                    // Remove the operator and the path token from the list
+                    // Remove path first (higher index) to avoid shifting operator index
+                    commandTokens.RemoveAt(redirectOperatorIndex + 1);
+                    commandTokens.RemoveAt(redirectOperatorIndex);
+                }
+                else
+                {
+                    // Operator found, but no path token follows
+                    System.Console.WriteLine($"WARN (Parser): Redirection operator '{redirectOperator}' found without a target path.");
+                    // Remove just the operator token
+                    commandTokens.RemoveAt(redirectOperatorIndex);
+                }
+                // Note: This still only handles the *first* redirection found.
+                // More complex scenarios (e.g., `cmd > file1 2>&1`) are not handled.
+            }
+
+            // --- Argument/Parameter Parsing (using remaining tokens) ---
             List<string> arguments = new List<string>();
             Dictionary<string, string> parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -280,6 +325,7 @@ namespace ArbSh.Console
         /// Tokenizes a single pipeline stage input string using a state machine.
         /// Respects single quotes (literal content), double quotes (allows escapes and variable expansion),
         /// and escape character '\' (makes next character literal).
+        /// Handles Arabic letters in identifiers and parameter names like -ParamName or -اسم_معلمة.
         /// </summary>
         private static List<string> TokenizeInput(string stageInput)
         {
@@ -296,105 +342,138 @@ namespace ArbSh.Console
                     case TokenizerStateSM.Default:
                         if (char.IsWhiteSpace(c))
                         {
-                            // Finalize previous token if exists
                             if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
                         }
                         else if (c == '"')
                         {
-                            state = TokenizerStateSM.InDoubleQuotes; // Enter double quotes
+                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
+                            state = TokenizerStateSM.InDoubleQuotes;
+                            currentToken.Append(c); // Keep quote start
                         }
                         else if (c == '\'')
                         {
-                            state = TokenizerStateSM.InSingleQuotes; // Enter single quotes
+                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
+                            state = TokenizerStateSM.InSingleQuotes;
+                            currentToken.Append(c); // Keep quote start
                         }
                         else if (c == '\\')
                         {
-                            state = TokenizerStateSM.EscapeNextDefault; // Expecting next char to be escaped
+                            state = TokenizerStateSM.EscapeNextDefault;
                         }
-                        else if (c == '$' && i + 1 < stageInput.Length)
+                        else if (c == '$' && i + 1 < stageInput.Length && IsValidIdentifierStartChar(stageInput[i + 1]))
                         {
-                            // Attempt variable expansion
+                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
                             int varNameStart = i + 1; int varNameEnd = varNameStart;
-                            while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_')) { varNameEnd++; }
+                            while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || IsArabicLetterChar(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_')) { varNameEnd++; }
                             if (varNameEnd > varNameStart)
-                            { // Found variable
-                                string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart); string varValue = GetVariableValue(varName); currentToken.Append(varValue);
-                                System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}'"); i = varNameEnd - 1;
+                            {
+                                string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart);
+                                string varValue = GetVariableValue(varName);
+                                // Treat expanded value as a single token for now
+                                tokens.Add(varValue);
+                                System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}' as separate token");
+                                i = varNameEnd - 1;
                             }
-                            else { currentToken.Append(c); } // Append '$' literally
+                            else { currentToken.Append(c); } // Append '$' literally if not valid var name start
                         }
-                        else // Character is not whitespace, quote, escape, or $
+                        else if (IsValidIdentifierStartChar(c)) // Starts a new identifier (e.g., Get, احصل)
                         {
-                            // Check if it's a valid character for a command/argument token
-                            // Allowing letters (Latin & Arabic), digits, underscore, and hyphen (for command names like Get-Help)
-                            if (char.IsLetterOrDigit(c) || IsArabicLetter(c) || c == '_' || c == '-')
+                            // If current token is not empty and doesn't look like an identifier start (e.g. operator), finalize it.
+                            if (currentToken.Length > 0 && !IsValidIdentifierStartChar(currentToken[0]) && currentToken[0] != '-')
                             {
-                                currentToken.Append(c); // Append valid token character
+                                tokens.Add(currentToken.ToString()); currentToken.Clear();
                             }
-                            else // It's likely an operator or other delimiter not handled above
-                            {
-                                // Finalize the previous token (command/argument) if any
-                                if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
+                            currentToken.Append(c);
+                        }
+                        else if (currentToken.Length > 0 && IsValidArgumentChar(c)) // Continues an existing token (identifier, argument, path)
+                        {
+                            // Allow appending valid argument characters (including '.') to the current token
+                            currentToken.Append(c);
+                        }
+                        // Note: Hyphen handling is implicitly covered by IsValidArgumentChar now if it's not the start char.
+                        // We still need special handling if '-' *starts* a token.
+                        else if (c == '-')
+                        {
+                             // If current token exists, finalize it before starting potential parameter
+                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
 
-                                // Handle the operator/delimiter itself
-                                // Special case for >> redirection
-                                if (c == '>' && i + 1 < stageInput.Length && stageInput[i + 1] == '>')
-                                {
-                                    tokens.Add(">>"); // Add '>>' as a single token
-                                    i++; // Skip the next '>'
-                                }
-                                else
-                                {
-                                    // Add other operators/delimiters (like '>', '|', ';', '(', ')') as single-character tokens
-                                    // Note: Semicolon handling for statement splitting happens earlier,
-                                    // but it might appear here if parsing only a single stage directly.
-                                    tokens.Add(c.ToString());
-                                }
-                                // Operator token is finalized immediately, currentToken remains empty for the next iteration.
+                            if (i + 1 < stageInput.Length && IsValidIdentifierStartChar(stageInput[i + 1]))
+                            {
+                                // Starts a parameter name (-Param, -اسم)
+                                currentToken.Append(c);
+                            }
+                            else
+                            {
+                                // Standalone hyphen operator/argument
+                                tokens.Add(c.ToString());
+                            }
+                        }
+                        else // Other characters (operators like >, >>, |, etc., or invalid chars)
+                        {
+                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); } // Finalize previous token
+                            // Handle specific operators
+                            if (c == '>' && i + 1 < stageInput.Length && stageInput[i + 1] == '>')
+                            {
+                                tokens.Add(">>"); i++;
+                            }
+                            else
+                            {
+                                tokens.Add(c.ToString());
                             }
                         }
                         break;
 
                     case TokenizerStateSM.InDoubleQuotes:
-                        if (c == '"')
+                         currentToken.Append(c); // Append char within quotes
+                         if (c == '"')
                         {
+                            // We've reached the closing quote. Finalize the token.
+                            tokens.Add(currentToken.ToString());
+                            currentToken.Clear();
                             state = TokenizerStateSM.Default; // Exit double quotes
                         }
                         else if (c == '\\')
                         {
-                            state = TokenizerStateSM.EscapeNextDouble; // Expecting next char to be escaped
+                            // Don't append the backslash yet, move to escape state
+                            state = TokenizerStateSM.EscapeNextDouble;
                         }
-                        else if (c == '$' && i + 1 < stageInput.Length)
+                        else if (c == '$' && i + 1 < stageInput.Length && IsValidIdentifierStartChar(stageInput[i+1])) // Basic variable check
                         {
                             // Attempt variable expansion inside double quotes
                             int varNameStart = i + 1; int varNameEnd = varNameStart;
-                            while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_')) { varNameEnd++; }
+                             while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || IsArabicLetterChar(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_'))
+                            {
+                                varNameEnd++;
+                            }
+
                             if (varNameEnd > varNameStart)
                             { // Found variable
-                                string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart); string varValue = GetVariableValue(varName); currentToken.Append(varValue);
-                                System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}' (in double quotes)"); i = varNameEnd - 1;
+                                string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart);
+                                string varValue = GetVariableValue(varName);
+                                currentToken.Append(varValue); // Append expanded value
+                                System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}' (in double quotes)");
+                                i = varNameEnd - 1; // Move index past variable name
                             }
-                            else { currentToken.Append(c); } // Append '$' literally
+                            else { currentToken.Append(c); } // Append '$' literally if not valid var name
                         }
-                        else
-                        {
-                            currentToken.Append(c); // Append normal char
-                        }
+                        // else // Normal character inside double quotes is handled by the initial append at the start of the state case
                         break;
 
                     case TokenizerStateSM.InSingleQuotes:
+                        currentToken.Append(c); // Append literally (no escapes or variables)
                         if (c == '\'')
                         {
+                            // We've reached the closing quote. Finalize the token.
+                            tokens.Add(currentToken.ToString());
+                            currentToken.Clear();
                             state = TokenizerStateSM.Default; // Exit single quotes
                         }
-                        else
-                        {
-                            currentToken.Append(c); // Append literally (no escapes or variables)
-                        }
+                        // else // Character was appended above
                         break;
 
                     case TokenizerStateSM.EscapeNextDefault: // After '\' in Default state
-                        // Append the escaped character literally.
+                        // Append the escaped character literally, regardless of what it is.
+                        // This handles escaping operators like \| or \>
                         currentToken.Append(c);
                         state = TokenizerStateSM.Default; // Return to Default state.
                         break;

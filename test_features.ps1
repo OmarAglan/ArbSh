@@ -1,6 +1,8 @@
-# PowerShell script to test ArbSh v0.6.0 features
+# PowerShell script to test ArbSh v0.7.0 features
 
 $ErrorActionPreference = 'Stop' # Exit script on error
+$OutputEncoding = [System.Text.Encoding]::UTF8 # Ensure script output handles UTF-8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8 # Try setting global console input encoding
 
 # --- Configuration ---
 $arbshProjectDir = "src_csharp/ArbSh.Console"
@@ -11,7 +13,7 @@ $tempAppendFile = "temp_append_test.txt"
 # --- Functions ---
 function Write-Log {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$Message
     )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -41,7 +43,8 @@ try {
     # Allow build output to show in console for diagnostics
     dotnet build $arbshProjectDir
     Write-Log "Build successful."
-} catch {
+}
+catch {
     Write-Log ("BUILD FAILED: " + $_.Exception.Message) # Use concatenation
     Exit 1
 }
@@ -62,6 +65,13 @@ $arbshCommands = @(
     'Get-Help Write-Output -Full'
     'Get-Help Test-Array-Binding -Full' # Corrected command name
     'Get-Help NonExistentCommand'
+    ''
+    '# --- Arabic Name Tests (Phase 3 Goal) ---'
+    'احصل-مساعدة' # Test Arabic command alias
+    'احصل-مساعدة Get-Command' # Test Arabic command alias with positional arg
+    'Get-Help -الاسم Get-Command' # Test Arabic parameter alias
+    'احصل-مساعدة -CommandName Get-Command' # Test Mix: Arabic command, English param
+    'Get-Help -الاسم Write-Output -Full' # Test Mix: English command, Arabic param, switch
     ''
     '# --- Pipeline ---'
     'Get-Command | Write-Output'
@@ -116,6 +126,7 @@ $processInfo.RedirectStandardOutput = $true
 $processInfo.RedirectStandardError = $true
 $processInfo.UseShellExecute = $false
 $processInfo.CreateNoWindow = $true
+# $processInfo.StandardInputEncoding = [System.Text.Encoding]::UTF8 # Removed incorrect attempt
 # Set working directory if needed, assuming script runs from project root
 # $processInfo.WorkingDirectory = (Get-Location).Path
 
@@ -124,8 +135,11 @@ $process.StartInfo = $processInfo
 
 $process.Start() | Out-Null
 
-# Write commands to stdin
-$process.StandardInput.WriteLine($inputString)
+# Write commands to stdin using UTF-8 bytes directly
+$utf8Encoding = [System.Text.Encoding]::UTF8
+$inputBytes = $utf8Encoding.GetBytes($inputString + [Environment]::NewLine) # Add newline bytes
+$process.StandardInput.BaseStream.Write($inputBytes, 0, $inputBytes.Length)
+$process.StandardInput.BaseStream.Flush() # Flush the base stream
 $process.StandardInput.Close() # Signal end of input
 
 # Read output and error streams
@@ -151,7 +165,8 @@ if (Test-Path $tempRedirectFile) {
     $content = Get-Content $tempRedirectFile -Encoding UTF8 # Read as UTF8
     Add-Content -Path $outputLogFile -Value $content # Append using Add-Content
     Remove-Item $tempRedirectFile # Cleanup
-} else {
+}
+else {
     Write-Log "ERROR: $tempRedirectFile was not created."
 }
 
@@ -160,7 +175,8 @@ if (Test-Path $tempAppendFile) {
     $content = Get-Content $tempAppendFile -Encoding UTF8 # Read as UTF8
     Add-Content -Path $outputLogFile -Value $content # Append using Add-Content
     Remove-Item $tempAppendFile # Cleanup
-} else {
+}
+else {
     Write-Log "ERROR: $tempAppendFile was not created."
 }
 

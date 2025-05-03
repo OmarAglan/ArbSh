@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text; // Required for Encoding
 
 namespace ArbSh.Console
 {
@@ -6,6 +7,11 @@ namespace ArbSh.Console
     {
         static void Main(string[] args)
         {
+            // Ensure console input is read as UTF-8 to handle Arabic characters correctly
+            System.Console.InputEncoding = System.Text.Encoding.UTF8;
+            // Optionally set output encoding too, though UTF-8 is often the default
+            // System.Console.OutputEncoding = System.Text.Encoding.UTF8;
+
             System.Console.WriteLine("Welcome to ArbSh (C# Prototype)!");
             System.Console.WriteLine("Type 'exit' to quit.");
 
