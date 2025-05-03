@@ -36,10 +36,10 @@ To create a powerful, extensible shell environment built on .NET that:
 -   [✅] **Implement Cmdlet Logic:** Added functional logic to `Get-Help` (displaying detailed parameter info including pipeline), `Get-Command` (outputting `CommandInfo` objects), and `Write-Output` (handling pipeline/parameter input).
 -   [✅] **Further Refine Parameter Binding:** Improved error reporting for type conversion failures and added support for binding remaining positional arguments to array parameters. Added pipeline binding support (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`) via `CmdletBase.BindPipelineParameters`.
 
-**Phase 3: Arabic Command Parsing & Tokenization (C#)**
+**Phase 3: Arabic Command Parsing & Tokenization (C#) (In Progress)**
 
--   [ ] Extend the C# parser and tokenizer to correctly identify and handle commands, parameters, and potentially string literals written in Arabic script.
--   [ ] Implement mechanisms to map Arabic command names (e.g., `احصل-محتوى`) to their corresponding C# cmdlet classes.
+-   [🚧] Extend the C# parser and tokenizer to correctly identify and handle commands, parameters, and potentially string literals written in Arabic script. *(Basic tokenization for Arabic letters and handling of hyphenated names implemented)*.
+-   [🚧] Implement mechanisms to map Arabic command names (e.g., `احصل-محتوى`) to their corresponding C# cmdlet classes. *(Mapping via `[ArabicName]` attribute implemented in `CommandDiscovery` and `Executor` for commands and parameters)*.
 -   [ ] Handle potential ambiguities or interactions between Arabic and English syntax elements.
 -   [ ] **Refine Parser (Advanced):**
     -   [ ] Implement more robust parsing for complex cases (e.g., advanced redirection `2>&1`, sub-expressions `$(...)`, type literals `[int]`, etc.).

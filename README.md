@@ -29,11 +29,11 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
     -   Handle general escape characters (`\`) both inside and outside quotes.
     -   Identify separate statements using semicolons (`;`) respecting quotes/escapes.
     -   Identify pipeline stages using pipes (`|`) respecting quotes/escapes.
-    -   Differentiate command names, arguments, and named parameters (`-`).
+    -   Differentiate command names (including hyphenated), arguments (including filenames with dots), and named parameters (`-`).
     -   Perform basic variable expansion (`$varName`) during tokenization (respecting escapes `\$`).
-    -   Detect basic output redirection (`>`, `>>`) (parsing still rudimentary).
--   **Parameter Binding:** Added `ParameterAttribute` (with pipeline support flags) and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks, boolean switches, basic type conversion (`TypeConverter`/`Convert.ChangeType`), improved error reporting for conversion failures, and binding remaining positional arguments to array parameters.
--   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation. **Update:** Command discovery now also recognizes an `[ArabicName]` attribute on cmdlet classes and properties, allowing cmdlets and parameters to be invoked using assigned Arabic names (e.g., `احصل-مساعدة -الاسم Get-Command`).
+    -   Detect basic output redirection (`>`, `>>`) and correctly parse the associated filename.
+-   **Parameter Binding:** Added `ParameterAttribute` (with pipeline support flags) and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks, boolean switches, basic type conversion (`TypeConverter`/`Convert.ChangeType`), improved error reporting for conversion failures, and binding remaining positional arguments to array parameters. **Update:** Parameter binder now also recognizes the `[ArabicName]` attribute on cmdlet properties, allowing parameters to be specified using assigned Arabic names (e.g., `-الاسم`).
+-   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation. **Update:** Command discovery now also recognizes the `[ArabicName]` attribute on cmdlet classes, allowing cmdlets to be invoked using assigned Arabic names (e.g., `احصل-مساعدة`).
 -   **Concurrent Pipeline:** The `Executor` now uses `Task` and `BlockingCollection` to execute pipeline stages concurrently within each statement. `CmdletBase` includes logic (`BindPipelineParameters`) to handle binding pipeline input (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`).
 -   **Basic Cmdlets:** `Write-Output`, `Get-Help`, and `Get-Command` have functional implementations. `Get-Help` displays detailed parameter info (including pipeline acceptance). `Get-Command` outputs structured `CommandInfo` objects.
 -   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, `CHANGELOG.md`, etc.) has been updated to reflect the C# refactoring status.
@@ -90,6 +90,7 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
     -   No external process execution support yet.
     -   No scripting features (variables are hardcoded in Parser, no functions, flow control, etc.).
     -   No tab completion, history, or aliasing.
+-   **Encoding:** Requires console and input streams to use UTF-8 for Arabic aliases to work correctly (handled in `Program.cs` and `test_features.ps1`).
 
 ## Conclusion
 

@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `ArabicNameAttribute` to be applicable to properties (parameters).
   - Modified the parameter binding logic in `Executor.cs` to check for `ArabicNameAttribute` on properties and attempt binding using the Arabic name first, falling back to the English name.
   - Cmdlet parameters can now be specified using either their English name (e.g., `-CommandName`) or their assigned Arabic name (e.g., `-الاسم`).
+- **Testing:** Added tests to `test_features.ps1` for Arabic command/parameter aliases.
+
+### Fixed
+- **Parser Tokenization:** Corrected tokenizer logic (`Parser.cs`) to properly handle hyphens within command names (e.g., `Get-Command`) and dots within arguments/filenames (e.g., `temp_file.txt`), preventing incorrect splitting.
+- **Redirection:** Resolved issue where output redirection (`>`, `>>`) failed due to incorrect filename parsing. Files are now created correctly. Added explicit `Flush()` calls in `Executor.cs` for robustness.
+- **Test Script Encoding:** Fixed `test_features.ps1` to correctly send UTF-8 encoded input to the ArbSh process by writing bytes directly to the standard input stream, enabling proper testing of Arabic characters. Confirmed successful parsing and execution of Arabic aliases.
 
 ## [0.6.0] - 2025-05-02
 
