@@ -33,13 +33,13 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
     -   Perform basic variable expansion (`$varName`) during tokenization (respecting escapes `\$`).
     -   Detect basic output redirection (`>`, `>>`) (parsing still rudimentary).
 -   **Parameter Binding:** Added `ParameterAttribute` (with pipeline support flags) and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks, boolean switches, basic type conversion (`TypeConverter`/`Convert.ChangeType`), improved error reporting for conversion failures, and binding remaining positional arguments to array parameters.
--   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation.
+-   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation. **Update:** Command discovery now also recognizes an `[ArabicName]` attribute on cmdlet classes and properties, allowing cmdlets and parameters to be invoked using assigned Arabic names (e.g., `احصل-مساعدة -الاسم Get-Command`).
 -   **Concurrent Pipeline:** The `Executor` now uses `Task` and `BlockingCollection` to execute pipeline stages concurrently within each statement. `CmdletBase` includes logic (`BindPipelineParameters`) to handle binding pipeline input (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`).
 -   **Basic Cmdlets:** `Write-Output`, `Get-Help`, and `Get-Command` have functional implementations. `Get-Help` displays detailed parameter info (including pipeline acceptance). `Get-Command` outputs structured `CommandInfo` objects.
 -   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, `CHANGELOG.md`, etc.) has been updated to reflect the C# refactoring status.
 -   **C Code Reference:** The original C source code and build files have been moved to the `old_c_code/` directory for reference during the porting process.
 
-*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse commands with quoted arguments, escape sequences, basic variable expansion (`$var`), pipelines (`|`), and statement separators (`;`), discover cmdlets, perform parameter binding (including pipeline input and basic arrays), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. However, advanced parsing (complex variable expansion, robust redirection), more robust type conversion, comprehensive error handling, and Arabic support are still needed.*
+*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse commands with quoted arguments, escape sequences, basic variable expansion (`$var`), pipelines (`|`), and statement separators (`;`), discover cmdlets (including Arabic aliases via `[ArabicName]` attribute), perform parameter binding (including pipeline input, basic arrays, and Arabic parameter aliases via `[ArabicName]` attribute), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. However, advanced parsing (complex variable expansion, robust redirection), more robust type conversion, comprehensive error handling, and full Arabic text rendering support are still needed.*
 
 ## New Code Structure
 
@@ -86,7 +86,7 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
     -   Unknown named parameters are currently ignored instead of causing an error.
 -   **Error Handling:** Rudimentary (basic exceptions caught, but no rich `ErrorRecord` objects like PowerShell).
 -   **Features:**
-    -   No Arabic language support (commands or text rendering) is implemented yet.
+    -   Basic Arabic command and parameter name support is implemented via the `[ArabicName]` attribute. Full Arabic text rendering (BiDi/RTL) is not yet implemented.
     -   No external process execution support yet.
     -   No scripting features (variables are hardcoded in Parser, no functions, flow control, etc.).
     -   No tab completion, history, or aliasing.

@@ -265,4 +265,39 @@ The parser now supports basic variable expansion. Variables start with `$` follo
     Help Error: Command 'Value from $testVar!' not found.
     ```
 
+## Arabic Command and Parameter Names (v0.7.0+)
+
+Cmdlets and their parameters can be invoked using Arabic names if they have the `[ArabicName]` attribute applied.
+
+**Example (using `Get-Help` / `احصل-مساعدة` which has aliases defined):**
+
+*   **Arabic Command Name:**
+    ```powershell
+    ArbSh> احصل-مساعدة Get-Command
+    # ... (Executor debug output) ...
+    NAME
+        Get-Command
+    # ...
+    ```
+*   **Arabic Parameter Name:**
+    ```powershell
+    ArbSh> Get-Help -الاسم Get-Command
+    # ... (Executor debug output) ...
+    DEBUG (Binder): Found parameter via Arabic name '-الاسم'.
+    # ...
+    NAME
+        Get-Command
+    # ...
+    ```
+*   **Arabic Command and Parameter Name:**
+    ```powershell
+    ArbSh> احصل-مساعدة -الاسم Get-Command
+    # ... (Executor debug output) ...
+    DEBUG (Binder): Found parameter via Arabic name '-الاسم'.
+    # ...
+    NAME
+        Get-Command
+    # ...
+    ```
+
 This covers the basic usage of the commands available in the current prototype.

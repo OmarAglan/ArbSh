@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-05-03
+
+### Added
+
+- **Arabic Command Name Support:**
+  - Extended the parser (`Parser.cs`) to recognize Arabic letters as valid characters in command/argument tokens.
+  - Added `ArabicNameAttribute.cs` to allow specifying an Arabic alias for a cmdlet class.
+  - Updated `CommandDiscovery.cs` to read the `ArabicNameAttribute` and add both English and Arabic names to the command cache.
+  - Cmdlets can now be invoked using either their English name (e.g., `Get-Help`) or their assigned Arabic name (e.g., `احصل-مساعدة`).
+- **Arabic Parameter Name Support:**
+  - Updated `ArabicNameAttribute` to be applicable to properties (parameters).
+  - Modified the parameter binding logic in `Executor.cs` to check for `ArabicNameAttribute` on properties and attempt binding using the Arabic name first, falling back to the English name.
+  - Cmdlet parameters can now be specified using either their English name (e.g., `-CommandName`) or their assigned Arabic name (e.g., `-الاسم`).
+
 ## [0.6.0] - 2025-05-02
 
 ### Changed
