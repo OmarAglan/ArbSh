@@ -13,6 +13,7 @@ namespace ArbSh.Console.Commands
     public class GetHelpCmdlet : CmdletBase
     {
         [Parameter(Position = 0, HelpMessage = "The name of the command to get help for.")]
+        [ArabicName("الاسم")] // Added Arabic name for the parameter
         public string? CommandName { get; set; }
 
         [Parameter(HelpMessage = "Display the full help topic.")]

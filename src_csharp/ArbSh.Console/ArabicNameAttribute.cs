@@ -6,7 +6,7 @@ namespace ArbSh.Console
     /// Specifies the Arabic name (alias) for a cmdlet.
     /// This allows invoking the cmdlet using its Arabic name in the shell.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, Inherited = false, AllowMultiple = false)] // Allow on properties too
     public sealed class ArabicNameAttribute : Attribute
     {
         /// <summary>

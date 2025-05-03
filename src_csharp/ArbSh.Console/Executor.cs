@@ -309,15 +309,35 @@ namespace ArbSh.Console
                  var paramAttr = prop.GetCustomAttribute<ParameterAttribute>();
                  if (paramAttr == null) continue;
 
-                 string paramName = $"-{prop.Name}"; // Convention: -PropertyName
+                 // Get English and potential Arabic names
+                 string englishParamName = $"-{prop.Name}";
+                 var arabicNameAttr = prop.GetCustomAttribute<ArabicNameAttribute>();
+                 string? arabicParamName = arabicNameAttr != null ? $"-{arabicNameAttr.Name}" : null;
+
                  object? valueToSet = null;
                  bool found = false;
+                 string? boundName = null; // Keep track of which name was used for binding
+                 string? namedValue = null; // The value found via named parameter
 
-                 // 1. Try binding by parameter name
-                 if (command.Parameters.ContainsKey(paramName))
+                 // 1. Try binding by parameter name (Arabic first, then English)
+                 if (arabicParamName != null && command.Parameters.ContainsKey(arabicParamName))
                  {
-                     string? namedValue = command.Parameters[paramName]; // May be empty for switch parameters
+                     namedValue = command.Parameters[arabicParamName];
+                     boundName = arabicParamName;
+                     found = true;
+                     System.Console.WriteLine($"DEBUG (Binder): Found parameter via Arabic name '{boundName}'.");
+                 }
+                 else if (command.Parameters.ContainsKey(englishParamName))
+                 {
+                     namedValue = command.Parameters[englishParamName];
+                     boundName = englishParamName;
+                     found = true;
+                     System.Console.WriteLine($"DEBUG (Binder): Found parameter via English name '{boundName}'.");
+                 }
 
+                 // If found by either name, process the value
+                 if (found)
+                 {
                      // Handle boolean switch parameters
                      if (prop.PropertyType == typeof(bool))
                      {
@@ -333,7 +353,7 @@ namespace ArbSh.Console
                              else
                              {
                                  // Any other value associated with a switch is an error
-                                 throw new ParameterBindingException($"A value '{namedValue}' cannot be specified for the boolean (switch) parameter '{paramName}'.");
+                                 throw new ParameterBindingException($"A value '{namedValue}' cannot be specified for the boolean (switch) parameter '{boundName}'.");
                              }
                          }
                          else
@@ -341,11 +361,11 @@ namespace ArbSh.Console
                              // Switch name was present, but no value followed it (or value was empty string)
                              valueToSet = true; // Default behavior for a present switch
                          }
-                         found = true;
-                         System.Console.WriteLine($"DEBUG (Binder): Bound switch parameter '{paramName}' to {valueToSet}.");
+                         // 'found' is already true here
+                         System.Console.WriteLine($"DEBUG (Binder): Bound switch parameter '{boundName}' to {valueToSet}.");
                      }
                      // Handle non-boolean named parameters
-                     else if (!string.IsNullOrEmpty(namedValue)) // Only bind if parser provided a non-empty value
+                     else if (!string.IsNullOrEmpty(namedValue)) // Only bind if parser provided a non-empty value (and it's not a bool prop)
                      {
                          try
                          {
@@ -360,19 +380,27 @@ namespace ArbSh.Console
                                  // Fallback for basic types if no specific converter found/applicable
                                  valueToSet = Convert.ChangeType(namedValue, prop.PropertyType);
                              }
-                             found = true;
-                             System.Console.WriteLine($"DEBUG (Binder): Bound named parameter '{paramName}' to value '{valueToSet}' (Type: {prop.PropertyType.Name})");
+                             // 'found' is already true here
+                             System.Console.WriteLine($"DEBUG (Binder): Bound named parameter '{boundName}' to value '{valueToSet}' (Type: {prop.PropertyType.Name})");
                          }
                          catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
                          {
                               // Throw specific binding exception for conversion failure
-                              throw new ParameterBindingException($"Cannot process argument transformation for parameter '{paramName}'. Cannot convert value \"{namedValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
+                              throw new ParameterBindingException($"Cannot process argument transformation for parameter '{boundName}'. Cannot convert value \"{namedValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
                               {
-                                  ParameterName = prop.Name
+                                  ParameterName = prop.Name // Still use property name for identification
                               };
                          }
                      }
+                     // If found is true but namedValue is null/empty and it's not a bool, it means a named param was provided without a value (e.g., "-Name -OtherParam")
+                     // This is generally an error unless it's a switch.
+                     else if (string.IsNullOrEmpty(namedValue) && prop.PropertyType != typeof(bool))
+                     {
+                         throw new ParameterBindingException($"Parameter '{boundName}' requires a value, but none was provided.");
+                     }
+                     // If found is true, but valueToSet is still null (e.g., switch param where value wasn't explicitly true/false), it's handled above.
                  }
+                 // Note: 'found' now indicates if the parameter was specified by *name* (Arabic or English)
 
                  // 2. Try binding by position (if not found by name and attribute specifies position)
                  // Also handle array binding for positional parameters here.
@@ -459,15 +487,16 @@ namespace ArbSh.Console
                      catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
                      {
                           // Throw specific binding exception for conversion failure
-                          throw new ParameterBindingException($"Cannot process argument transformation for parameter '{prop.Name}' at position {paramAttr.Position}. Cannot convert value \"{positionalValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
+                          throw new ParameterBindingException($"Cannot process argument transformation for parameter '{englishParamName}' at position {paramAttr.Position}. Cannot convert value \"{positionalValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
                           {
-                              ParameterName = prop.Name
+                              ParameterName = prop.Name // Still use property name for identification
                           };
                      }
                      } // <-- Correct placement for the 'else if' block's closing brace
                  } // <-- Correct placement for the 'if (!found && paramAttr.Position >= 0)' block's closing brace
 
-                 // 3. Set the property value if found (This should be inside the foreach loop)
+                 // 3. Set the property value if bound (either by name or position) and value is ready
+                 // Note: 'found' here means bound by *name* OR *position*.
                  if (found && valueToSet != null)
                  {
                      try
@@ -482,11 +511,19 @@ namespace ArbSh.Console
                      }
                  }
 
-                 // 4. Check for Mandatory parameters that were not bound
+                 // 4. Check for Mandatory parameters that were not bound by name or position
                  if (!found && paramAttr.Mandatory)
                  {
+                      // Construct error message mentioning both names if applicable
+                      string missingParamMsg = $"Missing mandatory parameter '{englishParamName}'";
+                      if (arabicParamName != null)
+                      {
+                          missingParamMsg += $" (or '{arabicParamName}')";
+                      }
+                      missingParamMsg += $" for cmdlet '{cmdlet.GetType().Name}'.";
+
                       // Throw an exception to stop execution of this cmdlet's task
-                      throw new ParameterBindingException($"Missing mandatory parameter '{paramName}' for cmdlet '{cmdlet.GetType().Name}'.")
+                      throw new ParameterBindingException(missingParamMsg)
                       {
                           ParameterName = prop.Name // Store the property name
                       };
