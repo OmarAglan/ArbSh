@@ -26,12 +26,13 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
 -   **Basic REPL:** A functional Read-Eval-Print Loop exists in `Program.cs`.
 -   **Basic Parsing:** The parser (`Parser.cs`) can now:
     -   Tokenize input respecting double quotes (`"..."`).
-    -   Handle general escape characters (`\`) both inside and outside quotes.
+    -   Handle general escape characters (`\`) both outside quotes and within double quotes (escaping `$`, `"`, `\`). Single quotes treat content literally.
     -   Identify separate statements using semicolons (`;`) respecting quotes/escapes.
     -   Identify pipeline stages using pipes (`|`) respecting quotes/escapes.
     -   Differentiate command names (including hyphenated), arguments (including filenames with dots), and named parameters (`-`).
     -   Perform basic variable expansion (`$varName`) during tokenization (respecting escapes `\$`).
-    -   Detect basic output redirection (`>`, `>>`) and correctly parse the associated filename.
+    -   **Advanced Redirection:** Detect and parse advanced redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `2>&1`, etc.), storing detailed rules (source stream, target type, target path/handle, append mode) in `ParsedCommand`.
+    -   **Sub-expressions:** Recognize `$()` syntax, recursively parse the inner command(s), and store the result (currently a `List<ParsedCommand>`) as an argument object. *(Execution of sub-expressions is not yet implemented)*.
 -   **Parameter Binding:** Added `ParameterAttribute` (with pipeline support flags) and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks, boolean switches, basic type conversion (`TypeConverter`/`Convert.ChangeType`), improved error reporting for conversion failures, and binding remaining positional arguments to array parameters. **Update:** Parameter binder now also recognizes the `[ArabicName]` attribute on cmdlet properties, allowing parameters to be specified using assigned Arabic names (e.g., `-الاسم`).
 -   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation. **Update:** Command discovery now also recognizes the `[ArabicName]` attribute on cmdlet classes, allowing cmdlets to be invoked using assigned Arabic names (e.g., `احصل-مساعدة`).
 -   **Concurrent Pipeline:** The `Executor` now uses `Task` and `BlockingCollection` to execute pipeline stages concurrently within each statement. `CmdletBase` includes logic (`BindPipelineParameters`) to handle binding pipeline input (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`).
@@ -39,7 +40,7 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
 -   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, `CHANGELOG.md`, etc.) has been updated to reflect the C# refactoring status.
 -   **C Code Reference:** The original C source code and build files have been moved to the `old_c_code/` directory for reference during the porting process.
 
-*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse commands with quoted arguments, escape sequences, basic variable expansion (`$var`), pipelines (`|`), and statement separators (`;`), discover cmdlets (including Arabic aliases via `[ArabicName]` attribute), perform parameter binding (including pipeline input, basic arrays, and Arabic parameter aliases via `[ArabicName]` attribute), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. However, advanced parsing (complex variable expansion, robust redirection), more robust type conversion, comprehensive error handling, and full Arabic text rendering support are still needed.*
+*The shell can now be built and run via `dotnet run`, providing a basic prompt. It can parse commands with quoted arguments, escape sequences (including within double quotes), basic variable expansion (`$var`), pipelines (`|`), statement separators (`;`), advanced redirection operators (`2>`, `>&1`, etc.), and sub-expressions (`$(...)`). It can discover cmdlets (including Arabic aliases via `[ArabicName]` attribute), perform parameter binding (including pipeline input, basic arrays, and Arabic parameter aliases via `[ArabicName]` attribute), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. However, execution of sub-expressions, parsing of type literals (`[int]`), robust type conversion, comprehensive error handling, and full Arabic text rendering support are still needed.*
 
 ## New Code Structure
 
@@ -78,8 +79,9 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
 ## Known Issues and Limitations (Current State)
 
 -   **Parsing/Tokenization:**
-    -   Logic is still basic (e.g., only simple variable expansion, rudimentary redirection handling, no complex expression parsing like sub-expressions `$(...)`).
-    -   Complex escape sequence handling in the tokenizer is incomplete (e.g., `\\"`, `\\ ` are not parsed correctly). (See Roadmap Phase 3)
+    -   Sub-expression `$(...)` parsing is implemented, but execution is not.
+    -   Type literals `[int]` are not yet parsed.
+    -   Variable expansion is basic (no nested variables or complex expressions).
 -   **Parameter Binding:**
     -   Type conversion is basic (relies on `TypeConverter` and `Convert.ChangeType`, no complex type handling like script blocks or hashtables).
     -   Does not yet support named array parameters or advanced pipeline binding scenarios (e.g., binding specific properties of complex input objects without `ValueFromPipelineByPropertyName`).

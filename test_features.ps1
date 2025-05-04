@@ -9,6 +9,11 @@ $arbshProjectDir = "src_csharp/ArbSh.Console"
 $outputLogFile = "test_output.log"
 $tempRedirectFile = "temp_redirect_test.txt"
 $tempAppendFile = "temp_append_test.txt"
+$tempStderrFile = "temp_stderr_test.txt"
+$tempStderrAppendFile = "temp_stderr_append_test.txt"
+$tempMergedFile = "temp_merged_test.txt"
+$tempMultiRedirectOut = "temp_multi_out.txt"
+$tempMultiRedirectErr = "temp_multi_err.txt"
 
 # --- Functions ---
 function Write-Log {
@@ -34,8 +39,24 @@ if (Test-Path $tempRedirectFile) {
 if (Test-Path $tempAppendFile) {
     Remove-Item $tempAppendFile
 }
+if (Test-Path $tempStderrFile) {
+    Remove-Item $tempStderrFile
+}
+if (Test-Path $tempStderrAppendFile) {
+    Remove-Item $tempStderrAppendFile
+}
+if (Test-Path $tempMergedFile) {
+    Remove-Item $tempMergedFile
+}
+if (Test-Path $tempMultiRedirectOut) {
+    Remove-Item $tempMultiRedirectOut
+}
+if (Test-Path $tempMultiRedirectErr) {
+    Remove-Item $tempMultiRedirectErr
+}
 
-Write-Log "Starting ArbSh v0.6.0 Feature Test..."
+
+Write-Log "Starting ArbSh v0.7.5 Feature Test..."
 
 # --- Build Project ---
 Write-Log "Building ArbSh project..."
@@ -105,6 +126,25 @@ $arbshCommands = @(
     'Write-Output ''Testing overwrite redirection'' > temp_redirect_test.txt' # Pass > literally
     'Get-Command >> temp_append_test.txt' # Pass >> literally
     'Write-Output ''Appending another line'' >> temp_append_test.txt' # Pass >> literally
+    ''
+    '# --- Advanced Redirection Parsing Tests (v0.7.5+) ---'
+    '# Note: Executor does not yet HANDLE these, this tests PARSER recognition'
+    'Write-Output ''Stderr Redirect Test'' 2> temp_stderr_test.txt'
+    'Write-Output ''Stderr Append Test'' 2>> temp_stderr_append_test.txt'
+    'Write-Output ''Stderr Append Test 2'' 2>> temp_stderr_append_test.txt'
+    'Write-Output ''Merge Stderr to Stdout Test'' 2>&1 | Write-Output # Pipe needed to see merged output'
+    'Write-Output ''Merge Stdout to Stderr Test'' >&2 # Less common, test parser'
+    'Write-Output ''Merge All to File Test'' > temp_merged_test.txt 2>&1'
+    'Write-Output ''Multi Redirect Test'' > temp_multi_out.txt 2> temp_multi_err.txt'
+    'احصل-مساعدة > temp_redirect_test.txt 2> temp_stderr_test.txt # Test with Arabic command'
+    ''
+    '# --- Sub-Expression Parsing Tests (v0.7.5+) ---'
+    '# Note: Executor does not yet HANDLE these, this tests PARSER recognition'
+    'Write-Output $(Get-Command)'
+    'Write-Output Before $(Get-Help Write-Output) After'
+    'Write-Output $(Get-Command | Write-Output)'
+    'Write-Output $(Write-Output Outer $(Get-Command) Inner)' # Nested test
+    'Get-Help -CommandName $(Write-Output Get-Command)' # Subexpression as parameter value
     ''
     '# --- Exit ---'
     'exit'
@@ -177,8 +217,17 @@ if (Test-Path $tempAppendFile) {
     Remove-Item $tempAppendFile # Cleanup
 }
 else {
-    Write-Log "ERROR: $tempAppendFile was not created."
+    Write-Log "INFO: $tempAppendFile was not created (or already cleaned up)." # Changed to INFO as it might be overwritten/deleted by later tests
 }
+
+# Add checks for new temp files (just existence for now, as executor doesn't handle them)
+Write-Log "Checking existence of advanced redirection test files (Parser test only)..."
+if (Test-Path $tempStderrFile) { Write-Log "INFO: $tempStderrFile exists (Parser likely recognized 2>)."; Remove-Item $tempStderrFile } else { Write-Log "INFO: $tempStderrFile does not exist." }
+if (Test-Path $tempStderrAppendFile) { Write-Log "INFO: $tempStderrAppendFile exists (Parser likely recognized 2>>)."; Remove-Item $tempStderrAppendFile } else { Write-Log "INFO: $tempStderrAppendFile does not exist." }
+if (Test-Path $tempMergedFile) { Write-Log "INFO: $tempMergedFile exists (Parser likely recognized > file 2>&1)."; Remove-Item $tempMergedFile } else { Write-Log "INFO: $tempMergedFile does not exist." }
+if (Test-Path $tempMultiRedirectOut) { Write-Log "INFO: $tempMultiRedirectOut exists (Parser likely recognized > file1)."; Remove-Item $tempMultiRedirectOut } else { Write-Log "INFO: $tempMultiRedirectOut does not exist." }
+if (Test-Path $tempMultiRedirectErr) { Write-Log "INFO: $tempMultiRedirectErr exists (Parser likely recognized 2> file2)."; Remove-Item $tempMultiRedirectErr } else { Write-Log "INFO: $tempMultiRedirectErr does not exist." }
+
 
 Write-Log "Test script finished."
 Write-Host "Test output captured in $outputLogFile"

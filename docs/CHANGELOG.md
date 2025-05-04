@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - YYYY-MM-DD
+
+### Added
+- (Future changes go here)
+
+## [0.7.5] - 2025-05-04
+
+### Added
+- **Advanced Redirection Parsing:**
+    - Extended the tokenizer (`Parser.cs`) to recognize advanced redirection operators like `2>`, `2>>`, `>&1`, `2>&1`, `>>&1`, etc., as distinct tokens.
+    - Updated the pipeline stage parser (`Parser.cs`) to correctly interpret these tokens, determine source/target streams/files, and handle append mode.
+    - Modified `ParsedCommand.cs` to store detailed redirection information using a `List<RedirectionInfo>` structure, replacing the previous simple output path/append properties.
+- **Refined Escape Sequence Handling:**
+    - Corrected escape sequence logic within double-quoted strings (`Parser.cs`) to only escape `$`, `"`, and `\` when preceded by `\`, aligning better with expected shell behavior.
+- **Sub-expression Parsing (Initial):**
+    - Added logic to the tokenizer (`Parser.cs`) to recognize `$(` as a distinct token.
+    - Updated the pipeline stage parser (`Parser.cs`) to detect `$(` tokens and consume subsequent tokens until a matching `)` is found, handling nested parentheses.
+    - The content within `$()` is currently added as a single placeholder argument string (e.g., `"$ (inner command)"`) to `ParsedCommand.Arguments`. *Note: Execution of sub-expressions is not yet implemented.*
+
+## [0.7.0] - 2025-05-03
+
 ## [0.7.0] - 2025-05-03
 
 ### Added

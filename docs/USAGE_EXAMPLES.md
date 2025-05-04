@@ -227,6 +227,28 @@ The backslash (`\`) is used as an escape character. It causes the character imme
     Write-Output
     # ...
     ```
+*   **Advanced Redirection (v0.7.5+):** The parser now recognizes more complex redirection operators.
+    *   Redirect Standard Error (stderr, stream 2) to a file:
+        ```powershell
+        ArbSh> Some-Command-That-Errors 2> error.log
+        ```
+    *   Append Standard Error (stderr) to a file:
+        ```powershell
+        ArbSh> Another-Command-That-Errors 2>> error.log
+        ```
+    *   Redirect Standard Error (stderr) to Standard Output (stdout, stream 1):
+        ```powershell
+        ArbSh> Command-With-Output-And-Error 2>&1 | Write-Output
+        ```
+    *   Redirect Standard Output (stdout) to a file and Standard Error (stderr) to the same file (by merging stderr to stdout first):
+        ```powershell
+        ArbSh> Command-With-Output-And-Error > output_and_error.log 2>&1
+        ```
+    *   Redirect Standard Output (stdout) to a file and Standard Error (stderr) to a different file:
+        ```powershell
+        ArbSh> Command-With-Output-And-Error > output.log 2> error.log
+        ```
+    *(Note: The actual handling of these redirections during command execution is not yet implemented in the `Executor`.)*
 
 ## Variable Expansion (`$variableName`)
 
