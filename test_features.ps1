@@ -146,6 +146,29 @@ $arbshCommands = @(
     'Write-Output $(Write-Output Outer $(Get-Command) Inner)' # Nested test
     'Get-Help -CommandName $(Write-Output Get-Command)' # Subexpression as parameter value
     ''
+    '# --- Mixed Script Tests (v0.7.5+) ---'
+    '# Test parser handling of mixed scripts in various contexts'
+    'Write-Output "مرحبا World"' # Mixed script string literal (double quotes)
+    'Write-Output ''Hello عالم''' # Mixed script string literal (single quotes)
+    'Write-Output Argument1 عربي Argument3' # Mixed script arguments
+    '# Test-Array-Binding عربي English ثالثا # Mixed script array arguments' # Command doesn't exist, but tests parsing
+    'Get-Help -CommandName Write-Output -Paramعربي Value # Mixed script parameter name (should be ignored by binder)'
+    'Get-Help -CommandName Write-Output -اسمEnglish Value # Mixed script parameter name (should be ignored by binder)'
+    'Write-Output "مرحبا"|Write-Output "World" # Mixed script separated by pipe'
+    'Write-Output "Hello";Write-Output "عالم" # Mixed script separated by semicolon'
+    'Write-Output $testVar # Should expand'
+    '# Write-Output $متغير_عربي # Variable expansion with Arabic name (needs variable definition first)'
+    ''
+    '# --- Mixed Script Edge Cases (Parser Robustness) ---'
+    'Write-Output Commandمرحبا # Mixed identifier'
+    'Write-Output اسمCommand # Mixed identifier'
+    'Write-Output Command-اسم # Mixed identifier with hyphen'
+    'Write-Output اسم-Command # Mixed identifier with hyphen'
+    'Write-Output Command1>ملف.txt # Operator touching Arabic'
+    'Write-Output Command2<ملف.txt # Operator touching Arabic'
+    'احصل-مساعدة>file.txt # Arabic command touching operator'
+    'احصل-مساعدة|Write-Output # Arabic command touching operator'
+    ''
     '# --- Exit ---'
     'exit'
 )

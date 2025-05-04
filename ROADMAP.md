@@ -40,7 +40,7 @@ To create a powerful, extensible shell environment built on .NET that:
 
 -   [🚧] Extend the C# parser and tokenizer to correctly identify and handle commands, parameters, and potentially string literals written in Arabic script. *(Basic tokenization for Arabic letters and handling of hyphenated names implemented)*.
 -   [🚧] Implement mechanisms to map Arabic command names (e.g., `احصل-محتوى`) to their corresponding C# cmdlet classes. *(Mapping via `[ArabicName]` attribute implemented in `CommandDiscovery` and `Executor` for commands and parameters)*.
--   [ ] Handle potential ambiguities or interactions between Arabic and English syntax elements.
+-   [✅] Handle potential ambiguities or interactions between Arabic and English syntax elements. *(Parser logic allows mixed scripts in identifiers; added specific tests in `test_features.ps1`)*.
 -   [🚧] **Refine Parser (Advanced):**
     -   [✅] Implement parsing for advanced redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `2>&1`, etc.) in tokenizer and pipeline stage parser.
     -   [✅] Fix complex escape sequence handling in tokenizer (removed backtick escape, correct `\` handling in double quotes).
