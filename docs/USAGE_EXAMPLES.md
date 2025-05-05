@@ -211,7 +211,7 @@ The backslash (`\`) is used as an escape character. It causes the character imme
     # ... (DEBUG output) ...
     Value is | this
     ```
-*   **Output Redirection (`>` Overwrite, `>>` Append):** Writes the final output of a pipeline to a file instead of the console.
+*   **Output Redirection (`>` Overwrite, `>>` Append):** Writes the final standard output (stdout) of a pipeline to a file instead of the console.
     ```powershell
     ArbSh> Get-Command | Write-Output > commands.txt
     ArbSh> Write-Output "Adding this line" >> commands.txt
@@ -230,29 +230,31 @@ The backslash (`\`) is used as an escape character. It causes the character imme
 *   **Advanced Redirection (v0.7.5+):** The parser now recognizes more complex redirection operators.
     *   Redirect Standard Error (stderr, stream 2) to a file:
         ```powershell
-        ArbSh> Some-Command-That-Errors 2> error.log
+        ArbSh> Some-Command-That-Errors 2> error.log # Creates/overwrites error.log with stderr
         ```
     *   Append Standard Error (stderr) to a file:
         ```powershell
-        ArbSh> Another-Command-That-Errors 2>> error.log
+        ArbSh> Another-Command-That-Errors 2>> error.log # Appends stderr to error.log
         ```
     *   Redirect Standard Error (stderr) to Standard Output (stdout, stream 1):
         ```powershell
-        ArbSh> Command-With-Output-And-Error 2>&1 | Write-Output
+        ArbSh> Command-With-Output-And-Error 2>&1 | Write-Output # Merges stderr into stdout stream
         ```
     *   Redirect Standard Output (stdout) to a file and Standard Error (stderr) to the same file (by merging stderr to stdout first):
         ```powershell
-        ArbSh> Command-With-Output-And-Error > output_and_error.log 2>&1
+        ArbSh> Command-With-Output-And-Error > output_and_error.log 2>&1 # Both streams go to the file
         ```
     *   Redirect Standard Output (stdout) to a file and Standard Error (stderr) to a different file:
         ```powershell
-        ArbSh> Command-With-Output-And-Error > output.log 2> error.log
+        ArbSh> Command-With-Output-And-Error > output.log 2> error.log # Separates streams
         ```
-    *(Note: The actual handling of these redirections during command execution is not yet implemented in the `Executor`.)*
+    *(Note: The parser recognizes all these forms. The `Executor` currently handles stdout (`>`, `>>`) and stderr (`2>`, `2>>`) file redirection. Stream merging (`2>&1`, `1>&2`) is parsed but not yet handled during execution.)*
 
 ## Variable Expansion (`$variableName`)
 
-The parser now supports basic variable expansion. Variables start with `$` followed by their name. The parser replaces the variable token with its stored value *before* the token is used as an argument or a parameter value.
+**Note:** Variable expansion is currently broken due to tokenizer changes and needs reimplementation in the parser. The examples below show the intended behavior.
+
+Variables start with `$` followed by their name. The parser *should* replace the variable token with its stored value *before* the token is used as an argument or a parameter value.
 
 **Note:** Variable storage is currently a placeholder within the parser itself. A proper session state management system is needed for user-defined variables. The following examples use predefined test variables: `$testVar`, `$pathExample`, `$emptyVar`.
 

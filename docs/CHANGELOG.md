@@ -5,26 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - YYYY-MM-DD
+## [Unreleased] - 2025-05-05
 
-### Added
-- (Future changes go here)
+### Changed
+- **Tokenizer Refactoring:** Replaced the internal state-machine tokenizer with a new Regex-based tokenizer (`Parsing/RegexTokenizer.cs`) using Unicode properties (`\p{L}`) for potentially better handling of mixed-script identifiers and complex syntax elements. Created `Parsing/Token.cs` for token definitions. Integrated the new tokenizer into `Parser.cs`.
+- **Parser Logic:** Updated redirection and argument/parameter parsing logic in `Parser.cs` to work with the new `List<Token>` structure.
+- **Redirection Parsing:** Refined Regex patterns in `RegexTokenizer.cs` and parsing logic in `Parser.cs` to correctly identify and parse all standard redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`).
+- **Executor Redirection Handling:**
+    - Implemented handling for stdout file redirection (`>`, `>>`) in `Executor.cs`.
+    - Implemented handling for stderr file redirection (`2>`, `2>>`) in `Executor.cs`.
+    - Fixed null path error when no redirection was specified.
+- **Error Handling:** Added `IsError` flag to `PipelineObject.cs` and updated `GetHelpCmdlet.cs` to use it for "command not found" errors.
+- **Test Script:** Updated `test_features.ps1` to log temporary file contents line-by-line to avoid `Add-Content` stream errors. Changed default file encoding for `test_output.log` to UTF-8 with BOM.
 
-## [0.7.5] - 2025-05-04
+### Known Issues / Regressions
+- **Input Encoding:** Persistent UTF-8 input corruption when running via PowerShell `Start-Process` with redirected stdin. Arabic commands/parameters arrive garbled in the C# app, blocking further testing/development of Arabic features.
+- **Variable Expansion:** Variable expansion (`$var`) is currently broken post-tokenizer refactor and needs reimplementation in the parser's argument handling logic.
+- **Stream Redirection Execution:** Stream merging (`2>&1`, `1>&2`) is parsed correctly but not yet implemented in the `Executor`.
+- **Sub-expression Execution:** Sub-expression parsing (`$(...)`) is implemented, but execution is not.
+- **Mixed Identifiers:** Tokenizer still needs refinement for mixed-script identifiers (e.g., `Commandمرحبا`).
+- **Executor Error Handling:** Executor needs to use the `IsError` flag from `PipelineObject` to route output to the correct stream (stdout/stderr) or file.
 
-### Added
-- **Advanced Redirection Parsing:**
-    - Extended the tokenizer (`Parser.cs`) to recognize advanced redirection operators like `2>`, `2>>`, `>&1`, `2>&1`, `>>&1`, etc., as distinct tokens.
-    - Updated the pipeline stage parser (`Parser.cs`) to correctly interpret these tokens, determine source/target streams/files, and handle append mode.
-    - Modified `ParsedCommand.cs` to store detailed redirection information using a `List<RedirectionInfo>` structure, replacing the previous simple output path/append properties.
 - **Refined Escape Sequence Handling:**
     - Corrected escape sequence logic within double-quoted strings (`Parser.cs`) to only escape `$`, `"`, and `\` when preceded by `\`, aligning better with expected shell behavior.
 - **Sub-expression Parsing (Initial):**
     - Added logic to the tokenizer (`Parser.cs`) to recognize `$(` as a distinct token.
     - Updated the pipeline stage parser (`Parser.cs`) to detect `$(` tokens and consume subsequent tokens until a matching `)` is found, handling nested parentheses.
     - The content within `$()` is currently added as a single placeholder argument string (e.g., `"$ (inner command)"`) to `ParsedCommand.Arguments`. *Note: Execution of sub-expressions is not yet implemented.*
-
-## [0.7.0] - 2025-05-03
 
 ## [0.7.0] - 2025-05-03
 

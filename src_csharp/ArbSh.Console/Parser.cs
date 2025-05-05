@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Linq; // Needed for Skip
 using System.Text; // Needed for StringBuilder
+using System.Text.RegularExpressions; // Needed for Regex.Match
+using ArbSh.Console.Parsing; // Add using for Token types
 
 namespace ArbSh.Console
 {
@@ -26,47 +30,8 @@ namespace ArbSh.Console
             return _variables.TryGetValue(variableName, out var value) ? value : string.Empty;
         }
 
-        /// <summary>
-        /// Checks if a character is an Arabic letter (U+0621 to U+064A).
-        /// </summary>
-        private static bool IsArabicLetterChar(char c)
-        {
-            // Arabic letters range U+0621 to U+064A.
-            // Consider adding U+0660-U+0669 for Eastern Arabic numerals if needed in identifiers.
-            return (c >= '\u0621' && c <= '\u064A');
-            // Note: The previous broader check (U+0600-U+06FF) included many non-letter characters.
-        }
-
-        /// <summary>
-        /// Checks if a character is valid *within* an identifier (command name, parameter name, variable name).
-        /// Allows Latin letters, digits, Arabic letters, underscore, and hyphen.
-        /// </summary>
-        private static bool IsValidIdentifierChar(char c)
-        {
-            return char.IsLetterOrDigit(c) || IsArabicLetterChar(c) || c == '_' || c == '-';
-        }
-
-        /// <summary>
-        /// Checks if a character is valid *within* a general argument or path token.
-        /// Allows identifier characters plus common path characters like '.', '\', '/'.
-        /// </summary>
-        private static bool IsValidArgumentChar(char c)
-        {
-            // Extend identifier chars with common path/argument chars
-            return IsValidIdentifierChar(c) || c == '.' || c == '\\' || c == '/';
-            // TODO: Consider adding other potentially valid argument chars if needed.
-        }
-
-        /// <summary>
-        /// Checks if a character is valid to *start* an identifier.
-        /// Allows Latin letters, Arabic letters, and underscore.
-        /// (Typically identifiers don't start with digits or hyphens).
-        /// </summary>
-        private static bool IsValidIdentifierStartChar(char c)
-        {
-             return char.IsLetter(c) || IsArabicLetterChar(c) || c == '_';
-        }
-
+        // NOTE: Old state machine tokenizer and helper methods removed (IsArabicLetterChar, IsValidIdentifierChar, etc.)
+        //       as tokenization is now handled by RegexTokenizer.
 
         /// <summary>
         /// Parses a line of input into a list of statements, where each statement is a list of commands for a pipeline.
@@ -229,157 +194,106 @@ namespace ArbSh.Console
         /// </summary>
         private static ParsedCommand? ParseSinglePipelineStage(string stageInput)
         {
-            // Tokenize the current pipeline stage input using the state machine
-            List<string> tokens = TokenizeInput(stageInput); // Use the new tokenizer
+            // Tokenize the current pipeline stage input using the new Regex Tokenizer
+            List<Token> tokens = RegexTokenizer.Tokenize(stageInput);
             if (tokens.Count == 0) return null;
 
-            string commandName = tokens[0];
-            List<string> remainingTokens = tokens.Skip(1).ToList(); // Start with tokens after command name
+            // First token should be the command name (Identifier)
+            if (tokens[0].Type != TokenType.Identifier)
+            {
+                // Handle error: Expected a command name identifier
+                System.Console.WriteLine($"ERROR (Parser): Expected command name, but got token type {tokens[0].Type} ('{tokens[0].Value}')");
+                return null; // Or throw exception
+            }
+            string commandName = tokens[0].Value;
+            List<Token> remainingTokens = tokens.Skip(1).ToList(); // Start with tokens after command name
 
             // Create the command object early so we can add redirections
-            var parsedCommand = new ParsedCommand(commandName, new List<object>(), new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)); // Changed List<string> to List<object>
+            var parsedCommand = new ParsedCommand(commandName, new List<object>(), new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)); // Arguments list is List<object>
 
             // --- Advanced Redirection Parsing ---
             // Loop through tokens to find and process *all* redirection operators
             // We need to iterate carefully as we remove items from the list
             for (int i = 0; i < remainingTokens.Count; /* No increment here */)
             {
-                string currentToken = remainingTokens[i];
-                int sourceStreamHandle = 1; // Default to stdout
-                bool append = false;
-                string redirectOperator = "";
-                string targetToken = "";
-                ParsedCommand.RedirectionTargetType targetType;
+                Token currentToken = remainingTokens[i];
+                bool processed = false; // Flag to indicate if the token was processed as part of a redirection
 
-                // Identify the redirection operator and source stream
-                if (currentToken == ">" || currentToken == ">>")
+                if (currentToken.Type == TokenType.Operator)
                 {
-                    redirectOperator = currentToken;
-                    sourceStreamHandle = 1;
-                }
-                else if (currentToken.EndsWith(">>") && currentToken.Length > 2 && int.TryParse(currentToken.Substring(0, currentToken.Length - 2), out sourceStreamHandle)) // e.g., "2>>"
-                {
-                     redirectOperator = currentToken;
-                }
-                else if (currentToken.EndsWith(">") && currentToken.Length > 1 && int.TryParse(currentToken.Substring(0, currentToken.Length - 1), out sourceStreamHandle)) // e.g., "2>"
-                {
-                     redirectOperator = currentToken;
-                }
-                else if (currentToken.EndsWith(">&") && currentToken.Length > 2 && int.TryParse(currentToken.Substring(0, currentToken.Length - 2), out sourceStreamHandle)) // e.g., "2>&" (needs target handle)
-                {
-                    redirectOperator = currentToken;
-                }
-                 else if (currentToken.EndsWith(">>&") && currentToken.Length > 3 && int.TryParse(currentToken.Substring(0, currentToken.Length - 3), out sourceStreamHandle)) // e.g., "1>>&" (needs target handle)
-                {
-                    redirectOperator = currentToken;
-                }
-                else if (currentToken == ">&") // Default stdout >& (needs target handle)
-                {
-                    redirectOperator = currentToken;
-                    sourceStreamHandle = 1;
-                }
-                 else if (currentToken == ">>&") // Default stdout >>& (needs target handle)
-                {
-                    redirectOperator = currentToken;
-                    sourceStreamHandle = 1;
-                }
+                    string opValue = currentToken.Value;
+                    ParsedCommand.RedirectionInfo? redirection = TryParseRedirectionOperator(opValue, remainingTokens, i);
 
-                // If we identified a redirection operator
-                if (!string.IsNullOrEmpty(redirectOperator))
-                {
-                    append = redirectOperator.Contains(">>");
-
-                    // Check if a target token exists immediately after the operator
-                    if (i + 1 < remainingTokens.Count)
+                    if (redirection != null)
                     {
-                        targetToken = remainingTokens[i + 1];
+                        parsedCommand.AddRedirection(redirection.Value);
+                        // Determine how many tokens were consumed (1 for stream, 2 for file)
+                        int tokensToRemove = (redirection.Value.TargetType == ParsedCommand.RedirectionTargetType.StreamHandle) ? 1 : 2;
 
-                        // Determine target type (File or Stream Handle)
-                        if (targetToken.StartsWith("&") && targetToken.Length > 1 && int.TryParse(targetToken.Substring(1), out _))
-                        {
-                            targetType = ParsedCommand.RedirectionTargetType.StreamHandle;
-                            // Validate that stream handle redirection operators end with '&'
-                            if (!redirectOperator.EndsWith("&")) {
-                                System.Console.WriteLine($"WARN (Parser): Invalid redirection. Operator '{redirectOperator}' cannot target a stream handle '{targetToken}'.");
-                                i++; // Move past operator, ignore target for now
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            targetType = ParsedCommand.RedirectionTargetType.FilePath;
-                             // Validate that file path redirection operators do NOT end with '&'
-                            if (redirectOperator.EndsWith("&")) {
-                                System.Console.WriteLine($"WARN (Parser): Invalid redirection. Operator '{redirectOperator}' cannot target a file path '{targetToken}'.");
-                                i++; // Move past operator, ignore target for now
-                                continue;
-                            }
-                        }
-
-                        // Create and add redirection info
-                        var redirectionInfo = new ParsedCommand.RedirectionInfo(sourceStreamHandle, targetType, targetToken, append);
-                        parsedCommand.AddRedirection(redirectionInfo);
-
-                        // Remove the operator and the target token from the list
-                        // Remove target first (higher index)
-                        remainingTokens.RemoveAt(i + 1);
+                        // Remove consumed tokens (in reverse index order)
+                        if (tokensToRemove == 2) remainingTokens.RemoveAt(i + 1);
                         remainingTokens.RemoveAt(i);
-                        // Do NOT increment i, as the list shifted and we need to check the new token at index i
-                        continue; // Restart loop iteration from the current index
+                        processed = true;
+                        // Do NOT increment i, list shifted, restart check from current index
+                        continue;
                     }
-                    else
+                    // Handle cases where the token looked like an operator but wasn't valid redirection
+                    else if (opValue.Contains(">")) // If it looked like redirection but failed parsing
                     {
-                        // Operator found, but no target token follows
-                        System.Console.WriteLine($"WARN (Parser): Redirection operator '{redirectOperator}' found without a target.");
-                        // Remove just the operator token
-                        remainingTokens.RemoveAt(i);
-                        // Do NOT increment i
-                        continue; // Restart loop iteration
+                         System.Console.WriteLine($"WARN (Parser): Failed to parse redirection for operator token '{opValue}'.");
+                         remainingTokens.RemoveAt(i); // Remove the invalid operator token
+                         processed = true;
+                         continue; // Restart check from current index
                     }
                 }
 
-                // If the current token was not a redirection operator, move to the next token
-                i++;
+                // If the token wasn't processed as redirection, move to the next one
+                if (!processed)
+                {
+                    i++;
+                }
             }
 
 
-            // --- Argument/Parameter Parsing (using remaining tokens) ---
-            List<object> arguments = parsedCommand.Arguments; // Changed to List<object>
-            Dictionary<string, string> parameters = parsedCommand.Parameters; // Get the dictionary
+            // --- Argument/Parameter Parsing (using remaining tokens AFTER redirection removal) ---
+            List<object> arguments = parsedCommand.Arguments; // Get the arguments list (List<object>)
+            Dictionary<string, string> parameters = parsedCommand.Parameters; // Get the parameters dictionary
 
             for (int i = 0; i < remainingTokens.Count; i++)
             {
-                string currentToken = remainingTokens[i]; // Use remainingTokens here
+                Token currentToken = remainingTokens[i];
 
-                // Check for parameter name (starts with '-' and has more chars)
-                if (currentToken.StartsWith("-") && currentToken.Length > 1)
+                // Check for parameter name
+                if (currentToken.Type == TokenType.ParameterName)
                 {
-                    string paramName = currentToken;
+                    string paramName = currentToken.Value;
                     string? paramValue = null;
 
-                    // Check if the next token exists and is not another parameter
-                    if (i + 1 < remainingTokens.Count && !remainingTokens[i + 1].StartsWith("-")) // Use remainingTokens here
+                    // Check if the next token exists and is NOT another parameter name
+                    if (i + 1 < remainingTokens.Count && remainingTokens[i + 1].Type != TokenType.ParameterName)
                     {
-                        paramValue = remainingTokens[i + 1]; // Use remainingTokens here
+                        // Value can be Identifier, StringLiteral, Variable, etc. Use its Value.
+                        paramValue = remainingTokens[i + 1].Value;
                         i++; // Consume the value token
                     }
                     parameters[paramName] = paramValue ?? string.Empty; // Store even if value is null (for switch parameters)
                 }
                 // --- SubExpression Parsing ---
-                else if (currentToken == "$(") // Check for subexpression *before* treating as regular argument
+                else if (currentToken.Type == TokenType.SubExpressionStart) // Check for subexpression start token '$('
                 {
-                    var subExpressionTokens = new List<string>();
+                    var subExpressionTokens = new List<Token>(); // Store Tokens within subexpression
                     int parenNestingLevel = 1; // Start at 1 due to the opening '$('
                     i++; // Move past the '$(' token
 
                     while (i < remainingTokens.Count)
                     {
-                        string subToken = remainingTokens[i];
-                        if (subToken == "(" || subToken == "$(") // Handle nested regular or sub-expressions
+                        Token subToken = remainingTokens[i];
+                        // Use GroupStart/SubExpressionStart and GroupEnd/SubExpressionEnd for nesting
+                        if (subToken.Type == TokenType.GroupStart || subToken.Type == TokenType.SubExpressionStart)
                         {
                             parenNestingLevel++;
                         }
-                        else if (subToken == ")")
+                        else if (subToken.Type == TokenType.GroupEnd || subToken.Type == TokenType.SubExpressionEnd)
                         {
                             parenNestingLevel--;
                             if (parenNestingLevel == 0)
@@ -395,20 +309,19 @@ namespace ArbSh.Console
                     if (parenNestingLevel != 0)
                     {
                         System.Console.WriteLine("WARN (Parser): Unterminated subexpression '$()' found.");
-                        // Decide how to handle - maybe add the tokens collected so far as arguments?
-                        // For now, let's just add what we collected.
-                        arguments.AddRange(subExpressionTokens.Cast<object>()); // Cast strings to object for AddRange
+                        // Add collected tokens as raw string arguments for now?
+                        arguments.AddRange(subExpressionTokens.Select(t => t.Value).Cast<object>());
                     }
                     else
                     {
                         // Successfully parsed subexpression.
-                        // Successfully parsed subexpression.
-                        // Recursively parse the inner content.
-                        string subExpressionInput = string.Join(" ", subExpressionTokens);
+                        // Convert sub-tokens back to a string to re-parse recursively.
+                        // This is inefficient but simpler for now than directly parsing token list.
+                        // TODO: Improve subexpression handling to directly parse token list?
+                        string subExpressionInput = string.Join(" ", subExpressionTokens.Select(t => t.Value)); // Reconstruct string
                         System.Console.WriteLine($"DEBUG (Parser): Recursively parsing subexpression content: '{subExpressionInput}'");
-                        List<List<ParsedCommand>> subStatements = Parse(subExpressionInput);
+                        List<List<ParsedCommand>> subStatements = Parse(subExpressionInput); // Recursive call
 
-                        // TODO: Handle multiple statements within subexpression? For now, assume one.
                         if (subStatements.Count > 0)
                         {
                             // Add the list of commands from the first statement as the argument.
@@ -418,16 +331,31 @@ namespace ArbSh.Console
                         else
                         {
                             System.Console.WriteLine($"WARN (Parser): Subexpression '$({subExpressionInput})' parsed into zero statements.");
-                            // Add an empty list or null? Or nothing? Add empty list for now.
-                            arguments.Add(new List<ParsedCommand>());
+                            arguments.Add(new List<ParsedCommand>()); // Add empty list
                         }
                         // 'i' is already positioned after the closing ')' due to the loop structure
                     }
                 }
-                else // It's a regular argument (not a parameter or subexpression start)
-                {
-                     arguments.Add(currentToken);
-                }
+                 else // It's a regular argument (Identifier, StringLiteral, Variable, etc.)
+                 {
+                     // Check if it's a variable token that needs expansion
+                     if (currentToken.Type == TokenType.Variable)
+                     {
+                         // Extract variable name (remove leading '$')
+                         string varName = currentToken.Value.Substring(1);
+                         string varValue = GetVariableValue(varName);
+                         arguments.Add(varValue); // Add the expanded value
+                         System.Console.WriteLine($"DEBUG (Parser): Expanded variable '{currentToken.Value}' to '{varValue}' during argument parsing.");
+                     }
+                     // TODO: Handle StringLiterals - remove quotes, process escapes?
+                     // else if (currentToken.Type == TokenType.StringLiteralDQ) { ... }
+                     // else if (currentToken.Type == TokenType.StringLiteralSQ) { ... }
+                     else
+                     {
+                         // Add other token types' values directly (Identifier, StringLiteral for now)
+                         arguments.Add(currentToken.Value);
+                     }
+                 }
             }
 
             // Return the command object populated earlier
@@ -435,236 +363,109 @@ namespace ArbSh.Console
         }
 
 
-        // --- State Machine Tokenizer Implementation ---
-        private enum TokenizerStateSM { Default, InDoubleQuotes, InSingleQuotes, EscapeNextDefault, EscapeNextDouble }
-
         /// <summary>
-        /// Tokenizes a single pipeline stage input string using a state machine.
-        /// Respects single quotes (literal content), double quotes (allows escapes and variable expansion),
-        /// and escape character '\' (makes next character literal).
-        /// Handles Arabic letters in identifiers and parameter names like -ParamName or -اسم_معلمة.
+        /// Attempts to parse a redirection operator token and its potential target.
         /// </summary>
-        private static List<string> TokenizeInput(string stageInput)
+        /// <param name="operatorTokenValue">The string value of the operator token (e.g., "2>", ">&1").</param>
+        /// <param name="remainingTokens">The list of remaining tokens after the command name.</param>
+        /// <param name="operatorIndex">The index of the operator token in remainingTokens.</param>
+        /// <returns>A RedirectionInfo struct if parsing is successful, otherwise null.</returns>
+        private static ParsedCommand.RedirectionInfo? TryParseRedirectionOperator(string operatorTokenValue, List<Token> remainingTokens, int operatorIndex)
         {
-            var tokens = new List<string>();
-            var currentToken = new StringBuilder();
-            TokenizerStateSM state = TokenizerStateSM.Default;
+            int sourceHandle = 1; // Default stdout
+            bool append = operatorTokenValue.Contains(">>");
+            bool targetIsStream = operatorTokenValue.EndsWith("&");
 
-            for (int i = 0; i < stageInput.Length; i++)
+            // --- Determine Source Handle ---
+            string handlePart = "";
+            int operatorSymbolIndex = operatorTokenValue.IndexOf('>');
+            if (operatorSymbolIndex > 0) // Check if there are digits before '>'
             {
-                char c = stageInput[i];
-
-                switch (state)
+                handlePart = operatorTokenValue.Substring(0, operatorSymbolIndex);
+                if (!int.TryParse(handlePart, out sourceHandle))
                 {
-                    case TokenizerStateSM.Default:
-                        if (char.IsWhiteSpace(c))
-                        {
-                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
-                        }
-                        else if (c == '"')
-                        {
-                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
-                            state = TokenizerStateSM.InDoubleQuotes;
-                            currentToken.Append(c); // Keep quote start
-                        }
-                        else if (c == '\'')
-                        {
-                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
-                            state = TokenizerStateSM.InSingleQuotes;
-                            currentToken.Append(c); // Keep quote start
-                        }
-                        else if (c == '\\')
-                        {
-                            state = TokenizerStateSM.EscapeNextDefault;
-                        }
-                        else if (c == '$' && i + 1 < stageInput.Length && IsValidIdentifierStartChar(stageInput[i + 1]))
-                        {
-                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
-                            int varNameStart = i + 1; int varNameEnd = varNameStart;
-                            while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || IsArabicLetterChar(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_')) { varNameEnd++; }
-                            if (varNameEnd > varNameStart)
-                            {
-                                string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart);
-                                string varValue = GetVariableValue(varName);
-                                // Treat expanded value as a single token for now
-                                tokens.Add(varValue);
-                                System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}' as separate token");
-                                i = varNameEnd - 1;
-                            }
-                            else { currentToken.Append(c); } // Append '$' literally if not valid var name start
-                        }
-                        else if (IsValidIdentifierStartChar(c)) // Starts a new identifier (e.g., Get, احصل)
-                        {
-                            // If current token is not empty and doesn't look like an identifier start (e.g. operator), finalize it.
-                            if (currentToken.Length > 0 && !IsValidIdentifierStartChar(currentToken[0]) && currentToken[0] != '-')
-                            {
-                                tokens.Add(currentToken.ToString()); currentToken.Clear();
-                            }
-                            currentToken.Append(c);
-                        }
-                        else if (currentToken.Length > 0 && IsValidArgumentChar(c)) // Continues an existing token (identifier, argument, path)
-                        {
-                            // Allow appending valid argument characters (including '.') to the current token
-                            currentToken.Append(c);
-                        }
-                        // Note: Hyphen handling is implicitly covered by IsValidArgumentChar now if it's not the start char.
-                        // We still need special handling if '-' *starts* a token.
-                        else if (c == '-')
-                        {
-                             // If current token exists, finalize it before starting potential parameter
-                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); }
-
-                            if (i + 1 < stageInput.Length && IsValidIdentifierStartChar(stageInput[i + 1]))
-                            {
-                                // Starts a parameter name (-Param, -اسم)
-                                currentToken.Append(c);
-                            }
-                            else
-                            {
-                                // Standalone hyphen operator/argument
-                                tokens.Add(c.ToString());
-                            }
-                        }
-                        else // Other characters (operators, digits starting redirection, etc.)
-                        {
-                            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); currentToken.Clear(); } // Finalize previous token
-
-                            // Check for multi-character operators first
-                            if (c == '>' && i + 2 < stageInput.Length && stageInput[i + 1] == '>' && stageInput[i + 2] == '&' && i + 3 < stageInput.Length && char.IsDigit(stageInput[i + 3])) // >>&digit (e.g., >>&1)
-                            {
-                                tokens.Add(stageInput.Substring(i, 4)); i += 3;
-                            }
-                            else if (c == '>' && i + 1 < stageInput.Length && stageInput[i + 1] == '&' && i + 2 < stageInput.Length && char.IsDigit(stageInput[i + 2])) // >&digit (e.g., >&1)
-                            {
-                                tokens.Add(stageInput.Substring(i, 3)); i += 2;
-                            }
-                            else if (char.IsDigit(c) && i + 1 < stageInput.Length && stageInput[i + 1] == '>' && i + 2 < stageInput.Length && stageInput[i + 2] == '>') // digit>> (e.g., 2>>)
-                            {
-                                tokens.Add(stageInput.Substring(i, 3)); i += 2;
-                            }
-                             else if (c == '>' && i + 1 < stageInput.Length && stageInput[i + 1] == '>') // >>
-                            {
-                                tokens.Add(">>"); i++;
-                            }
-                            else if (char.IsDigit(c) && i + 1 < stageInput.Length && stageInput[i + 1] == '>') // digit> (e.g., 2>)
-                            {
-                                tokens.Add(stageInput.Substring(i, 2)); i += 1;
-                            }
-                            // Check for subexpression start '$(' before checking for single '>' or '('
-                            else if (c == '$' && i + 1 < stageInput.Length && stageInput[i + 1] == '(')
-                            {
-                                tokens.Add("$("); i++; // Tokenize as '$('
-                                // TODO: Need state change or recursive call for subexpression parsing
-                            }
-                            // Check for single-character operators / syntax elements
-                            else if (c == '>' || c == '|' || c == ';' || c == '(' || c == ')' || c == '[' || c == ']' || c == '&') // Add other single chars?
-                            {
-                                tokens.Add(c.ToString());
-                            }
-                            // If none of the above, and not a valid argument character continuation (handled earlier), treat as unexpected.
-                            else if (!IsValidArgumentChar(c)) // Check if it's truly invalid in any token context
-                            {
-                                // Maybe log a warning or throw an error? For now, add as single token.
-                                System.Console.WriteLine($"WARN (Tokenizer): Encountered potentially unexpected character '{c}'. Treating as single token.");
-                                tokens.Add(c.ToString());
-                            }
-                            // If it reaches here, it implies IsValidArgumentChar(c) is true, but it wasn't handled as a continuation.
-                            // This might happen if a valid argument char starts a token immediately after an operator without space.
-                            // Example: command>file. The '>' is handled above. Then 'f' is encountered.
-                            // The IsValidIdentifierStartChar check earlier should handle 'f' correctly, starting a new token.
-                            // So, this final implicit 'else' case where IsValidArgumentChar(c) is true should not be needed.
-                        }
-                        break;
-
-                    case TokenizerStateSM.InDoubleQuotes:
-                         currentToken.Append(c); // Append char within quotes
-                         if (c == '"')
-                        {
-                            // We've reached the closing quote. Finalize the token.
-                            tokens.Add(currentToken.ToString());
-                            currentToken.Clear();
-                            state = TokenizerStateSM.Default; // Exit double quotes
-                        }
-                        else if (c == '\\')
-                        {
-                            // Don't append the backslash yet, move to escape state
-                            state = TokenizerStateSM.EscapeNextDouble;
-                        }
-                        else if (c == '$' && i + 1 < stageInput.Length && IsValidIdentifierStartChar(stageInput[i+1])) // Basic variable check
-                        {
-                            // Attempt variable expansion inside double quotes
-                            int varNameStart = i + 1; int varNameEnd = varNameStart;
-                             while (varNameEnd < stageInput.Length && (char.IsLetterOrDigit(stageInput[varNameEnd]) || IsArabicLetterChar(stageInput[varNameEnd]) || stageInput[varNameEnd] == '_'))
-                            {
-                                varNameEnd++;
-                            }
-
-                            if (varNameEnd > varNameStart)
-                            { // Found variable
-                                string varName = stageInput.Substring(varNameStart, varNameEnd - varNameStart);
-                                string varValue = GetVariableValue(varName);
-                                currentToken.Append(varValue); // Append expanded value
-                                System.Console.WriteLine($"DEBUG (Tokenizer): Expanded variable '${varName}' to '{varValue}' (in double quotes)");
-                                i = varNameEnd - 1; // Move index past variable name
-                            }
-                            else { currentToken.Append(c); } // Append '$' literally if not valid var name
-                        }
-                        // else // Normal character inside double quotes is handled by the initial append at the start of the state case
-                        break;
-
-                    case TokenizerStateSM.InSingleQuotes:
-                        currentToken.Append(c); // Append literally (no escapes or variables)
-                        if (c == '\'')
-                        {
-                            // We've reached the closing quote. Finalize the token.
-                            tokens.Add(currentToken.ToString());
-                            currentToken.Clear();
-                            state = TokenizerStateSM.Default; // Exit single quotes
-                        }
-                        // else // Character was appended above
-                        break;
-
-                    case TokenizerStateSM.EscapeNextDefault: // After '\' in Default state
-                        // Append the escaped character literally, regardless of what it is.
-                        // This handles escaping operators like \| or \>
-                        currentToken.Append(c);
-                        state = TokenizerStateSM.Default; // Return to Default state.
-                        break;
-
-                    case TokenizerStateSM.EscapeNextDouble: // After '\' in InDoubleQuotes state
-                        // Inside double quotes, \ only escapes $, ", and \ itself.
-                        // Other characters preceded by \ are treated literally including the backslash.
-                        if (c == '$' || c == '"' || c == '\\') // Removed backtick '`'
-                        {
-                            currentToken.Append(c); // Append the specifically escaped character
-                        }
-                        else
-                        {
-                            // For other characters, append the backslash *and* the character
-                            currentToken.Append('\\');
-                            currentToken.Append(c);
-                        }
-                        state = TokenizerStateSM.InDoubleQuotes; // Return to InDoubleQuotes state.
-                        break;
+                    System.Console.WriteLine($"WARN (Parser): Invalid source handle '{handlePart}' in redirection operator '{operatorTokenValue}'. Defaulting to 1.");
+                    sourceHandle = 1; // Default on parse error
                 }
             }
-
-            // Finalize last token if it exists
-            if (currentToken.Length > 0) { tokens.Add(currentToken.ToString()); }
-
-            // Check for unterminated states
-            if (state == TokenizerStateSM.EscapeNextDefault || state == TokenizerStateSM.EscapeNextDouble)
+            else
             {
-                System.Console.WriteLine("WARN (Tokenizer): Input ended with an escape character.");
-                // Append the trailing backslash? Or ignore? Let's ignore for now.
+                 sourceHandle = 1; // Default if '>' is the first char
             }
-            else if (state != TokenizerStateSM.Default)
+             // Simple override: if it starts with 2 and no other digit, assume stderr
+            if (operatorTokenValue.StartsWith("2>") || operatorTokenValue.StartsWith("2>>")) sourceHandle = 2;
+
+
+            // --- Determine Target ---
+            // Note: The Regex patterns in RegexTokenizer should now capture the full operator like "2>&1" or ">&2"
+            if (operatorTokenValue.Contains("&")) // Check if it's potentially a stream redirection
             {
-                System.Console.WriteLine("WARN (Tokenizer): Unterminated quote detected.");
-                // Consider throwing FormatException("Unterminated quote in input.");
+                 // Use Regex to extract source (optional) and target handles
+                 // Pattern: Optional digits (\d*), followed by > or >>, then & and digits (\d+)
+                 Match streamRedirectMatch = Regex.Match(operatorTokenValue, @"^(\d*)>?>(?:&(\d+))$|^(\d*)>(?:&(\d+))$");
+
+                 if (streamRedirectMatch.Success)
+                 {
+                     // Determine which pattern matched (append >> or overwrite >)
+                     string sourceHandleStr = streamRedirectMatch.Groups[1].Success ? streamRedirectMatch.Groups[1].Value : (streamRedirectMatch.Groups[3].Success ? streamRedirectMatch.Groups[3].Value : "");
+                     string targetHandleStr = streamRedirectMatch.Groups[2].Success ? streamRedirectMatch.Groups[2].Value : streamRedirectMatch.Groups[4].Value;
+                     append = operatorTokenValue.Contains(">>"); // Double check append based on original token
+
+                     // Parse source handle (default to 1 if empty)
+                     if (string.IsNullOrEmpty(sourceHandleStr))
+                     {
+                         sourceHandle = 1;
+                     }
+                     else if (!int.TryParse(sourceHandleStr, out sourceHandle))
+                     {
+                         System.Console.WriteLine($"WARN (Parser): Invalid source handle '{sourceHandleStr}' in stream redirection '{operatorTokenValue}'. Defaulting to 1.");
+                         sourceHandle = 1;
+                     }
+
+                     System.Console.WriteLine($"DEBUG (ParsedCommand): Added stream redirection: {operatorTokenValue} (Source: {sourceHandle}, Target: {targetHandleStr}, Append: {append})");
+                     return new ParsedCommand.RedirectionInfo(sourceHandle, ParsedCommand.RedirectionTargetType.StreamHandle, targetHandleStr, append);
+                 }
+                 else
+                 {
+                     // Regex didn't match the expected stream redirection format
+                     System.Console.WriteLine($"WARN (Parser): Invalid stream redirection operator format '{operatorTokenValue}'. Could not extract target handle.");
+                     return null; // Indicate parsing failure
+                 }
             }
-            return tokens;
+            else // File target: Expecting next token to be the file path
+            {
+                if (operatorIndex + 1 < remainingTokens.Count)
+                {
+                    Token targetToken = remainingTokens[operatorIndex + 1];
+                    if (targetToken.Type == TokenType.Identifier || targetToken.Type == TokenType.StringLiteralDQ || targetToken.Type == TokenType.StringLiteralSQ)
+                    {
+                        // TODO: Handle quotes/escapes in targetToken.Value if necessary
+                        string targetPath = targetToken.Value;
+                        // Remove quotes from string literals if present
+                        if (targetToken.Type == TokenType.StringLiteralDQ || targetToken.Type == TokenType.StringLiteralSQ)
+                        {
+                             if (targetPath.Length >= 2) // Avoid error on empty strings "" or ''
+                                targetPath = targetPath.Substring(1, targetPath.Length - 2);
+                        }
+
+                        System.Console.WriteLine($"DEBUG (ParsedCommand): Added file redirection: {operatorTokenValue} {targetPath}");
+                        return new ParsedCommand.RedirectionInfo(sourceHandle, ParsedCommand.RedirectionTargetType.FilePath, targetPath, append);
+                    }
+                    else
+                    {
+                        System.Console.WriteLine($"WARN (Parser): Unexpected token type '{targetToken.Type}' used as redirection file path target: '{targetToken.Value}'.");
+                        return null; // Indicate parsing failure
+                    }
+                }
+                else
+                {
+                    System.Console.WriteLine($"WARN (Parser): Redirection operator '{operatorTokenValue}' found without a target file path.");
+                    return null; // Indicate parsing failure
+                }
+            }
         }
 
+
+        // NOTE: Old state machine tokenizer (TokenizeInput, TokenizerStateSM enum, helper methods) removed.
     }
 }

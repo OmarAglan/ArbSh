@@ -34,8 +34,8 @@ namespace ArbSh.Console.Commands
                 }
                 else
                 {
-                    WriteObject($"Help Error: Command '{CommandName}' not found.");
-                    // TODO: Use WriteError
+                    // Use the new PipelineObject constructor to mark this as an error
+                    WriteObject(new PipelineObject($"Help Error: Command '{CommandName}' not found.", isError: true));
                 }
             }
             else // General help

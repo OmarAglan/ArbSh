@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.IO; // For StreamWriter
 using System.Threading.Tasks; // Added for Task support
 using ArbSh.Console.Commands;
+using static ArbSh.Console.ParsedCommand; // For RedirectionInfo etc.
 
 namespace ArbSh.Console
 {
@@ -60,6 +61,7 @@ namespace ArbSh.Console
                     Type? cmdletType = CommandDiscovery.Find(commandName);
 
                     // TODO: Add logic here to check for external commands if cmdletType is null
+                    // TODO: Implement redirection handling *before* cmdlet execution (e.g., setting StdOut/StdErr for the task/process)
 
                     if (cmdletType != null)
                     {
@@ -108,6 +110,7 @@ namespace ArbSh.Console
                                     System.Console.WriteLine($"DEBUG (Executor Task): '{currentCommand.CommandName}' has no pipeline input, calling ProcessRecord once.");
                                     // Call ProcessRecord once even without pipeline input,
                                     // allowing cmdlets like Get-Command or Write-Output with arguments to run.
+                                    // TODO: Handle subexpression arguments here - execute them first?
                                     cmdletInstance.ProcessRecord(null);
                                 }
 
@@ -192,10 +195,10 @@ namespace ArbSh.Console
                     }
                     catch (Exception ex) // Catch other potential waiting errors
                     {
-                         System.Console.ForegroundColor = ConsoleColor.DarkRed;
-                         System.Console.WriteLine($"ERROR (Executor): Unexpected error waiting for pipeline tasks: {ex.Message}");
-                         System.Console.ResetColor();
-                         outputOfLastStage = null; // Prevent output processing
+                        System.Console.ForegroundColor = ConsoleColor.DarkRed;
+                        System.Console.WriteLine($"ERROR (Executor): Unexpected error waiting for pipeline tasks: {ex.Message}");
+                        System.Console.ResetColor();
+                        outputOfLastStage = null; // Prevent output processing
                     }
                 }
 
@@ -204,68 +207,206 @@ namespace ArbSh.Console
                 if (outputOfLastStage != null)
                 {
                     ParsedCommand lastCommandConfig = statementCommands.Last(); // Get config (like redirection) from the original last command
-                    StreamWriter? redirectWriter = null;
+                    StreamWriter? stdoutRedirectWriter = null;
+                    StreamWriter? stderrRedirectWriter = null; // Added for stderr
+                    string? stdoutRedirectPath = null;
+                    string? stderrRedirectPath = null;
+                    bool writeStdOutToConsole = true;
+                    bool writeStdErrToConsole = true;
+                    bool mergeStderrToStdout = false; // Flag for 2>&1
+                    bool mergeStdoutToStderr = false; // Flag for 1>&2
 
                     try
                     {
-                        // Check for output redirection on the last command
-                        if (!string.IsNullOrEmpty(lastCommandConfig.OutputRedirectPath))
+                        // --- Setup Redirections ---
+                        if (lastCommandConfig.Redirections.Any())
                         {
-                            try
+                            // First pass: Detect stream merges
+                            foreach (var redir in lastCommandConfig.Redirections.Where(r => r.TargetType == RedirectionTargetType.StreamHandle))
                             {
-                                // Use UTF8 encoding *without* BOM
-                                var utf8NoBom = new System.Text.UTF8Encoding(false);
-                                redirectWriter = new StreamWriter(lastCommandConfig.OutputRedirectPath, lastCommandConfig.AppendOutput, utf8NoBom);
-                                System.Console.WriteLine($"DEBUG (Executor): Redirecting final output {(lastCommandConfig.AppendOutput ? ">>" : ">")} {lastCommandConfig.OutputRedirectPath}");
+                                if (int.TryParse(redir.Target, out int targetHandle))
+                                {
+                                    if (redir.SourceStreamHandle == 2 && targetHandle == 1) // 2>&1
+                                    {
+                                        mergeStderrToStdout = true;
+                                        System.Console.WriteLine($"DEBUG (Executor): Detected stderr merge to stdout (2>&1).");
+                                    }
+                                    else if (redir.SourceStreamHandle == 1 && targetHandle == 2) // 1>&2
+                                    {
+                                        mergeStdoutToStderr = true;
+                                        System.Console.WriteLine($"DEBUG (Executor): Detected stdout merge to stderr (1>&2).");
+                                    }
+                                    else
+                                    {
+                                         System.Console.WriteLine($"WARN (Executor): Stream handle redirection from {redir.SourceStreamHandle} to {redir.Target} is parsed but not yet implemented.");
+                                    }
+                                }
+                                else
+                                {
+                                     System.Console.WriteLine($"WARN (Executor): Invalid target stream handle '{redir.Target}' in redirection.");
+                                }
                             }
-                            catch (Exception ex)
+
+                            // Second pass: Setup file writers and determine console output based on merges
+                            // If stdout is redirected to a file OR merged to stderr, don't write stdout to console.
+                            writeStdOutToConsole = !lastCommandConfig.Redirections.Any(r => r.SourceStreamHandle == 1 && r.TargetType == RedirectionTargetType.FilePath) && !mergeStdoutToStderr;
+                            // If stderr is redirected to a file OR merged to stdout, don't write stderr to console.
+                            writeStdErrToConsole = !lastCommandConfig.Redirections.Any(r => r.SourceStreamHandle == 2 && r.TargetType == RedirectionTargetType.FilePath) && !mergeStderrToStdout;
+
+
+                            // Now setup file writers
+                            foreach (var redir in lastCommandConfig.Redirections.Where(r => r.TargetType == RedirectionTargetType.FilePath))
                             {
-                                 System.Console.ForegroundColor = ConsoleColor.Red;
-                                 System.Console.WriteLine($"ERROR: Cannot open file '{lastCommandConfig.OutputRedirectPath}' for redirection: {ex.Message}");
-                                 System.Console.ResetColor();
-                                 // Don't proceed with output if redirection failed, but ensure collection is disposed later
+                                // File redirections take precedence over merges for console output suppression
+                                // (e.g., if 2>&1 and 1>file, stderr also goes to file, not console)
+                                if (redir.TargetType == RedirectionTargetType.FilePath) // Double check, though filtered
+                                {
+                                    if (redir.SourceStreamHandle == 1) // Stdout to File
+                                    {
+                                        stdoutRedirectPath = redir.Target;
+                                        try
+                                        {
+                                            var utf8NoBom = new System.Text.UTF8Encoding(false);
+                                            stdoutRedirectWriter = new StreamWriter(stdoutRedirectPath, redir.Append, utf8NoBom);
+                                            System.Console.WriteLine($"DEBUG (Executor): Redirecting stdout {(redir.Append ? ">>" : ">")} {stdoutRedirectPath}");
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            System.Console.ForegroundColor = ConsoleColor.Red;
+                                            System.Console.WriteLine($"ERROR: Cannot open file '{stdoutRedirectPath}' for stdout redirection: {ex.Message}");
+                                            System.Console.ResetColor();
+                                            stdoutRedirectWriter = null; // Ensure it's null
+                                            writeStdOutToConsole = true; // Fallback to console if file open fails
+                                        }
+                                    }
+                                    else if (redir.SourceStreamHandle == 2) // Stderr to File
+                                    {
+                                        stderrRedirectPath = redir.Target;
+                                        try
+                                        {
+                                            var utf8NoBom = new System.Text.UTF8Encoding(false);
+                                            stderrRedirectWriter = new StreamWriter(stderrRedirectPath, redir.Append, utf8NoBom);
+                                            System.Console.WriteLine($"DEBUG (Executor): Redirecting stderr {(redir.Append ? "2>>" : "2>")} {stderrRedirectPath}");
+                                            // writeStdErrToConsole = false; // Already handled above based on merge flags
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            System.Console.ForegroundColor = ConsoleColor.Red;
+                                            System.Console.WriteLine($"ERROR: Cannot open file '{stderrRedirectPath}' for stderr redirection: {ex.Message}");
+                                            System.Console.ResetColor();
+                                            stderrRedirectWriter = null;
+                                            writeStdErrToConsole = true; // Fallback stderr to console
+                                        }
+                                    }
+                                    else
+                                    {
+                                        System.Console.WriteLine($"WARN (Executor): File redirection from unsupported source handle '{redir.SourceStreamHandle}' ignored.");
+                                    }
+                                }
+                                // Stream handle redirections were processed in the first pass
                             }
-                         }
+                        } // End if Redirections.Any()
 
-                         // Consume the final output from the last stage's collection
-                         System.Console.WriteLine($"DEBUG (Executor Output): Checking final output. IsCompleted={outputOfLastStage.IsCompleted}, Count={outputOfLastStage.Count}, IsAddingCompleted={outputOfLastStage.IsAddingCompleted}"); // Added Debug
-                         if (redirectWriter == null) {
-                              System.Console.WriteLine("DEBUG (Executor Output): Writing final output to Console...");
-                         } else {
-                              System.Console.WriteLine($"DEBUG (Executor Output): Writing final output to file '{lastCommandConfig.OutputRedirectPath}'..."); // Added Debug
-                         }
+                        // --- Consume and Distribute Output ---
+                        System.Console.WriteLine($"DEBUG (Executor Output): Checking final output. IsCompleted={outputOfLastStage.IsCompleted}, Count={outputOfLastStage.Count}, IsAddingCompleted={outputOfLastStage.IsAddingCompleted}");
+                        if (writeStdOutToConsole) System.Console.WriteLine("DEBUG (Executor Output): Writing final stdout output to Console...");
+                        if (stdoutRedirectWriter != null) System.Console.WriteLine($"DEBUG (Executor Output): Writing final stdout output to file '{stdoutRedirectPath}'...");
+                        if (writeStdErrToConsole) System.Console.WriteLine("DEBUG (Executor Output): Writing final stderr output to Console...");
+                        if (stderrRedirectWriter != null) System.Console.WriteLine($"DEBUG (Executor Output): Writing final stderr output to file '{stderrRedirectPath}'...");
 
-                         int outputCount = 0; // Added Debug
-                         foreach (var finalOutput in outputOfLastStage.GetConsumingEnumerable())
-                         {
-                             outputCount++; // Added Debug
-                             string outputString = finalOutput?.ToString() ?? string.Empty;
-                             System.Console.WriteLine($"DEBUG (Executor Output): Processing output item #{outputCount}: '{outputString}'"); // Added Debug
+                        int outputCount = 0;
+                        foreach (var finalOutput in outputOfLastStage.GetConsumingEnumerable())
+                        {
+                            outputCount++;
+                            bool isError = finalOutput.IsError; // Use the flag from PipelineObject
+                            string outputString = finalOutput?.ToString() ?? string.Empty;
+                            System.Console.WriteLine($"DEBUG (Executor Output): Processing output item #{outputCount} (IsError={isError}): '{outputString}'");
 
-                             if (redirectWriter != null)
-                             {
-                                 System.Console.WriteLine($"DEBUG (Executor Output): Writing item #{outputCount} to file..."); // Added Debug
-                                 try
-                                 {
-                                     redirectWriter.WriteLine(outputString);
-                                     redirectWriter.Flush(); // Explicitly flush after write
-                                     System.Console.WriteLine($"DEBUG (Executor Output): Item #{outputCount} written and flushed to file."); // Updated Debug
-                                 }
-                                 catch (Exception ex) // Catch broader exceptions
-                                 {
-                                      System.Console.ForegroundColor = ConsoleColor.Red;
-                                      System.Console.WriteLine($"ERROR: Failed writing/flushing to redirect file '{redirectWriter.BaseStream}': {ex.GetType().Name} - {ex.Message}"); // More details
-                                      System.Console.ResetColor();
-                                      try { redirectWriter.Dispose(); } catch { /* Ignore dispose error */ } // Attempt dispose even after error
-                                      redirectWriter = null; // Stop further attempts
-                                 }
-                            }
-                            else
+                            // Determine target(s) based on error status and merge flags
+                            StreamWriter? primaryWriter = null;
+                            StreamWriter? secondaryWriter = null; // For cases like 2>&1 where output goes to stdout's file
+                            string? primaryPath = null;
+                            bool writeToPrimaryConsole = false;
+                            bool writeToSecondaryConsole = false; // Not really needed, console is singular
+
+                            if (isError)
                             {
-                                // Write to console
-                                System.Console.WriteLine(outputString);
+                                if (mergeStderrToStdout) // 2>&1
+                                {
+                                    primaryWriter = stdoutRedirectWriter; // Target stdout's file writer
+                                    primaryPath = stdoutRedirectPath;
+                                    writeToPrimaryConsole = writeStdOutToConsole; // Write to console only if stdout goes to console
+                                }
+                                else // Normal stderr or 2>file
+                                {
+                                    primaryWriter = stderrRedirectWriter;
+                                    primaryPath = stderrRedirectPath;
+                                    writeToPrimaryConsole = writeStdErrToConsole;
+                                }
+                            }
+                            else // Not an error (regular output)
+                            {
+                                if (mergeStdoutToStderr) // 1>&2
+                                {
+                                    primaryWriter = stderrRedirectWriter; // Target stderr's file writer
+                                    primaryPath = stderrRedirectPath;
+                                    writeToPrimaryConsole = writeStdErrToConsole; // Write to console only if stderr goes to console
+                                }
+                                else // Normal stdout or 1>file
+                                {
+                                    primaryWriter = stdoutRedirectWriter;
+                                    primaryPath = stdoutRedirectPath;
+                                    writeToPrimaryConsole = writeStdOutToConsole;
+                                }
+                            }
+
+                            // Write to File(s) if redirected
+                            if (primaryWriter != null)
+                            {
+                                try
+                                {
+                                    primaryWriter.WriteLine(outputString);
+                                    primaryWriter.Flush(); // Flush immediately for testing
+                                    System.Console.WriteLine($"DEBUG (Executor Output): Item #{outputCount} written and flushed to primary target file '{primaryPath}'.");
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Console.ForegroundColor = ConsoleColor.Red;
+                                    System.Console.WriteLine($"ERROR: Failed writing/flushing to primary redirect file '{primaryPath}': {ex.GetType().Name} - {ex.Message}");
+                                    System.Console.ResetColor();
+                                    try { primaryWriter.Dispose(); } catch { /* Ignore */ }
+                                    // Null out the writer that failed
+                                    if (primaryWriter == stdoutRedirectWriter) stdoutRedirectWriter = null;
+                                    if (primaryWriter == stderrRedirectWriter) stderrRedirectWriter = null;
+                                    // Fallback the corresponding stream to console
+                                    if (isError && !mergeStderrToStdout) writeStdErrToConsole = true; // Fallback error to console if not merged
+                                    if (!isError && !mergeStdoutToStderr) writeStdOutToConsole = true; // Fallback output to console if not merged
+                                    // If merged, the fallback depends on the *other* stream's console status
+                                    if (isError && mergeStderrToStdout) writeStdOutToConsole = true; // Fallback merged error via stdout console status
+                                    if (!isError && mergeStdoutToStderr) writeStdErrToConsole = true; // Fallback merged output via stderr console status
+
+                                    primaryWriter = null; // Ensure we don't try to write again below if console fallback is also true
+                                }
+                            }
+                            // Note: secondaryWriter logic for complex merges (e.g., tee) is not implemented here.
+
+                            // Write to Console if applicable
+                            if (writeToPrimaryConsole)
+                            {
+                                // Use Console.Error for errors, Console.Out for regular output
+                                if (isError)
+                                {
+                                    System.Console.Error.WriteLine(outputString);
+                                }
+                                else
+                                {
+                                    System.Console.Out.WriteLine(outputString);
+                                }
                             }
                         }
+                         if (outputCount == 0 && outputOfLastStage.IsAddingCompleted) {
+                              System.Console.WriteLine("DEBUG (Executor Output): Final output collection is complete and empty.");
+                         }
                     }
                     catch (OperationCanceledException) { /* Expected if collection is empty and completed */ }
                     catch (Exception ex)
@@ -277,30 +418,32 @@ namespace ArbSh.Console
                     }
                     finally
                     {
-                        if (redirectWriter != null)
+                        // Dispose any open stream writers
+                        if (stdoutRedirectWriter != null)
                         {
-                             System.Console.WriteLine($"DEBUG (Executor Output): Flushing and Disposing StreamWriter for '{lastCommandConfig.OutputRedirectPath}'."); // Added Debug
-                             try
-                             {
-                                 redirectWriter.Flush(); // Ensure flush before dispose
-                                 redirectWriter.Dispose();
-                             } catch (Exception ex) {
-                                 System.Console.ForegroundColor = ConsoleColor.Red;
-                                 System.Console.WriteLine($"ERROR: Exception during final flush/dispose of redirect file: {ex.Message}");
-                                 System.Console.ResetColor();
-                             }
+                            System.Console.WriteLine($"DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout '{stdoutRedirectPath}'.");
+                            try { stdoutRedirectWriter.Flush(); stdoutRedirectWriter.Dispose(); } catch (Exception ex) { System.Console.WriteLine($"ERROR: Exception during final flush/dispose of stdout redirect file: {ex.Message}"); }
+                        }
+                        if (stderrRedirectWriter != null) // Added
+                        {
+                            System.Console.WriteLine($"DEBUG (Executor Output): Flushing and Disposing StreamWriter for stderr '{stderrRedirectPath}'.");
+                            try { stderrRedirectWriter.Flush(); stderrRedirectWriter.Dispose(); } catch (Exception ex) { System.Console.WriteLine($"ERROR: Exception during final flush/dispose of stderr redirect file: {ex.Message}"); }
                         }
                         outputOfLastStage.Dispose(); // Dispose the final collection
                     }
                 }
-                else
+                else // outputOfLastStage was null (likely pipeline setup failed)
                 {
-                    System.Console.WriteLine($"DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).");
+                    // Check if there were any commands to begin with, to avoid redundant message if statement was empty
+                    if (statementCommands.Any())
+                    {
+                        System.Console.WriteLine($"DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).");
+                    }
                 }
-                 System.Console.WriteLine($"DEBUG (Executor): --- Statement execution finished ---");
+                System.Console.WriteLine($"DEBUG (Executor): --- Statement execution finished ---");
 
             } // End of loop for all statements
-             System.Console.WriteLine($"DEBUG (Executor): All statements executed.");
+            System.Console.WriteLine($"DEBUG (Executor): All statements executed.");
         }
 
         /// <summary>
@@ -309,256 +452,273 @@ namespace ArbSh.Console
         /// </summary>
         private static void BindParameters(CmdletBase cmdlet, ParsedCommand command)
         {
-             // (Keep existing BindParameters logic - it should work fine within the task)
-             // ... [Existing BindParameters implementation remains unchanged] ...
-             System.Console.WriteLine($"DEBUG (Binder): Binding parameters for {cmdlet.GetType().Name}...");
-             var cmdletType = cmdlet.GetType();
-             var properties = cmdletType.GetProperties()
-                 .Where(p => Attribute.IsDefined(p, typeof(ParameterAttribute)))
-                 .ToList();
+            System.Console.WriteLine($"DEBUG (Binder): Binding parameters for {cmdlet.GetType().Name}...");
+            var cmdletType = cmdlet.GetType();
+            var properties = cmdletType.GetProperties()
+                .Where(p => Attribute.IsDefined(p, typeof(ParameterAttribute)))
+                .ToList();
 
-             // Keep track of used positional arguments
-             var usedPositionalArgs = new bool[command.Arguments.Count];
+            // Keep track of used positional arguments
+            var usedPositionalArgs = new bool[command.Arguments.Count];
 
-             foreach (var prop in properties)
-             {
-                 var paramAttr = prop.GetCustomAttribute<ParameterAttribute>();
-                 if (paramAttr == null) continue;
+            foreach (var prop in properties)
+            {
+                var paramAttr = prop.GetCustomAttribute<ParameterAttribute>();
+                if (paramAttr == null) continue;
 
-                 // Get English and potential Arabic names
-                 string englishParamName = $"-{prop.Name}";
-                 var arabicNameAttr = prop.GetCustomAttribute<ArabicNameAttribute>();
-                 string? arabicParamName = arabicNameAttr != null ? $"-{arabicNameAttr.Name}" : null;
+                // Get English and potential Arabic names
+                string englishParamName = $"-{prop.Name}";
+                var arabicNameAttr = prop.GetCustomAttribute<ArabicNameAttribute>();
+                string? arabicParamName = arabicNameAttr != null ? $"-{arabicNameAttr.Name}" : null;
 
-                 object? valueToSet = null;
-                 bool found = false;
-                 string? boundName = null; // Keep track of which name was used for binding
-                 string? namedValue = null; // The value found via named parameter
+                object? valueToSet = null;
+                bool found = false;
+                string? boundName = null; // Keep track of which name was used for binding
+                string? namedValue = null; // The value found via named parameter
 
-                 // 1. Try binding by parameter name (Arabic first, then English)
-                 if (arabicParamName != null && command.Parameters.ContainsKey(arabicParamName))
-                 {
-                     namedValue = command.Parameters[arabicParamName];
-                     boundName = arabicParamName;
-                     found = true;
-                     System.Console.WriteLine($"DEBUG (Binder): Found parameter via Arabic name '{boundName}'.");
-                 }
-                 else if (command.Parameters.ContainsKey(englishParamName))
-                 {
-                     namedValue = command.Parameters[englishParamName];
-                     boundName = englishParamName;
-                     found = true;
-                     System.Console.WriteLine($"DEBUG (Binder): Found parameter via English name '{boundName}'.");
-                 }
+                // 1. Try binding by parameter name (Arabic first, then English)
+                if (arabicParamName != null && command.Parameters.ContainsKey(arabicParamName))
+                {
+                    namedValue = command.Parameters[arabicParamName];
+                    boundName = arabicParamName;
+                    found = true;
+                    System.Console.WriteLine($"DEBUG (Binder): Found parameter via Arabic name '{boundName}'.");
+                }
+                else if (command.Parameters.ContainsKey(englishParamName))
+                {
+                    namedValue = command.Parameters[englishParamName];
+                    boundName = englishParamName;
+                    found = true;
+                    System.Console.WriteLine($"DEBUG (Binder): Found parameter via English name '{boundName}'.");
+                }
 
-                 // If found by either name, process the value
-                 if (found)
-                 {
-                     // Handle boolean switch parameters
-                     if (prop.PropertyType == typeof(bool))
-                     {
-                         // Switch is present if its name exists in the parsed parameters.
-                         // Only consider the associated value if it's explicitly true/false.
-                         if (!string.IsNullOrEmpty(namedValue)) // Check if parser associated a value
-                         {
-                             // Try parsing the associated value as bool
-                             if (bool.TryParse(namedValue, out bool boolValue))
-                             {
-                                 valueToSet = boolValue; // Assign $true or $false if provided
-                             }
-                             else
-                             {
-                                 // Any other value associated with a switch is an error
-                                 throw new ParameterBindingException($"A value '{namedValue}' cannot be specified for the boolean (switch) parameter '{boundName}'.");
-                             }
-                         }
-                         else
-                         {
-                             // Switch name was present, but no value followed it (or value was empty string)
-                             valueToSet = true; // Default behavior for a present switch
-                         }
-                         // 'found' is already true here
-                         System.Console.WriteLine($"DEBUG (Binder): Bound switch parameter '{boundName}' to {valueToSet}.");
-                     }
-                     // Handle non-boolean named parameters
-                     else if (!string.IsNullOrEmpty(namedValue)) // Only bind if parser provided a non-empty value (and it's not a bool prop)
-                     {
-                         try
-                         {
-                             // Attempt conversion using TypeConverter first, then fallback
-                             TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
-                             if (converter != null && converter.CanConvertFrom(typeof(string)))
-                             {
-                                 valueToSet = converter.ConvertFromString(namedValue);
-                             }
-                             else
-                             {
-                                 // Fallback for basic types if no specific converter found/applicable
-                                 valueToSet = Convert.ChangeType(namedValue, prop.PropertyType);
-                             }
-                             // 'found' is already true here
-                             System.Console.WriteLine($"DEBUG (Binder): Bound named parameter '{boundName}' to value '{valueToSet}' (Type: {prop.PropertyType.Name})");
-                         }
-                         catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
-                         {
-                              // Throw specific binding exception for conversion failure
-                              throw new ParameterBindingException($"Cannot process argument transformation for parameter '{boundName}'. Cannot convert value \"{namedValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
-                              {
-                                  ParameterName = prop.Name // Still use property name for identification
-                              };
-                         }
-                     }
-                     // If found is true but namedValue is null/empty and it's not a bool, it means a named param was provided without a value (e.g., "-Name -OtherParam")
-                     // This is generally an error unless it's a switch.
-                     else if (string.IsNullOrEmpty(namedValue) && prop.PropertyType != typeof(bool))
-                     {
-                         throw new ParameterBindingException($"Parameter '{boundName}' requires a value, but none was provided.");
-                     }
-                     // If found is true, but valueToSet is still null (e.g., switch param where value wasn't explicitly true/false), it's handled above.
-                 }
-                 // Note: 'found' now indicates if the parameter was specified by *name* (Arabic or English)
+                // If found by either name, process the value
+                if (found)
+                {
+                    // Handle boolean switch parameters
+                    if (prop.PropertyType == typeof(bool))
+                    {
+                        // Switch is present if its name exists in the parsed parameters.
+                        // Only consider the associated value if it's explicitly true/false.
+                        if (!string.IsNullOrEmpty(namedValue)) // Check if parser associated a value
+                        {
+                            // Try parsing the associated value as bool
+                            if (bool.TryParse(namedValue, out bool boolValue))
+                            {
+                                valueToSet = boolValue; // Assign $true or $false if provided
+                            }
+                            else
+                            {
+                                // Any other value associated with a switch is an error
+                                throw new ParameterBindingException($"A value '{namedValue}' cannot be specified for the boolean (switch) parameter '{boundName}'.");
+                            }
+                        }
+                        else
+                        {
+                            // Switch name was present, but no value followed it (or value was empty string)
+                            valueToSet = true; // Default behavior for a present switch
+                        }
+                        // 'found' is already true here
+                        System.Console.WriteLine($"DEBUG (Binder): Bound switch parameter '{boundName}' to {valueToSet}.");
+                    }
+                    // Handle non-boolean named parameters
+                    else if (!string.IsNullOrEmpty(namedValue)) // Only bind if parser provided a non-empty value (and it's not a bool prop)
+                    {
+                        try
+                        {
+                            // Attempt conversion using TypeConverter first, then fallback
+                            TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
+                            if (converter != null && converter.CanConvertFrom(typeof(string)))
+                            {
+                                valueToSet = converter.ConvertFromString(namedValue);
+                            }
+                            else
+                            {
+                                // Fallback for basic types if no specific converter found/applicable
+                                valueToSet = Convert.ChangeType(namedValue, prop.PropertyType);
+                            }
+                            // 'found' is already true here
+                            System.Console.WriteLine($"DEBUG (Binder): Bound named parameter '{boundName}' to value '{valueToSet}' (Type: {prop.PropertyType.Name})");
+                        }
+                        catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
+                        {
+                            // Throw specific binding exception for conversion failure
+                            throw new ParameterBindingException($"Cannot process argument transformation for parameter '{boundName}'. Cannot convert value \"{namedValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
+                            {
+                                ParameterName = prop.Name // Still use property name for identification
+                            };
+                        }
+                    }
+                    // If found is true but namedValue is null/empty and it's not a bool, it means a named param was provided without a value (e.g., "-Name -OtherParam")
+                    // This is generally an error unless it's a switch.
+                    else if (string.IsNullOrEmpty(namedValue) && prop.PropertyType != typeof(bool))
+                    {
+                        throw new ParameterBindingException($"Parameter '{boundName}' requires a value, but none was provided.");
+                    }
+                    // If found is true, but valueToSet is still null (e.g., switch param where value wasn't explicitly true/false), it's handled above.
+                }
+                // Note: 'found' now indicates if the parameter was specified by *name* (Arabic or English)
 
-                 // 2. Try binding by position (if not found by name and attribute specifies position)
-                 // Also handle array binding for positional parameters here.
-                 if (!found && paramAttr.Position >= 0)
-                 {
-                     // Check if it's an array type meant to consume remaining arguments
-                     if (prop.PropertyType.IsArray && paramAttr.Position < command.Arguments.Count) // Ensure position is valid
-                     {
-                         Type? elementType = prop.PropertyType.GetElementType();
-                         if (elementType != null)
-                         {
-                             List<object> arrayValues = new List<object>();
-                             bool conversionError = false;
-                             int argsConsumed = 0;
+                // 2. Try binding by position (if not found by name and attribute specifies position)
+                // Also handle array binding for positional parameters here.
+                if (!found && paramAttr.Position >= 0)
+                {
+                    // Check if it's an array type meant to consume remaining arguments
+                    if (prop.PropertyType.IsArray && paramAttr.Position < command.Arguments.Count) // Ensure position is valid
+                    {
+                        Type? elementType = prop.PropertyType.GetElementType();
+                        if (elementType != null)
+                        {
+                            List<object> arrayValues = new List<object>();
+                            bool conversionError = false;
+                            int argsConsumed = 0;
 
-                             // Consume all remaining unused arguments from the specified position onwards
-                             for (int j = paramAttr.Position; j < command.Arguments.Count; j++)
-                             {
-                                 if (!usedPositionalArgs[j])
-                                 {
-                                     string argValue = command.Arguments[j];
-                                     try
-                                     {
-                                         // Attempt conversion
-                                         TypeConverter converter = TypeDescriptor.GetConverter(elementType);
-                                         object convertedValue = converter != null && converter.CanConvertFrom(typeof(string))
-                                             ? converter.ConvertFromString(argValue)! // Assume non-null if conversion succeeds
-                                             : Convert.ChangeType(argValue, elementType)!;
+                            // Consume all remaining unused arguments from the specified position onwards
+                            for (int j = paramAttr.Position; j < command.Arguments.Count; j++)
+                            {
+                                if (!usedPositionalArgs[j] && command.Arguments[j] is string argValue) // Check if it's a string
+                                {
+                                    // string argValue = command.Arguments[j]; // Already assigned via pattern matching
+                                    try
+                                    {
+                                        // Attempt conversion
+                                        TypeConverter converter = TypeDescriptor.GetConverter(elementType);
+                                        object convertedValue = converter != null && converter.CanConvertFrom(typeof(string))
+                                            ? converter.ConvertFromString(argValue)! // Assume non-null if conversion succeeds
+                                            : Convert.ChangeType(argValue, elementType)!;
 
-                                         arrayValues.Add(convertedValue);
-                                         usedPositionalArgs[j] = true; // Mark as used
-                                         argsConsumed++;
-                                     }
-                                     catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException)
-                                     {
-                                         conversionError = true;
-                                         // Throw specific binding exception for conversion failure within the array
-                                         throw new ParameterBindingException($"Cannot process argument transformation for array parameter '{prop.Name}'. Cannot convert value \"{argValue}\" at index {j} to type \"{elementType.FullName}\".", ex)
-                                         {
-                                             ParameterName = prop.Name
-                                         };
-                                     }
-                                 }
-                             }
+                                        arrayValues.Add(convertedValue);
+                                        usedPositionalArgs[j] = true; // Mark as used
+                                        argsConsumed++;
+                                    }
+                                    catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException)
+                                    {
+                                        conversionError = true;
+                                        // Throw specific binding exception for conversion failure within the array
+                                        throw new ParameterBindingException($"Cannot process argument transformation for array parameter '{prop.Name}'. Cannot convert value \"{argValue}\" at index {j} to type \"{elementType.FullName}\".", ex)
+                                        {
+                                            ParameterName = prop.Name
+                                        };
+                                    }
+                                }
+                                // TODO: Handle non-string arguments (subexpressions) for array parameters?
+                            }
 
-                             if (!conversionError && argsConsumed > 0) // Only bind if we successfully consumed and converted at least one argument
-                             {
-                                 // Create the typed array and set the value
-                                 Array finalArray = Array.CreateInstance(elementType, arrayValues.Count);
-                                 // Copy elements one by one to handle the System.Array type from CreateInstance
-                                 for(int k=0; k < arrayValues.Count; k++)
-                                 {
-                                     finalArray.SetValue(arrayValues[k], k);
-                                 }
-                                 // arrayValues.CopyTo(finalArray, 0); // This caused type mismatch error
-                                 valueToSet = finalArray;
-                                 found = true;
-                                 System.Console.WriteLine($"DEBUG (Binder): Bound {argsConsumed} remaining positional argument(s) starting at {paramAttr.Position} to array parameter '{prop.Name}' (Type: {prop.PropertyType.Name})");
-                             }
-                             // If argsConsumed is 0, it means there were no unused args at or after the position, so don't bind.
-                         }
-                     }
-                     // Handle non-array positional parameters (only if not already bound as array)
-                     else if (!prop.PropertyType.IsArray && paramAttr.Position < command.Arguments.Count && !usedPositionalArgs[paramAttr.Position])
-                     {
-                         string positionalValue = command.Arguments[paramAttr.Position];
-                     try
-                     {
-                         // Attempt conversion using TypeConverter first, then fallback
-                         TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
-                         if (converter != null && converter.CanConvertFrom(typeof(string)))
-                         {
-                             valueToSet = converter.ConvertFromString(positionalValue);
-                         }
-                         else
-                         {
-                             // Fallback for basic types
-                             valueToSet = Convert.ChangeType(positionalValue, prop.PropertyType);
-                         }
-                         found = true;
-                         usedPositionalArgs[paramAttr.Position] = true; // Mark as used
-                         System.Console.WriteLine($"DEBUG (Binder): Bound positional parameter at {paramAttr.Position} ('{positionalValue}') to property '{prop.Name}' (Type: {prop.PropertyType.Name})");
-                     }
-                     catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
-                     {
-                          // Throw specific binding exception for conversion failure
-                          throw new ParameterBindingException($"Cannot process argument transformation for parameter '{englishParamName}' at position {paramAttr.Position}. Cannot convert value \"{positionalValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
-                          {
-                              ParameterName = prop.Name // Still use property name for identification
-                          };
-                     }
-                     } // <-- Correct placement for the 'else if' block's closing brace
-                 } // <-- Correct placement for the 'if (!found && paramAttr.Position >= 0)' block's closing brace
+                            if (!conversionError && argsConsumed > 0) // Only bind if we successfully consumed and converted at least one argument
+                            {
+                                // Create the typed array and set the value
+                                Array finalArray = Array.CreateInstance(elementType, arrayValues.Count);
+                                // Copy elements one by one to handle the System.Array type from CreateInstance
+                                for (int k = 0; k < arrayValues.Count; k++)
+                                {
+                                    finalArray.SetValue(arrayValues[k], k);
+                                }
+                                // arrayValues.CopyTo(finalArray, 0); // This caused type mismatch error
+                                valueToSet = finalArray;
+                                found = true;
+                                System.Console.WriteLine($"DEBUG (Binder): Bound {argsConsumed} remaining positional argument(s) starting at {paramAttr.Position} to array parameter '{prop.Name}' (Type: {prop.PropertyType.Name})");
+                            }
+                            // If argsConsumed is 0, it means there were no unused args at or after the position, so don't bind.
+                        }
+                    }
+                    // Handle non-array positional parameters (only if not already bound as array)
+                    else if (!prop.PropertyType.IsArray && paramAttr.Position < command.Arguments.Count && !usedPositionalArgs[paramAttr.Position])
+                    {
+                        if (command.Arguments[paramAttr.Position] is string positionalValue) // Check if it's a string
+                        {
+                            // string positionalValue = command.Arguments[paramAttr.Position]; // Assigned via pattern matching
+                            try
+                            {
+                                // Attempt conversion using TypeConverter first, then fallback
+                                TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
+                                if (converter != null && converter.CanConvertFrom(typeof(string)))
+                                {
+                                    valueToSet = converter.ConvertFromString(positionalValue);
+                                }
+                                else
+                                {
+                                    // Fallback for basic types
+                                    valueToSet = Convert.ChangeType(positionalValue, prop.PropertyType);
+                                }
+                                found = true;
+                                usedPositionalArgs[paramAttr.Position] = true; // Mark as used
+                                System.Console.WriteLine($"DEBUG (Binder): Bound positional parameter at {paramAttr.Position} ('{positionalValue}') to property '{prop.Name}' (Type: {prop.PropertyType.Name})");
+                            }
+                            catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
+                            {
+                                // Throw specific binding exception for conversion failure
+                                throw new ParameterBindingException($"Cannot process argument transformation for parameter '{englishParamName}' at position {paramAttr.Position}. Cannot convert value \"{positionalValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
+                                {
+                                    ParameterName = prop.Name // Still use property name for identification
+                                };
+                            }
+                        } // End of string check for positionalValue
+                        else
+                        {
+                            // Handle non-string positional argument (e.g., subexpression) - skip binding for now
+                            System.Console.WriteLine($"WARN (Binder): Skipping non-string positional argument at index {paramAttr.Position} for parameter '{prop.Name}'. Subexpression execution not implemented.");
+                            // Mark as 'used' to prevent array binder from trying it again? Or leave unused? Leave unused for now.
+                        }
+                    } // <-- Correct placement for the 'else if' block's closing brace
+                } // <-- Correct placement for the 'if (!found && paramAttr.Position >= 0)' block's closing brace
 
-                 // 3. Set the property value if bound (either by name or position) and value is ready
-                 // Note: 'found' here means bound by *name* OR *position*.
-                 if (found && valueToSet != null)
-                 {
-                     try
-                     {
-                         prop.SetValue(cmdlet, valueToSet);
-                     }
-                     catch (Exception ex)
-                     {
-                         // This might indicate a problem with the setter logic itself
-                         System.Console.WriteLine($"ERROR (Binder): Failed to set property '{prop.Name}': {ex.Message}");
-                         throw new ParameterBindingException($"Failed to set property '{prop.Name}'.", ex) { ParameterName = prop.Name };
-                     }
-                 }
+                // 3. Set the property value if bound (either by name or position) and value is ready
+                // Note: 'found' here means bound by *name* OR *position*.
+                if (found && valueToSet != null)
+                {
+                    try
+                    {
+                        prop.SetValue(cmdlet, valueToSet);
+                    }
+                    catch (Exception ex)
+                    {
+                        // This might indicate a problem with the setter logic itself
+                        System.Console.WriteLine($"ERROR (Binder): Failed to set property '{prop.Name}': {ex.Message}");
+                        throw new ParameterBindingException($"Failed to set property '{prop.Name}'.", ex) { ParameterName = prop.Name };
+                    }
+                }
 
-                 // 4. Check for Mandatory parameters that were not bound by name or position
-                 if (!found && paramAttr.Mandatory)
-                 {
-                      // Construct error message mentioning both names if applicable
-                      string missingParamMsg = $"Missing mandatory parameter '{englishParamName}'";
-                      if (arabicParamName != null)
-                      {
-                          missingParamMsg += $" (or '{arabicParamName}')";
-                      }
-                      missingParamMsg += $" for cmdlet '{cmdlet.GetType().Name}'.";
+                // 4. Check for Mandatory parameters that were not bound by name or position
+                if (!found && paramAttr.Mandatory)
+                {
+                    // Construct error message mentioning both names if applicable
+                    string missingParamMsg = $"Missing mandatory parameter '{englishParamName}'";
+                    if (arabicParamName != null)
+                    {
+                        missingParamMsg += $" (or '{arabicParamName}')";
+                    }
+                    missingParamMsg += $" for cmdlet '{cmdlet.GetType().Name}'.";
 
-                      // Throw an exception to stop execution of this cmdlet's task
-                      throw new ParameterBindingException(missingParamMsg)
-                      {
-                          ParameterName = prop.Name // Store the property name
-                      };
-                 }
-             }
+                    // Throw an exception to stop execution of this cmdlet's task
+                    throw new ParameterBindingException(missingParamMsg)
+                    {
+                        ParameterName = prop.Name // Store the property name
+                    };
+                }
+            }
 
-             // TODO: Handle remaining positional arguments (e.g., pass via pipeline or error)
-             // This check might be less relevant now if cmdlets primarily use pipeline input
-             // or specifically defined parameters. Consider if unbound arguments should always be an error.
-             for(int i = 0; i < command.Arguments.Count; i++)
-             {
-                 if (!usedPositionalArgs[i])
-                 {
-                      // Maybe throw an error here? Or let the cmdlet decide?
-                      System.Console.WriteLine($"WARN (Binder): Unused positional argument detected: {command.Arguments[i]}");
-                      // Depending on shell strictness, this could be an error:
-                      // throw new ParameterBindingException($"Unexpected positional argument: {command.Arguments[i]}");
-                 }
-             }
+            // TODO: Handle remaining positional arguments (e.g., pass via pipeline or error)
+            // This check might be less relevant now if cmdlets primarily use pipeline input
+            // or specifically defined parameters. Consider if unbound arguments should always be an error.
+            for (int i = 0; i < command.Arguments.Count; i++)
+            {
+                if (!usedPositionalArgs[i])
+                {
+                    // Maybe throw an error here? Or let the cmdlet decide?
+                    // Check type before logging
+                    if (command.Arguments[i] is string unusedStringArg)
+                    {
+                        System.Console.WriteLine($"WARN (Binder): Unused positional string argument detected: {unusedStringArg}");
+                        // Depending on shell strictness, this could be an error:
+                        // throw new ParameterBindingException($"Unexpected positional argument: {unusedStringArg}");
+                    }
+                    else // It's likely a parsed subexpression List<ParsedCommand>
+                    {
+                        System.Console.WriteLine($"WARN (Binder): Unused positional subexpression argument detected at index {i}.");
+                        // Execution not implemented yet.
+                    }
+                }
+            }
         }
     }
 }

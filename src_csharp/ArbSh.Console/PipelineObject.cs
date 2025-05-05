@@ -1,16 +1,20 @@
 namespace ArbSh.Console
 {
     /// <summary>
-    /// Represents a base class or marker interface for objects flowing through the pipeline.
-    /// Specific cmdlets might operate on or produce derived types.
+    /// Represents a single object flowing through the pipeline.
+    /// Can represent regular output or an error record.
     /// </summary>
     public class PipelineObject
     {
         // Basic properties or methods common to all pipeline objects can go here.
-        // For now, it can be a simple marker or contain a raw value.
-        public object? Value { get; set; }
+        public object? Value { get; } // Make Value readonly after construction
+        public bool IsError { get; } // Flag to indicate if this is an error
 
-        public PipelineObject(object? value)
+        // Constructor for regular output
+        public PipelineObject(object? value) : this(value, false) { }
+
+        // Primary constructor
+        public PipelineObject(object? value, bool isError)
         {
             Value = value;
         }

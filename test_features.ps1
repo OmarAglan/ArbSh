@@ -1,4 +1,4 @@
-# PowerShell script to test ArbSh v0.7.0 features
+﻿# PowerShell script to test ArbSh v0.7.0 features
 
 $ErrorActionPreference = 'Stop' # Exit script on error
 $OutputEncoding = [System.Text.Encoding]::UTF8 # Ensure script output handles UTF-8
@@ -189,7 +189,7 @@ $processInfo.RedirectStandardOutput = $true
 $processInfo.RedirectStandardError = $true
 $processInfo.UseShellExecute = $false
 $processInfo.CreateNoWindow = $true
-# $processInfo.StandardInputEncoding = [System.Text.Encoding]::UTF8 # Removed incorrect attempt
+# $processInfo.StandardInputEncoding = [System.Text.Encoding]::UTF8 # This property doesn't exist here, remove setting
 # Set working directory if needed, assuming script runs from project root
 # $processInfo.WorkingDirectory = (Get-Location).Path
 
@@ -198,14 +198,17 @@ $process.StartInfo = $processInfo
 
 $process.Start() | Out-Null
 
-# Write commands to stdin using UTF-8 bytes directly
-$utf8Encoding = [System.Text.Encoding]::UTF8
-$inputBytes = $utf8Encoding.GetBytes($inputString + [Environment]::NewLine) # Add newline bytes
-$process.StandardInput.BaseStream.Write($inputBytes, 0, $inputBytes.Length)
-$process.StandardInput.BaseStream.Flush() # Flush the base stream
+# Write commands line by line using WriteLine and the specified encoding
+Write-Log "Writing commands to ArbSh stdin..."
+foreach ($command in $arbshCommands) {
+    # Write-Log "Sending: $command" # Optional: Log each command being sent
+    $process.StandardInput.WriteLine($command)
+}
 $process.StandardInput.Close() # Signal end of input
+Write-Log "Finished writing commands."
 
 # Read output and error streams
+Write-Log "Reading ArbSh stdout/stderr..."
 $output = $process.StandardOutput.ReadToEnd()
 $errorOutput = $process.StandardError.ReadToEnd()
 
@@ -225,8 +228,10 @@ Write-Log ("ArbSh process exited with code " + $process.ExitCode + ".") # Use co
 Write-Log "Verifying redirection files..."
 if (Test-Path $tempRedirectFile) {
     Write-Log ("Content of " + $tempRedirectFile + ":") # Use concatenation
-    $content = Get-Content $tempRedirectFile -Encoding UTF8 # Read as UTF8
-    Add-Content -Path $outputLogFile -Value $content # Append using Add-Content
+    $contentLines = Get-Content $tempRedirectFile -Encoding UTF8 # Read as UTF8 lines
+    foreach ($line in $contentLines) {
+        Add-Content -Path $outputLogFile -Value $line # Append line by line
+    }
     Remove-Item $tempRedirectFile # Cleanup
 }
 else {
@@ -235,8 +240,10 @@ else {
 
 if (Test-Path $tempAppendFile) {
     Write-Log ("Content of " + $tempAppendFile + ":") # Use concatenation
-    $content = Get-Content $tempAppendFile -Encoding UTF8 # Read as UTF8
-    Add-Content -Path $outputLogFile -Value $content # Append using Add-Content
+    $contentLines = Get-Content $tempAppendFile -Encoding UTF8 # Read as UTF8 lines
+    foreach ($line in $contentLines) {
+        Add-Content -Path $outputLogFile -Value $line # Append line by line
+    }
     Remove-Item $tempAppendFile # Cleanup
 }
 else {
