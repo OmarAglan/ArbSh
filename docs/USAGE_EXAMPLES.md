@@ -159,6 +159,43 @@ Write-Output [-InputObject <Object>]
     ```
     *(Note: This array binding currently works for positional parameters.)*
 
+## Variable Expansion (`$variableName`)
+
+Variables start with `$` followed by their name. The parser replaces the variable token with its stored value *before* the token is used as an argument or a parameter value. Adjacent tokens (like `ValueIs:` and `$testVar`) are correctly concatenated into a single argument after expansion.
+
+**Note:** Variable storage is currently a placeholder within the parser itself. A proper session state management system is needed for user-defined variables. The following examples use predefined test variables: `$testVar`, `$pathExample`, `$emptyVar`.
+
+**Examples:**
+
+*   **Simple Expansion:**
+    ```powershell
+    ArbSh> Write-Output $testVar
+    DEBUG: Received command: Write-Output $testVar
+    # ... (parser/executor debug output) ...
+    Value from $testVar!
+    ```
+*   **Expansion with Adjacent Literals:**
+    ```powershell
+    ArbSh> Write-Output ValueIs:$testVar
+    DEBUG: Received command: Write-Output ValueIs:$testVar
+    # ... (parser/executor debug output) ...
+    ValueIs:Value from $testVar!
+    ```
+*   **Undefined Variable:**
+    ```powershell
+    ArbSh> Write-Output $nonExistentVar
+    DEBUG: Received command: Write-Output $nonExistentVar
+    # ... (parser/executor debug output) ...
+    # (Output is an empty line)
+    ```
+*   **Expansion in Parameter Value:**
+    ```powershell
+    ArbSh> Get-Help -CommandName $testVar
+    DEBUG: Received command: Get-Help -CommandName $testVar
+    # ... (parser/executor debug output) ...
+    Help Error: Command 'Value from $testVar!' not found.
+    ```
+
 ## Escape Characters (`\`)
 
 The backslash (`\`) is used as an escape character. It causes the character immediately following it to be treated literally, ignoring its special meaning (like space, `$`, `;`, `|`, `"`). This works both outside and inside double quotes.
@@ -248,50 +285,11 @@ The backslash (`\`) is used as an escape character. It causes the character imme
         ```powershell
         ArbSh> Command-With-Output-And-Error > output.log 2> error.log # Separates streams
         ```
-    *(Note: The parser recognizes all these forms. The `Executor` currently handles stdout (`>`, `>>`) and stderr (`2>`, `2>>`) file redirection. Stream merging (`2>&1`, `1>&2`) is parsed but not yet handled during execution.)*
-
-## Variable Expansion (`$variableName`)
-
-**Note:** Variable expansion is currently broken due to tokenizer changes and needs reimplementation in the parser. The examples below show the intended behavior.
-
-Variables start with `$` followed by their name. The parser *should* replace the variable token with its stored value *before* the token is used as an argument or a parameter value.
-
-**Note:** Variable storage is currently a placeholder within the parser itself. A proper session state management system is needed for user-defined variables. The following examples use predefined test variables: `$testVar`, `$pathExample`, `$emptyVar`.
-
-**Examples:**
-
-*   **Simple Expansion:**
-    ```powershell
-    ArbSh> Write-Output $testVar
-    DEBUG: Received command: Write-Output $testVar
-    # ... (parser/executor debug output) ...
-    Value from $testVar!
-    ```
-*   **Expansion with Literals:** (Note: String interpolation like `"Path: $pathExample"` is not yet supported, variables must be separate tokens)
-    ```powershell
-    ArbSh> Write-Output Path is: $pathExample
-    DEBUG: Received command: Write-Output Path is: $pathExample
-    # ... (parser/executor debug output) ...
-    Path is: C:\Users
-    ```
-*   **Undefined Variable:**
-    ```powershell
-    ArbSh> Write-Output $nonExistentVar
-    DEBUG: Received command: Write-Output $nonExistentVar
-    # ... (parser/executor debug output) ...
-    # (Output is an empty line)
-    ```
-*   **Expansion in Parameter Value:**
-    ```powershell
-    ArbSh> Get-Help -CommandName $testVar
-    DEBUG: Received command: Get-Help -CommandName $testVar
-    # ... (parser/executor debug output) ...
-    Help Error: Command 'Value from $testVar!' not found.
-    ```
+    *(Note: The parser recognizes all these forms. The `Executor` currently handles stdout (`>`, `>>`) and stderr (`2>`, `2>>`) file redirection. Stream merging (`2>&1`, `1>&2`) is parsed but not yet handled during execution. Input redirection `<` is not yet parsed.)*
 
 ## Arabic Command and Parameter Names (v0.7.0+)
 
-Cmdlets and their parameters can be invoked using Arabic names if they have the `[ArabicName]` attribute applied.
+Cmdlets and their parameters can be invoked using Arabic names if they have the `[ArabicName]` attribute applied. The previous encoding issues that prevented this from working correctly in test scripts have been resolved.
 
 **Example (using `Get-Help` / `احصل-مساعدة` which has aliases defined):**
 

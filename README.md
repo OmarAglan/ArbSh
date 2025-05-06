@@ -30,18 +30,19 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
     -   Identify separate statements using semicolons (`;`) respecting quotes/escapes.
     -   Identify pipeline stages using pipes (`|`) respecting quotes/escapes.
     -   **Tokenizer Refactoring:** Replaced the internal state-machine tokenizer with a new Regex-based tokenizer (`RegexTokenizer.cs`) using Unicode properties (`\p{L}`) for better handling of mixed-script identifiers and complex syntax elements like redirection operators.
-    -   **Variable Expansion:** Currently broken due to tokenizer refactoring; needs reimplementation in the parser logic.
-    -   **Advanced Redirection:** Detect and parse advanced redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`, etc.) using the new tokenizer.
+    -   **Variable Expansion:** Fixed the regression; variables like `$testVar` are now correctly expanded and concatenated within arguments (e.g., `ValueIs:$testVar` works).
+    -   **Advanced Redirection:** Detect and parse advanced redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`, etc.) using the new tokenizer. *(Input redirection `<` still needs to be added to the tokenizer)*.
     -   **Sub-expressions:** Recognize `$()` syntax, recursively parse the inner command(s), and store the result (currently a `List<ParsedCommand>`) as an argument object. *(Execution of sub-expressions is not yet implemented)*.
 -   **Parameter Binding:** Added `ParameterAttribute` (with pipeline support flags) and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks, boolean switches, basic type conversion (`TypeConverter`/`Convert.ChangeType`), improved error reporting for conversion failures, and binding remaining positional arguments to array parameters. **Update:** Parameter binder now also recognizes the `[ArabicName]` attribute on cmdlet properties, allowing parameters to be specified using assigned Arabic names (e.g., `-الاسم`).
 -   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation. **Update:** Command discovery now also recognizes the `[ArabicName]` attribute on cmdlet classes, allowing cmdlets to be invoked using assigned Arabic names (e.g., `احصل-مساعدة`).
 -   **Concurrent Pipeline:** The `Executor` now uses `Task` and `BlockingCollection` to execute pipeline stages concurrently within each statement. `CmdletBase` includes logic (`BindPipelineParameters`) to handle binding pipeline input (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`).
 -   **Basic Cmdlets:** `Write-Output`, `Get-Help`, and `Get-Command` have functional implementations. `Get-Help` displays detailed parameter info (including pipeline acceptance) and now outputs an error object (`PipelineObject` with `IsError=true`) if a command is not found. `Get-Command` outputs structured `CommandInfo` objects.
 -   **Executor Redirection:** The `Executor` now handles file redirection for both stdout (`>`, `>>`) and stderr (`2>`, `2>>`), creating the necessary files and suppressing console output for the redirected stream. Stream merging (`2>&1`, `1>&2`) is parsed but not yet handled during execution.
+-   **Encoding Issues Resolved:** Fixed the persistent UTF-8 input/output encoding corruption when running via PowerShell `Start-Process` with redirected streams by adjusting C# input reading (`StreamReader`) and setting appropriate encodings in the test script (`StandardInput/Output/ErrorEncoding`). Arabic commands/parameters are now received and logged correctly in tests.
 -   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, `CHANGELOG.md`, etc.) has been updated to reflect the C# refactoring status.
 -   **C Code Reference:** The original C source code and build files have been moved to the `old_c_code/` directory for reference during the porting process.
 
-*The shell can now be built and run via `dotnet run`, providing a basic prompt. It uses a new Regex-based tokenizer. It can parse commands with quoted arguments, escape sequences, pipelines (`|`), statement separators (`;`), and all standard redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`). It can discover cmdlets (including Arabic aliases via `[ArabicName]` attribute), perform parameter binding (including pipeline input, basic arrays, and Arabic parameter aliases via `[ArabicName]` attribute), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. The executor handles stdout and stderr file redirection. However, variable expansion, stream redirection *execution* (`>&1`), sub-expression execution, type literal parsing (`[int]`), robust type conversion, comprehensive error handling (beyond basic exceptions and `IsError` flag), and full Arabic text rendering support are still needed. **Crucially, a persistent UTF-8 input encoding issue when running via PowerShell's `Start-Process` currently prevents correct parsing of Arabic commands/parameters.** *
+*The shell can now be built and run via `dotnet run`, providing a basic prompt. It uses a new Regex-based tokenizer. It can parse commands with quoted arguments, escape sequences, pipelines (`|`), statement separators (`;`), variable expansion (`$var`), and most standard redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`). It can discover cmdlets (including Arabic aliases via `[ArabicName]` attribute), perform parameter binding (including pipeline input, basic arrays, and Arabic parameter aliases via `[ArabicName]` attribute), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. The executor handles stdout and stderr file redirection. The major encoding blocker for testing Arabic features is resolved. However, input redirection parsing (`<`), stream redirection *execution* (`>&1`), sub-expression execution, type literal parsing (`[int]`), robust type conversion, comprehensive error handling (beyond basic exceptions and `IsError` flag), and full Arabic text rendering support are still needed.*
 
 ## New Code Structure
 
@@ -79,12 +80,12 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
 
 ## Known Issues and Limitations (Current State)
 
--   **Encoding:** **Persistent UTF-8 input corruption** when running via PowerShell `Start-Process` with redirected stdin. Arabic commands/parameters arrive garbled in the C# app, blocking further testing/development of Arabic features. This occurs despite setting `Console.InputEncoding` and using UTF-8 in the test script.
+-   **Encoding:** **RESOLVED!** The previous UTF-8 input/output corruption issues when using redirected streams with `Start-Process` have been fixed.
 -   **Parsing/Tokenization:**
-    -   Variable expansion (`$var`) is currently broken post-refactor.
+    -   Input redirection operator `<` is not yet recognized by the tokenizer.
     -   Sub-expression `$(...)` parsing is implemented, but execution is not.
     -   Type literals `[int]` are not yet parsed.
-    -   Mixed-script identifiers (e.g., `Commandمرحبا`) are not always tokenized correctly.
+    -   Mixed-script identifiers (e.g., `Commandمرحبا`) need verification/improvement in the tokenizer.
 -   **Execution:**
     -   Stream redirection merging (`2>&1`, `1>&2`) is parsed but not implemented in the Executor.
     -   Sub-expression execution is not implemented.

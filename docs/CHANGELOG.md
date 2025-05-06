@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-05-06
+
+### Fixed
+- **Encoding Issues:** Resolved persistent UTF-8 input/output corruption when running via PowerShell `Start-Process` with redirected streams. This involved:
+    - Setting `StandardInputEncoding`, `StandardOutputEncoding`, and `StandardErrorEncoding` to UTF-8 in `test_features.ps1`.
+    - Modifying `Program.cs` to use `StreamReader` with explicit UTF-8 encoding for `Console.OpenStandardInput()` and ensuring `Console.OutputEncoding` is also UTF-8.
+    - Arabic commands/parameters and output are now handled correctly in test scenarios.
+- **Variable Expansion Regression:** Fixed the parser logic in `Parser.cs` to correctly handle variable expansion (`$var`) within arguments, ensuring adjacent tokens are concatenated properly (e.g., `ValueIs:$testVar` now works as expected). Implemented using a `StringBuilder` in the argument parsing loop.
+
+### Changed
+- Updated `README.md` and `docs/USAGE_EXAMPLES.md` to reflect the encoding and variable expansion fixes.
+- Updated `ROADMAP.md` to mark the encoding blocker as resolved and the variable expansion fix as complete.
+
+### Known Issues / Regressions
+- **Tokenizer:**
+    - Input redirection operator `<` is not yet recognized.
+    - Mixed-script identifiers (e.g., `Commandمرحبا`) need verification/improvement.
+- **Parser:**
+    - Sub-expression `$(...)` parsing is implemented, but execution is not.
+    - Type literals `[int]` are not yet parsed.
+- **Execution:**
+    - Stream redirection merging (`2>&1`, `1>&2`) is parsed but not implemented in the Executor.
+    - Sub-expression execution is not implemented.
+
 ## [Unreleased] - 2025-05-05
 
 ### Changed
@@ -19,19 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Script:** Updated `test_features.ps1` to log temporary file contents line-by-line to avoid `Add-Content` stream errors. Changed default file encoding for `test_output.log` to UTF-8 with BOM.
 
 ### Known Issues / Regressions
-- **Input Encoding:** Persistent UTF-8 input corruption when running via PowerShell `Start-Process` with redirected stdin. Arabic commands/parameters arrive garbled in the C# app, blocking further testing/development of Arabic features.
-- **Variable Expansion:** Variable expansion (`$var`) is currently broken post-tokenizer refactor and needs reimplementation in the parser's argument handling logic.
-- **Stream Redirection Execution:** Stream merging (`2>&1`, `1>&2`) is parsed correctly but not yet implemented in the `Executor`.
-- **Sub-expression Execution:** Sub-expression parsing (`$(...)`) is implemented, but execution is not.
-- **Mixed Identifiers:** Tokenizer still needs refinement for mixed-script identifiers (e.g., `Commandمرحبا`).
-- **Executor Error Handling:** Executor needs to use the `IsError` flag from `PipelineObject` to route output to the correct stream (stdout/stderr) or file.
-
-- **Refined Escape Sequence Handling:**
-    - Corrected escape sequence logic within double-quoted strings (`Parser.cs`) to only escape `$`, `"`, and `\` when preceded by `\`, aligning better with expected shell behavior.
-- **Sub-expression Parsing (Initial):**
-    - Added logic to the tokenizer (`Parser.cs`) to recognize `$(` as a distinct token.
-    - Updated the pipeline stage parser (`Parser.cs`) to detect `$(` tokens and consume subsequent tokens until a matching `)` is found, handling nested parentheses.
-    - The content within `$()` is currently added as a single placeholder argument string (e.g., `"$ (inner command)"`) to `ParsedCommand.Arguments`. *Note: Execution of sub-expressions is not yet implemented.*
 
 ## [0.7.0] - 2025-05-03
 

@@ -256,8 +256,9 @@ namespace ArbSh.Console
 
 
             // --- Argument/Parameter Parsing (using remaining tokens AFTER redirection removal) ---
-            List<object> arguments = parsedCommand.Arguments; // Get the arguments list (List<object>)
-            Dictionary<string, string> parameters = parsedCommand.Parameters; // Get the parameters dictionary
+            List<object> arguments = parsedCommand.Arguments;
+            Dictionary<string, string> parameters = parsedCommand.Parameters;
+            var currentArgumentBuilder = new StringBuilder(); // Builder for concatenating argument parts
 
             for (int i = 0; i < remainingTokens.Count; i++)
             {
@@ -266,28 +267,58 @@ namespace ArbSh.Console
                 // Check for parameter name
                 if (currentToken.Type == TokenType.ParameterName)
                 {
+                    // If we were building an argument, add it before processing the parameter
+                    if (currentArgumentBuilder.Length > 0)
+                    {
+                        arguments.Add(currentArgumentBuilder.ToString());
+                        currentArgumentBuilder.Clear();
+                    }
+
                     string paramName = currentToken.Value;
                     string? paramValue = null;
 
-                    // Check if the next token exists and is NOT another parameter name
-                    if (i + 1 < remainingTokens.Count && remainingTokens[i + 1].Type != TokenType.ParameterName)
+                    // Check if the next token exists and is NOT another parameter name or operator
+                    // (Operators should have been handled already, but check just in case)
+                    if (i + 1 < remainingTokens.Count &&
+                        remainingTokens[i + 1].Type != TokenType.ParameterName &&
+                        remainingTokens[i + 1].Type != TokenType.Operator) // Added check for operator
                     {
-                        // Value can be Identifier, StringLiteral, Variable, etc. Use its Value.
-                        paramValue = remainingTokens[i + 1].Value;
+                        // Value can be Identifier, StringLiteral, Variable, etc.
+                        // Expand variable if needed for parameter value
+                        Token valueToken = remainingTokens[i + 1];
+                        if (valueToken.Type == TokenType.Variable)
+                        {
+                            string varName = valueToken.Value.Substring(1);
+                            paramValue = GetVariableValue(varName);
+                            System.Console.WriteLine($"DEBUG (Parser): Expanded variable '{valueToken.Value}' to '{paramValue}' for parameter '{paramName}'.");
+                        }
+                        // TODO: Handle string literal quotes/escapes for parameter values?
+                        else
+                        {
+                            paramValue = valueToken.Value;
+                        }
                         i++; // Consume the value token
                     }
                     parameters[paramName] = paramValue ?? string.Empty; // Store even if value is null (for switch parameters)
                 }
                 // --- SubExpression Parsing ---
-                else if (currentToken.Type == TokenType.SubExpressionStart) // Check for subexpression start token '$('
+                else if (currentToken.Type == TokenType.SubExpressionStart)
                 {
-                    var subExpressionTokens = new List<Token>(); // Store Tokens within subexpression
-                    int parenNestingLevel = 1; // Start at 1 due to the opening '$('
+                    // If we were building an argument, add it before processing the subexpression
+                    if (currentArgumentBuilder.Length > 0)
+                    {
+                        arguments.Add(currentArgumentBuilder.ToString());
+                        currentArgumentBuilder.Clear();
+                    }
+
+                    var subExpressionTokens = new List<Token>();
+                    int parenNestingLevel = 1;
                     i++; // Move past the '$(' token
 
                     while (i < remainingTokens.Count)
                     {
                         Token subToken = remainingTokens[i];
+                        // Use GroupStart/SubExpressionStart and GroupEnd/SubExpressionEnd for nesting
                         // Use GroupStart/SubExpressionStart and GroupEnd/SubExpressionEnd for nesting
                         if (subToken.Type == TokenType.GroupStart || subToken.Type == TokenType.SubExpressionStart)
                         {
@@ -296,66 +327,63 @@ namespace ArbSh.Console
                         else if (subToken.Type == TokenType.GroupEnd || subToken.Type == TokenType.SubExpressionEnd)
                         {
                             parenNestingLevel--;
-                            if (parenNestingLevel == 0)
-                            {
-                                // Found the matching closing parenthesis
-                                break; // Exit the inner loop
-                            }
+                            if (parenNestingLevel == 0) break; // Found matching end
                         }
                         subExpressionTokens.Add(subToken);
-                        i++; // Move to the next token within the subexpression
+                        i++;
                     }
 
                     if (parenNestingLevel != 0)
                     {
                         System.Console.WriteLine("WARN (Parser): Unterminated subexpression '$()' found.");
-                        // Add collected tokens as raw string arguments for now?
-                        arguments.AddRange(subExpressionTokens.Select(t => t.Value).Cast<object>());
+                        // Add collected tokens as a single raw string argument
+                        arguments.Add(string.Join("", subExpressionTokens.Select(t => t.Value)));
                     }
                     else
                     {
                         // Successfully parsed subexpression.
-                        // Convert sub-tokens back to a string to re-parse recursively.
-                        // This is inefficient but simpler for now than directly parsing token list.
-                        // TODO: Improve subexpression handling to directly parse token list?
-                        string subExpressionInput = string.Join(" ", subExpressionTokens.Select(t => t.Value)); // Reconstruct string
+                        string subExpressionInput = string.Join(" ", subExpressionTokens.Select(t => t.Value));
                         System.Console.WriteLine($"DEBUG (Parser): Recursively parsing subexpression content: '{subExpressionInput}'");
-                        List<List<ParsedCommand>> subStatements = Parse(subExpressionInput); // Recursive call
+                        List<List<ParsedCommand>> subStatements = Parse(subExpressionInput);
 
                         if (subStatements.Count > 0)
                         {
-                            // Add the list of commands from the first statement as the argument.
-                            arguments.Add(subStatements[0]); // Add List<ParsedCommand> to List<object>
+                            arguments.Add(subStatements[0]); // Add List<ParsedCommand>
                             System.Console.WriteLine($"DEBUG (Parser): Added parsed subexpression (statement 0) as argument.");
                         }
                         else
                         {
                             System.Console.WriteLine($"WARN (Parser): Subexpression '$({subExpressionInput})' parsed into zero statements.");
-                            arguments.Add(new List<ParsedCommand>()); // Add empty list
+                            arguments.Add(new List<ParsedCommand>());
                         }
-                        // 'i' is already positioned after the closing ')' due to the loop structure
                     }
                 }
-                 else // It's a regular argument (Identifier, StringLiteral, Variable, etc.)
-                 {
-                     // Check if it's a variable token that needs expansion
-                     if (currentToken.Type == TokenType.Variable)
-                     {
-                         // Extract variable name (remove leading '$')
-                         string varName = currentToken.Value.Substring(1);
-                         string varValue = GetVariableValue(varName);
-                         arguments.Add(varValue); // Add the expanded value
-                         System.Console.WriteLine($"DEBUG (Parser): Expanded variable '{currentToken.Value}' to '{varValue}' during argument parsing.");
-                     }
-                     // TODO: Handle StringLiterals - remove quotes, process escapes?
-                     // else if (currentToken.Type == TokenType.StringLiteralDQ) { ... }
-                     // else if (currentToken.Type == TokenType.StringLiteralSQ) { ... }
-                     else
-                     {
-                         // Add other token types' values directly (Identifier, StringLiteral for now)
-                         arguments.Add(currentToken.Value);
-                     }
-                 }
+                else // It's part of a regular argument (Identifier, StringLiteral, Variable, Operator not handled as redirection, etc.)
+                {
+                    string valueToAppend;
+                    // Check if it's a variable token that needs expansion
+                    if (currentToken.Type == TokenType.Variable)
+                    {
+                        string varName = currentToken.Value.Substring(1);
+                        valueToAppend = GetVariableValue(varName);
+                        System.Console.WriteLine($"DEBUG (Parser): Expanding variable '{currentToken.Value}' to '{valueToAppend}' for argument building.");
+                    }
+                    // TODO: Handle StringLiterals - remove quotes, process escapes?
+                    // else if (currentToken.Type == TokenType.StringLiteralDQ) { valueToAppend = ProcessStringLiteral(currentToken.Value); }
+                    // else if (currentToken.Type == TokenType.StringLiteralSQ) { valueToAppend = ProcessStringLiteral(currentToken.Value); }
+                    else
+                    {
+                        // Append other token types' values directly
+                        valueToAppend = currentToken.Value;
+                    }
+                    currentArgumentBuilder.Append(valueToAppend);
+                }
+            }
+
+            // Add any remaining content in the builder as the last argument
+            if (currentArgumentBuilder.Length > 0)
+            {
+                arguments.Add(currentArgumentBuilder.ToString());
             }
 
             // Return the command object populated earlier

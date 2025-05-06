@@ -47,10 +47,10 @@ To create a powerful, extensible shell environment built on .NET that:
     -   [✅] Integrate Tokenizer into Parser (`Parser.cs` now calls `RegexTokenizer.Tokenize`).
     -   [✅] Refine Tokenizer Regex Patterns: Fixed patterns for stream redirection (`>&1`, `>&2`).
     -   [✅] Refine Redirection & Argument Parsing in `Parser.cs`: Logic updated to use `Token` objects and correctly parse all redirection types.
-    -   [✅] Testing and Verification: Basic functionality confirmed. **Encoding issues resolved.** Variable expansion is a known regression. Mixed-script identifier tokenization needs improvement.
+    -   [✅] Testing and Verification: Basic functionality confirmed. **Encoding issues resolved.** **Variable expansion regression fixed.** Mixed-script identifier tokenization needs improvement.
 -   [🚧] Implement mechanisms to map Arabic command names/parameters. *(Existing `[ArabicName]` attribute approach likely still valid)*.
 -   [🚧] **Refine Parser (Advanced - Post-Tokenizer Refactor):**
-    -   [ ] Implement variable expansion logic within the argument parsing loop.
+    -   [✅] Implement variable expansion logic within the argument parsing loop (using StringBuilder).
     -   [ ] Implement parsing logic (using the new token stream) for sub-expressions `$(...)`.
     -   [ ] Implement parsing logic for type literals `[int]`.
     -   [ ] Re-verify complex escape sequence handling based on the new token stream.
