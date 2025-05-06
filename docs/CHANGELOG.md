@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-05-06
+## [0.7.5] - 2025-05-06
 
 ### Fixed
 - **Encoding Issues:** Resolved persistent UTF-8 input/output corruption when running via PowerShell `Start-Process` with redirected streams. This involved:
@@ -17,21 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated `README.md` and `docs/USAGE_EXAMPLES.md` to reflect the encoding and variable expansion fixes.
 - Updated `ROADMAP.md` to mark the encoding blocker as resolved and the variable expansion fix as complete.
-
-### Known Issues / Regressions
-- **Tokenizer:**
-    - Input redirection operator `<` is not yet recognized.
-    - Mixed-script identifiers (e.g., `Commandمرحبا`) need verification/improvement.
-- **Parser:**
-    - Sub-expression `$(...)` parsing is implemented, but execution is not.
-    - Type literals `[int]` are not yet parsed.
-- **Execution:**
-    - Stream redirection merging (`2>&1`, `1>&2`) is parsed but not implemented in the Executor.
-    - Sub-expression execution is not implemented.
-
-## [Unreleased] - 2025-05-05
-
-### Changed
 - **Tokenizer Refactoring:** Replaced the internal state-machine tokenizer with a new Regex-based tokenizer (`Parsing/RegexTokenizer.cs`) using Unicode properties (`\p{L}`) for potentially better handling of mixed-script identifiers and complex syntax elements. Created `Parsing/Token.cs` for token definitions. Integrated the new tokenizer into `Parser.cs`.
 - **Parser Logic:** Updated redirection and argument/parameter parsing logic in `Parser.cs` to work with the new `List<Token>` structure.
 - **Redirection Parsing:** Refined Regex patterns in `RegexTokenizer.cs` and parsing logic in `Parser.cs` to correctly identify and parse all standard redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`).
@@ -43,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Script:** Updated `test_features.ps1` to log temporary file contents line-by-line to avoid `Add-Content` stream errors. Changed default file encoding for `test_output.log` to UTF-8 with BOM.
 
 ### Known Issues / Regressions
+- **Tokenizer:**
+    - Input redirection operator `<` is not yet recognized.
+    - Mixed-script identifiers (e.g., `Commandمرحبا`) need verification/improvement.
+- **Parser:**
+    - Sub-expression `$(...)` parsing is implemented, but execution is not.
+    - Type literals `[int]` are not yet parsed.
+- **Execution:**
+    - Stream redirection merging (`2>&1`, `1>&2`) is parsed but not implemented in the Executor.
+    - Sub-expression execution is not implemented.
 
 ## [0.7.0] - 2025-05-03
 
