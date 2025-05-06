@@ -10,37 +10,50 @@ namespace ArbSh.Console
             // Ensure console input is read as UTF-8 to handle Arabic characters correctly
             System.Console.InputEncoding = System.Text.Encoding.UTF8;
             // Optionally set output encoding too, though UTF-8 is often the default
-            // System.Console.OutputEncoding = System.Text.Encoding.UTF8;
+            System.Console.OutputEncoding = System.Text.Encoding.UTF8; // Ensure output is also UTF-8
 
             System.Console.WriteLine("Welcome to ArbSh (C# Prototype)!");
             System.Console.WriteLine("Type 'exit' to quit.");
 
             // TODO: Initialize core components (Parser, Executor, State)
 
-            while (true)
+            // Use StreamReader for potentially more reliable UTF-8 reading from redirected stdin
+            // Note: System.Console methods/properties need full qualification here.
+            using (var stdinReader = new StreamReader(System.Console.OpenStandardInput(), Encoding.UTF8))
             {
-                // TODO: Implement proper prompt handling (e.g., showing current path)
-                // TODO: Integrate BiDi logic for prompt rendering if needed
-                System.Console.Write("ArbSh> ");
-
-                // TODO: Implement advanced input reading (history, completion, BiDi input)
-                string? inputLine = System.Console.ReadLine();
-
-                // Handle EOF (Ctrl+Z on Windows, Ctrl+D on Unix)
-                if (inputLine == null)
+                while (true)
                 {
-                    System.Console.WriteLine(); // Newline after EOF
-                    break;
-                }
+                    // TODO: Implement proper prompt handling (e.g., showing current path)
+                    // TODO: Integrate BiDi logic for prompt rendering if needed
+                    // Only write prompt if input is not redirected (interactive mode)
+                    if (!System.Console.IsInputRedirected)
+                    {
+                        System.Console.Write("ArbSh> ");
+                    }
 
-                // Trim whitespace
-                inputLine = inputLine.Trim();
+                    // TODO: Implement advanced input reading (history, completion, BiDi input)
+                    // Read using the StreamReader
+                    string? inputLine = stdinReader.ReadLine();
 
-                // Skip empty lines
-                if (string.IsNullOrWhiteSpace(inputLine))
-                {
-                    continue;
-                }
+                    // Handle EOF (Ctrl+Z on Windows, Ctrl+D on Unix / end of redirected input)
+                    if (inputLine == null)
+                    {
+                        // Avoid writing extra newline if input was redirected
+                        if (!System.Console.IsInputRedirected)
+                        {
+                            System.Console.WriteLine(); // Newline after EOF in interactive mode
+                        }
+                        break;
+                    }
+
+                    // Trim whitespace
+                    inputLine = inputLine.Trim();
+
+                    // Skip empty lines
+                    if (string.IsNullOrWhiteSpace(inputLine))
+                    {
+                        continue;
+                    }
 
                 // Basic exit command
                 if (inputLine.Equals("exit", StringComparison.OrdinalIgnoreCase))
@@ -82,10 +95,14 @@ namespace ArbSh.Console
                     // System.Console.WriteLine(ex.StackTrace); // Optional: for debugging
                     System.Console.ResetColor();
                 }
-            }
+            } // End using stdinReader
 
-            System.Console.WriteLine("Exiting ArbSh.");
+            // Only write exit message if not redirected (avoid cluttering captured output)
+            if (!System.Console.IsInputRedirected)
+            {
+                System.Console.WriteLine("Exiting ArbSh.");
+            }
             // TODO: Perform any necessary cleanup
         }
     }
-}
+}}

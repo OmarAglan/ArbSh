@@ -182,6 +182,10 @@ Write-Log "--- ArbSh Start Output ---"
 
 # Use Start-Process to capture stdout and stderr together
 $processInfo = New-Object System.Diagnostics.ProcessStartInfo
+$processInfo.GetType().FullName # For debugging: Check the type of the object
+$PSVersionTable.PSVersion # For debugging: Check the PowerShell version
+$processInfo.Arguments # For debugging: Check the arguments
+$processInfo.FileName # For debugging: Check the file name
 $processInfo.FileName = "dotnet"
 $processInfo.Arguments = "run --project $arbshProjectDir"
 $processInfo.RedirectStandardInput = $true
@@ -189,7 +193,9 @@ $processInfo.RedirectStandardOutput = $true
 $processInfo.RedirectStandardError = $true
 $processInfo.UseShellExecute = $false
 $processInfo.CreateNoWindow = $true
-# $processInfo.StandardInputEncoding = [System.Text.Encoding]::UTF8 # This property doesn't exist here, remove setting
+$processInfo.StandardInputEncoding = [System.Text.Encoding]::UTF8 # Explicitly set input encoding for the child process
+$processInfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8 # Expect UTF-8 output from the child process
+$processInfo.StandardErrorEncoding = [System.Text.Encoding]::UTF8 # Expect UTF-8 error output from the child process
 # Set working directory if needed, assuming script runs from project root
 # $processInfo.WorkingDirectory = (Get-Location).Path
 
