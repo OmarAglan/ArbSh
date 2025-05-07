@@ -1,11 +1,11 @@
-[2025-05-07 19:16:25] Starting ArbSh v0.7.5 Feature Test...
-[2025-05-07 19:16:25] Building ArbSh project...
-[2025-05-07 19:16:30] Build successful.
-[2025-05-07 19:16:30] Executing ArbSh with test commands...
-[2025-05-07 19:16:30] --- ArbSh Start Output ---
-[2025-05-07 19:16:31] Writing commands to ArbSh stdin...
-[2025-05-07 19:16:34] Finished writing commands.
-[2025-05-07 19:16:34] Reading ArbSh stdout/stderr...
+[2025-05-07 20:11:53] Starting ArbSh v0.7.5 Feature Test...
+[2025-05-07 20:11:53] Building ArbSh project...
+[2025-05-07 20:11:58] Build successful.
+[2025-05-07 20:11:58] Executing ArbSh with test commands...
+[2025-05-07 20:11:58] --- ArbSh Start Output ---
+[2025-05-07 20:11:58] Writing commands to ArbSh stdin...
+[2025-05-07 20:12:03] Finished writing commands.
+[2025-05-07 20:12:03] Reading ArbSh stdout/stderr...
 Welcome to ArbSh (C# Prototype)!
 Type 'exit' to quit.
 DEBUG: Received command: # --- Basic Commands ---
@@ -616,9 +616,9 @@ DEBUG (Executor): Waiting for 2 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Get-Command'...
 DEBUG (Binder): Binding parameters for GetCommandCmdlet...
 DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
-DEBUG (Executor Task): Starting task for 'Test-Array-Binding'...
 DEBUG (Executor Task): 'Get-Command' finished processing.
 DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
+DEBUG (Executor Task): Starting task for 'Test-Array-Binding'...
 DEBUG (Binder): Binding parameters for TestArrayBindingCmdlet...
 DEBUG (Executor Task): 'Test-Array-Binding' consuming input...
 DEBUG (Executor Task): 'Test-Array-Binding' finished consuming input.
@@ -1076,8 +1076,7 @@ DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAd
 DEBUG (Executor Output): Writing final stdout output to file 'temp_redirect_test.txt'...
 DEBUG (Executor Output): Writing final stderr output to Console...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Testing overwrite redirection'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'temp_redirect_test.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'temp_redirect_test.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'temp_redirect_test.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Get-Command >> temp_append_test.txt
@@ -1102,16 +1101,15 @@ DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=5, IsAd
 DEBUG (Executor Output): Writing final stdout output to file 'temp_append_test.txt'...
 DEBUG (Executor Output): Writing final stderr output to Console...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'احصل-مساعدة'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'temp_append_test.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'temp_append_test.txt'.
 DEBUG (Executor Output): Processing output item #2 (IsError=False): 'Get-Command'
-DEBUG (Executor Output): Item #2 written and flushed to primary target file 'temp_append_test.txt'.
+DEBUG (Executor Output): Item #2 written and flushed to target file 'temp_append_test.txt'.
 DEBUG (Executor Output): Processing output item #3 (IsError=False): 'Get-Help'
-DEBUG (Executor Output): Item #3 written and flushed to primary target file 'temp_append_test.txt'.
+DEBUG (Executor Output): Item #3 written and flushed to target file 'temp_append_test.txt'.
 DEBUG (Executor Output): Processing output item #4 (IsError=False): 'Test-Array-Binding'
-DEBUG (Executor Output): Item #4 written and flushed to primary target file 'temp_append_test.txt'.
+DEBUG (Executor Output): Item #4 written and flushed to target file 'temp_append_test.txt'.
 DEBUG (Executor Output): Processing output item #5 (IsError=False): 'Write-Output'
-DEBUG (Executor Output): Item #5 written and flushed to primary target file 'temp_append_test.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'temp_append_test.txt'.
+DEBUG (Executor Output): Item #5 written and flushed to target file 'temp_append_test.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Write-Output 'Appending another line' >> temp_append_test.txt
@@ -1137,8 +1135,7 @@ DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAd
 DEBUG (Executor Output): Writing final stdout output to file 'temp_append_test.txt'...
 DEBUG (Executor Output): Writing final stderr output to Console...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Appending another line'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'temp_append_test.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'temp_append_test.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'temp_append_test.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: # --- Advanced Redirection Parsing Tests (v0.7.5+) ---
@@ -1175,7 +1172,6 @@ DEBUG (Executor Output): Writing final stdout output to Console...
 DEBUG (Executor Output): Writing final stderr output to file 'temp_stderr_test.txt'...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Stderr Redirect Test'
 Stderr Redirect Test
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stderr 'temp_stderr_test.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Write-Output 'Stderr Append Test' 2>> temp_stderr_append_test.txt
@@ -1202,7 +1198,6 @@ DEBUG (Executor Output): Writing final stdout output to Console...
 DEBUG (Executor Output): Writing final stderr output to file 'temp_stderr_append_test.txt'...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Stderr Append Test'
 Stderr Append Test
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stderr 'temp_stderr_append_test.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Write-Output 'Stderr Append Test 2' 2>> temp_stderr_append_test.txt
@@ -1229,7 +1224,6 @@ DEBUG (Executor Output): Writing final stdout output to Console...
 DEBUG (Executor Output): Writing final stderr output to file 'temp_stderr_append_test.txt'...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Stderr Append Test 2'
 Stderr Append Test 2
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stderr 'temp_stderr_append_test.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Write-Output 'Merge Stderr to Stdout Test' 2>&1 | Write-Output # Pipe needed to see merged output
@@ -1246,13 +1240,13 @@ DEBUG (Executor Pipeline): Preparing stage 1: 'Write-Output'...
 DEBUG (Executor): Waiting for 2 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
 DEBUG (Binder): Bound positional parameter at 0 ('Merge Stderr to Stdout Test') to property 'InputObject' (Type: Object)
 DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Write-Output' finished processing.
-DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
-DEBUG (Executor Task): Starting task for 'Write-Output'...
-DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
 DEBUG (Executor Task): 'Write-Output' consuming input...
+DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
 DEBUG (Executor Task): 'Write-Output' finished consuming input.
 DEBUG (Executor Task): 'Write-Output' finished processing.
 DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
@@ -1286,7 +1280,7 @@ DEBUG (Executor): Detected stdout merge to stderr (1>&2).
 DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAddingCompleted=True
 DEBUG (Executor Output): Writing final stderr output to Console...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Merge Stdout to Stderr Test'
-Merge Stdout to Stderr Test
+DEBUG (Executor Output): Routing regular object via 1>&2 merge.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Write-Output 'Merge All to File Test' > temp_merged_test.txt 2>&1
@@ -1314,8 +1308,7 @@ DEBUG (Executor): Redirecting stdout > temp_merged_test.txt
 DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAddingCompleted=True
 DEBUG (Executor Output): Writing final stdout output to file 'temp_merged_test.txt'...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Merge All to File Test'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'temp_merged_test.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'temp_merged_test.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'temp_merged_test.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Write-Output 'Multi Redirect Test' > temp_multi_out.txt 2> temp_multi_err.txt
@@ -1344,9 +1337,7 @@ DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAd
 DEBUG (Executor Output): Writing final stdout output to file 'temp_multi_out.txt'...
 DEBUG (Executor Output): Writing final stderr output to file 'temp_multi_err.txt'...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Multi Redirect Test'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'temp_multi_out.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'temp_multi_out.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stderr 'temp_multi_err.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'temp_multi_out.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: احصل-مساعدة > temp_redirect_test.txt 2> temp_stderr_test.txt # Test with Arabic command
@@ -1374,11 +1365,9 @@ DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=2, IsAd
 DEBUG (Executor Output): Writing final stdout output to file 'temp_redirect_test.txt'...
 DEBUG (Executor Output): Writing final stderr output to file 'temp_stderr_test.txt'...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Placeholder general help message. Try 'Get-Help <Command-Name>'.'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'temp_redirect_test.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'temp_redirect_test.txt'.
 DEBUG (Executor Output): Processing output item #2 (IsError=False): 'Example: Get-Help Get-Command'
-DEBUG (Executor Output): Item #2 written and flushed to primary target file 'temp_redirect_test.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'temp_redirect_test.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stderr 'temp_stderr_test.txt'.
+DEBUG (Executor Output): Item #2 written and flushed to target file 'temp_redirect_test.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: # --- Input Redirection Parsing Tests (Phase 3) ---
@@ -1414,8 +1403,7 @@ DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAd
 DEBUG (Executor Output): Writing final stdout output to file 'temp_input.txt'...
 DEBUG (Executor Output): Writing final stderr output to Console...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Line for input redirection'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'temp_input.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'temp_input.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'temp_input.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Get-Command < temp_input.txt # Test parser recognition of <
@@ -1426,14 +1414,17 @@ DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
 DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor): Attempting input redirection from 'temp_input.txt' for first command.
 DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
 DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Get-Command'...
 DEBUG (Binder): Binding parameters for GetCommandCmdlet...
-DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Get-Command' consuming input...
+DEBUG (Executor Task): 'Get-Command' finished consuming input.
 DEBUG (Executor Task): 'Get-Command' finished processing.
 DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
 DEBUG (Executor): All pipeline tasks for the statement completed.
+DEBUG (Executor): Finished reading input redirect file 'temp_input.txt'. Input collection marked complete.
 DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=5, IsAddingCompleted=True
 DEBUG (Executor Output): Writing final stdout output to Console...
 DEBUG (Executor Output): Writing final stderr output to Console...
@@ -1457,18 +1448,22 @@ DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
 DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor): Attempting input redirection from 'temp_input.txt' for first command.
 DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
 DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
-DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' consuming input...
+DEBUG (Executor Task): 'Write-Output' finished consuming input.
 DEBUG (Executor Task): 'Write-Output' finished processing.
 DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
+DEBUG (Executor): Finished reading input redirect file 'temp_input.txt'. Input collection marked complete.
 DEBUG (Executor): All pipeline tasks for the statement completed.
-DEBUG (Executor Output): Checking final output. IsCompleted=True, Count=0, IsAddingCompleted=True
+DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAddingCompleted=True
 DEBUG (Executor Output): Writing final stdout output to Console...
 DEBUG (Executor Output): Writing final stderr output to Console...
-DEBUG (Executor Output): Final output collection is complete and empty.
+DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Line for input redirection'
+Line for input redirection
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: # --- Sub-Expression Parsing Tests (v0.7.5+) ---
@@ -1499,7 +1494,7 @@ DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
 WARN (Binder): Skipping non-string positional argument at index 0 for parameter 'InputObject'. Subexpression execution not implemented.
-WARN (Binder): Unused positional subexpression argument detected at index 0.
+WARN (Binder): Unused positional argument of type List`1 detected at index 0. Subexpression execution not implemented.
 DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Write-Output' finished processing.
 DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
@@ -1528,7 +1523,7 @@ DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
 DEBUG (Binder): Bound positional parameter at 0 ('Before') to property 'InputObject' (Type: Object)
-WARN (Binder): Unused positional subexpression argument detected at index 1.
+WARN (Binder): Unused positional argument of type List`1 detected at index 1. Subexpression execution not implemented.
 WARN (Binder): Unused positional string argument detected: After
 DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Write-Output' finished processing.
@@ -1553,15 +1548,15 @@ DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
 DEBUG (Executor Pipeline): Preparing stage 1: 'Write-Output'...
 DEBUG (Executor): Waiting for 2 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 (')') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' consuming input...
 DEBUG (Binder): Bound positional parameter at 0 ('Get-Command') to property 'InputObject' (Type: Object)
 DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Write-Output' finished processing.
 DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
-DEBUG (Executor Task): Starting task for 'Write-Output'...
-DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
-DEBUG (Binder): Bound positional parameter at 0 (')') to property 'InputObject' (Type: Object)
-DEBUG (Executor Task): 'Write-Output' consuming input...
 DEBUG (Executor Task): 'Write-Output' finished consuming input.
 DEBUG (Executor Task): 'Write-Output' finished processing.
 DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
@@ -1592,7 +1587,7 @@ DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
 WARN (Binder): Skipping non-string positional argument at index 0 for parameter 'InputObject'. Subexpression execution not implemented.
-WARN (Binder): Unused positional subexpression argument detected at index 0.
+WARN (Binder): Unused positional argument of type List`1 detected at index 0. Subexpression execution not implemented.
 WARN (Binder): Unused positional string argument detected: Inner)
 DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Write-Output' finished processing.
@@ -1722,7 +1717,6 @@ DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
 DEBUG (Binder): Bound positional parameter at 0 ('Before') to property 'InputObject' (Type: Object)
-WARN (Binder): Unused positional string argument detected: TypeLiteral:string
 WARN (Binder): Unused positional string argument detected: After
 DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Write-Output' finished processing.
@@ -1914,15 +1908,15 @@ DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
 DEBUG (Executor Pipeline): Preparing stage 1: 'Write-Output'...
 DEBUG (Executor): Waiting for 2 task(s) in the pipeline to complete...
 DEBUG (Executor Task): Starting task for 'Write-Output'...
+DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
+DEBUG (Binder): Bound positional parameter at 0 ('World') to property 'InputObject' (Type: Object)
+DEBUG (Executor Task): 'Write-Output' consuming input...
 DEBUG (Binder): Bound positional parameter at 0 ('مرحبا') to property 'InputObject' (Type: Object)
 DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
 DEBUG (Executor Task): 'Write-Output' finished processing.
 DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
-DEBUG (Executor Task): Starting task for 'Write-Output'...
-DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
-DEBUG (Binder): Bound positional parameter at 0 ('World') to property 'InputObject' (Type: Object)
-DEBUG (Executor Task): 'Write-Output' consuming input...
 DEBUG (Executor Task): 'Write-Output' finished consuming input.
 DEBUG (Executor Task): 'Write-Output' finished processing.
 DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
@@ -2124,8 +2118,7 @@ DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAd
 DEBUG (Executor Output): Writing final stdout output to file 'ملف.txt'...
 DEBUG (Executor Output): Writing final stderr output to Console...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Command1'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'ملف.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'ملف.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'ملف.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: Write-Output Command2<ملف.txt # Operator touching Arabic
@@ -2136,20 +2129,23 @@ DEBUG (Parser): Statement parsed into 1 pipeline stage(s).
 DEBUG (Parser): Parsed into 1 statement(s).
 DEBUG (Executor): Executing 1 statement(s)...
 DEBUG (Executor): --- Executing Statement (1 command(s)) ---
+DEBUG (Executor): Attempting input redirection from 'ملف.txt' for first command.
 DEBUG (Executor Pipeline): Preparing stage 0: 'Write-Output'...
 DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
+DEBUG (Executor): Finished reading input redirect file 'ملف.txt'. Input collection marked complete.
 DEBUG (Executor Task): Starting task for 'Write-Output'...
 DEBUG (Binder): Binding parameters for WriteOutputCmdlet...
 DEBUG (Binder): Bound positional parameter at 0 ('Command2') to property 'InputObject' (Type: Object)
-DEBUG (Executor Task): 'Write-Output' has no pipeline input, calling ProcessRecord once.
+DEBUG (Executor Task): 'Write-Output' consuming input...
+DEBUG (Executor Task): 'Write-Output' finished consuming input.
 DEBUG (Executor Task): 'Write-Output' finished processing.
 DEBUG (Executor Task): Stage 'Write-Output' completed adding output.
 DEBUG (Executor): All pipeline tasks for the statement completed.
 DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=1, IsAddingCompleted=True
 DEBUG (Executor Output): Writing final stdout output to Console...
 DEBUG (Executor Output): Writing final stderr output to Console...
-DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Command2'
-Command2
+DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Command1'
+Command1
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: احصل-مساعدة>file.txt # Arabic command touching operator
@@ -2174,10 +2170,9 @@ DEBUG (Executor Output): Checking final output. IsCompleted=False, Count=2, IsAd
 DEBUG (Executor Output): Writing final stdout output to file 'file.txt'...
 DEBUG (Executor Output): Writing final stderr output to Console...
 DEBUG (Executor Output): Processing output item #1 (IsError=False): 'Placeholder general help message. Try 'Get-Help <Command-Name>'.'
-DEBUG (Executor Output): Item #1 written and flushed to primary target file 'file.txt'.
+DEBUG (Executor Output): Item #1 written and flushed to target file 'file.txt'.
 DEBUG (Executor Output): Processing output item #2 (IsError=False): 'Example: Get-Help Get-Command'
-DEBUG (Executor Output): Item #2 written and flushed to primary target file 'file.txt'.
-DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout 'file.txt'.
+DEBUG (Executor Output): Item #2 written and flushed to target file 'file.txt'.
 DEBUG (Executor): --- Statement execution finished ---
 DEBUG (Executor): All statements executed.
 DEBUG: Received command: احصل-مساعدة|Write-Output # Arabic command touching operator
@@ -2217,23 +2212,27 @@ DEBUG (Parser): Parsed into 0 statement(s).
 DEBUG (Executor): Executing 0 statement(s)...
 DEBUG (Executor): All statements executed.
 
-[2025-05-07 19:16:35] --- ArbSh End Output ---
-[2025-05-07 19:16:35] ArbSh process exited with code 0.
-[2025-05-07 19:16:35] Verifying redirection files...
-[2025-05-07 19:16:35] Content of temp_redirect_test.txt:
+[2025-05-07 20:12:03] --- ArbSh Error Output ---
+Merge Stdout to Stderr Test
+
+[2025-05-07 20:12:03] --- End ArbSh Error Output ---
+[2025-05-07 20:12:03] --- ArbSh End Output ---
+[2025-05-07 20:12:03] ArbSh process exited with code 0.
+[2025-05-07 20:12:03] Verifying redirection files...
+[2025-05-07 20:12:03] Content of temp_redirect_test.txt:
 Placeholder general help message. Try 'Get-Help <Command-Name>'.
 Example: Get-Help Get-Command
-[2025-05-07 19:16:35] Content of temp_append_test.txt:
+[2025-05-07 20:12:03] Content of temp_append_test.txt:
 احصل-مساعدة
 Get-Command
 Get-Help
 Test-Array-Binding
 Write-Output
 Appending another line
-[2025-05-07 19:16:35] Checking existence of advanced redirection test files (Parser test only)...
-[2025-05-07 19:16:35] INFO: temp_stderr_test.txt exists (Parser likely recognized 2>).
-[2025-05-07 19:16:35] INFO: temp_stderr_append_test.txt exists (Parser likely recognized 2>>).
-[2025-05-07 19:16:35] INFO: temp_merged_test.txt exists (Parser likely recognized > file 2>&1).
-[2025-05-07 19:16:35] INFO: temp_multi_out.txt exists (Parser likely recognized > file1).
-[2025-05-07 19:16:35] INFO: temp_multi_err.txt exists (Parser likely recognized 2> file2).
-[2025-05-07 19:16:35] Test script finished.
+[2025-05-07 20:12:03] Checking existence of advanced redirection test files (Parser test only)...
+[2025-05-07 20:12:03] INFO: temp_stderr_test.txt exists (Parser likely recognized 2>).
+[2025-05-07 20:12:03] INFO: temp_stderr_append_test.txt exists (Parser likely recognized 2>>).
+[2025-05-07 20:12:03] INFO: temp_merged_test.txt exists (Parser likely recognized > file 2>&1).
+[2025-05-07 20:12:03] INFO: temp_multi_out.txt exists (Parser likely recognized > file1).
+[2025-05-07 20:12:03] INFO: temp_multi_err.txt exists (Parser likely recognized 2> file2).
+[2025-05-07 20:12:03] Test script finished.

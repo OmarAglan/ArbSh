@@ -2,7 +2,7 @@
 
 This document provides examples for the currently implemented commands in the ArbSh C# prototype.
 
-**Note:** The shell is in early development (v0.7.6). Features like advanced parsing, robust error handling, and Arabic language support are still under development. Pipeline execution is concurrent. Parsing for type literals, input redirection, and sub-expressions is implemented, but execution logic for these is pending.
+**Note:** The shell is in early development (v0.8.0). Features like advanced parsing, robust error handling, and Arabic language support are still under development. Pipeline execution is concurrent. Parsing for type literals and sub-expressions is implemented, but execution logic for these is pending. Input redirection and stream merging are now parsed and executed.
 
 ## Running ArbSh
 
@@ -301,7 +301,23 @@ The backslash (`\`) is used as an escape character.
         ```powershell
         ArbSh> Command-With-Output-And-Error > output.log 2> error.log # Separates streams
         ```
-    *(Note: The parser recognizes all these forms, including input redirection `<`. The `Executor` currently handles stdout (`>`, `>>`) and stderr (`2>`, `2>>`) file redirection. Stream merging (`2>&1`, `1>&2`) and input redirection (`<`) execution are not yet implemented.)*
+    *(Note: The parser recognizes all these forms. The `Executor` now handles stdout (`>`, `>>`), stderr (`2>`, `2>>`), input (`<`) file redirection, and stream merging (`2>&1`, `1>&2`). Sub-expression execution is not yet implemented.)*
+
+    *   **Stream Merging Examples (v0.8.0+):**
+        ```powershell
+        # Assume 'Cmd-Error' writes "ERROR!" to stderr and 'Cmd-Output' writes "OUTPUT" to stdout
+        ArbSh> Cmd-Error 2>&1 | Write-Output 
+        # ... (Executor debug output) ...
+        DEBUG (Executor Output): Routing error object via 2>&1 merge.
+        # ...
+        ERROR! # Error appears on stdout due to merge
+
+        ArbSh> Cmd-Output >&2 
+        # ... (Executor debug output) ...
+        DEBUG (Executor Output): Routing regular object via 1>&2 merge.
+        # ... (Output "OUTPUT" appears on stderr stream)
+        ```
+
 
 ## Type Literals (`[TypeName]`) (v0.7.6+)
 
@@ -334,9 +350,7 @@ Before # Write-Output receives "Before", "TypeLiteral:string", "After" as args
 
 ## Input Redirection (`<`) (v0.7.6+)
 
-The parser now recognizes the input redirection operator `<` followed by a filename (which can be quoted).
-
-Currently, the parser identifies the operator and filename and stores the path in the `ParsedCommand` object. The `Executor` does not yet use this information to redirect standard input for the command.
+The parser now recognizes the input redirection operator `<` followed by a filename (which can be quoted). The `Executor` reads the specified file and provides its content line-by-line as pipeline input to the command.
 
 **Examples:**
 
@@ -344,16 +358,15 @@ Currently, the parser identifies the operator and filename and stores the path i
 # First, create a file to read from:
 ArbSh> Write-Output "This is the input file." > input.txt
 
-# Now, use input redirection (Parser recognizes it, Executor ignores it for now):
-ArbSh> Get-Command < input.txt
+# Now, use input redirection:
+ArbSh> Write-Output < input.txt
 # ... (DEBUG output) ...
-DEBUG (ParsedCommand): Set input redirection to: < input.txt
-# ... (Output of Get-Command is shown, as stdin isn't actually redirected yet) ...
-احصل-مساعدة
-Get-Command
-Get-Help
-Test-Array-Binding
-Write-Output
+DEBUG (Executor): Attempting input redirection from 'input.txt' for first command.
+DEBUG (Executor Task): 'Write-Output' consuming input...
+DEBUG (Executor): Finished reading input redirect file 'input.txt'. Input collection marked complete.
+DEBUG (Executor Task): 'Write-Output' finished consuming input.
+# ...
+Line for input redirection
 ```
 
 ## Sub-expressions (`$(...)`) (v0.7.6+)

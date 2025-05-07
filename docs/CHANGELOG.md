@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-05-07
+
+### Added
+- **BiDi Algorithm:** Ported core BiDi algorithm logic (determining character types, resolving embedding levels via explicit codes, reordering runs per Rule L2) from the original C implementation to `I18n/BidiAlgorithm.cs`. Includes `GetCharType`, `ProcessRuns`, `ReorderRunsForDisplay`, and `ProcessString` methods. (Note: Based on simplified C logic, requires testing and rendering integration).
+- **Executor:** Implemented execution logic for input redirection (`< file.txt`). Reads specified file and provides content as pipeline input to the first command.
+- **Executor:** Implemented execution logic for stream redirection merging (`2>&1`, `1>&2`). Output/Error objects are now correctly routed to the target stream's file handle or console stream based on merge directives.
+
+### Fixed
+- Fixed build warnings related to unused variables in `Executor.cs`'s output handling logic.
+- Fixed build warning related to empty switch block in `I18n/BidiAlgorithm.cs`.
+
+### Changed
+- Updated `README.md` and `ROADMAP.md` to reflect Phase 4 progress.
+
 ## [0.7.6] - 2025-05-07
 
 ### Added

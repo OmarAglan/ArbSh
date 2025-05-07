@@ -35,9 +35,71 @@ namespace ArbSh.Console
                 System.Console.WriteLine($"DEBUG (Executor): --- Executing Statement ({statementCommands.Count} command(s)) ---");
 
                 // Pipeline execution using Tasks for concurrency.
-                BlockingCollection<PipelineObject>? inputForCurrentStage = null; // Input for the *first* command is null
+                BlockingCollection<PipelineObject>? inputForCurrentStage = null; 
                 List<Task> pipelineTasks = new List<Task>(); // List to hold tasks for the current pipeline
                 BlockingCollection<PipelineObject>? outputOfLastStage = null; // To hold the final output collection
+                StreamReader? inputRedirectReader = null; // For handling < redirection
+
+                // --- Handle Input Redirection for the FIRST command ---
+                if (statementCommands.Count > 0 && !string.IsNullOrEmpty(statementCommands[0].InputRedirectPath))
+                {
+                    string inputFile = statementCommands[0].InputRedirectPath!;
+                    System.Console.WriteLine($"DEBUG (Executor): Attempting input redirection from '{inputFile}' for first command.");
+                    try
+                    {
+                        // Use UTF8 without BOM by default for reading
+                        var utf8NoBom = new System.Text.UTF8Encoding(false); 
+                        inputRedirectReader = new StreamReader(inputFile, utf8NoBom);
+                        
+                        // Prepare a collection to feed the file content into the first stage
+                        var fileInputCollection = new BlockingCollection<PipelineObject>();
+                        inputForCurrentStage = fileInputCollection; // This will be the input for the first stage
+
+                        // Start a task to read the file and populate the collection asynchronously
+                        // This prevents blocking the main executor thread if the file is large.
+                        Task.Run(() => {
+                            try
+                            {
+                                string? line;
+                                while ((line = inputRedirectReader.ReadLine()) != null)
+                                {
+                                    fileInputCollection.Add(new PipelineObject(line));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log error reading file - maybe add error object to collection?
+                                System.Console.ForegroundColor = ConsoleColor.Red;
+                                System.Console.WriteLine($"ERROR reading input redirect file '{inputFile}': {ex.Message}");
+                                System.Console.ResetColor();
+                                // Add an error object to signal downstream cmdlets?
+                                fileInputCollection.Add(new PipelineObject($"ERROR reading input file: {ex.Message}", isError: true));
+                            }
+                            finally
+                            {
+                                fileInputCollection.CompleteAdding(); // Signal end of file input
+                                inputRedirectReader?.Dispose(); // Dispose the reader when done
+                                System.Console.WriteLine($"DEBUG (Executor): Finished reading input redirect file '{inputFile}'. Input collection marked complete.");
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        // Handle file open errors (e.g., FileNotFoundException, IOException)
+                        System.Console.ForegroundColor = ConsoleColor.Red;
+                        System.Console.WriteLine($"ERROR opening input redirect file '{inputFile}': {ex.Message}");
+                        System.Console.ResetColor();
+                        // Can't proceed with this statement if input redirection fails critically
+                        // We could add an error object to a dummy input collection, or just skip the statement.
+                        // Let's skip the statement for now.
+                        inputForCurrentStage = new BlockingCollection<PipelineObject>(); // Provide empty input
+                        inputForCurrentStage.CompleteAdding(); // Mark as complete immediately
+                        // Skip setting up tasks for this statement by breaking the loop
+                        break; 
+                    }
+                }
+                // If no input redirection, inputForCurrentStage remains null for the first command.
+
 
                 for (int i = 0; i < statementCommands.Count; i++)
                 {
@@ -323,85 +385,96 @@ namespace ArbSh.Console
                             System.Console.WriteLine($"DEBUG (Executor Output): Processing output item #{outputCount} (IsError={isError}): '{outputString}'");
 
                             // Determine target(s) based on error status and merge flags
-                            StreamWriter? primaryWriter = null;
-                            StreamWriter? secondaryWriter = null; // For cases like 2>&1 where output goes to stdout's file
-                            string? primaryPath = null;
-                            bool writeToPrimaryConsole = false;
-                            bool writeToSecondaryConsole = false; // Not really needed, console is singular
+                            // StreamWriter? primaryWriter = null; // Unused
+                            // StreamWriter? secondaryWriter = null; // Unused
+                            // string? primaryPath = null; // Unused
+                            // bool writeToPrimaryConsole = false; // Unused
+                            StreamWriter? targetFileWriter = null;
+                            string? targetFilePath = null;
+                            bool writeToConsole = false;
+                            System.IO.TextWriter consoleStream = System.Console.Out; // Default to Stdout
 
-                            if (isError)
+                            if (isError) // This is an error object
                             {
-                                if (mergeStderrToStdout) // 2>&1
+                                if (mergeStderrToStdout) // 2>&1: Treat like normal output
                                 {
-                                    primaryWriter = stdoutRedirectWriter; // Target stdout's file writer
-                                    primaryPath = stdoutRedirectPath;
-                                    writeToPrimaryConsole = writeStdOutToConsole; // Write to console only if stdout goes to console
+                                    targetFileWriter = stdoutRedirectWriter;
+                                    targetFilePath = stdoutRedirectPath;
+                                    writeToConsole = writeStdOutToConsole; // Use stdout's console status
+                                    consoleStream = System.Console.Out;    // Write to stdout console if applicable
+                                    System.Console.WriteLine($"DEBUG (Executor Output): Routing error object via 2>&1 merge.");
                                 }
-                                else // Normal stderr or 2>file
+                                else // Normal error (stderr) or 2>file
                                 {
-                                    primaryWriter = stderrRedirectWriter;
-                                    primaryPath = stderrRedirectPath;
-                                    writeToPrimaryConsole = writeStdErrToConsole;
+                                    targetFileWriter = stderrRedirectWriter;
+                                    targetFilePath = stderrRedirectPath;
+                                    writeToConsole = writeStdErrToConsole; // Use stderr's console status
+                                    consoleStream = System.Console.Error;   // Write to stderr console if applicable
                                 }
                             }
-                            else // Not an error (regular output)
+                            else // This is regular output object
                             {
-                                if (mergeStdoutToStderr) // 1>&2
+                                if (mergeStdoutToStderr) // 1>&2: Treat like error output
                                 {
-                                    primaryWriter = stderrRedirectWriter; // Target stderr's file writer
-                                    primaryPath = stderrRedirectPath;
-                                    writeToPrimaryConsole = writeStdErrToConsole; // Write to console only if stderr goes to console
+                                    targetFileWriter = stderrRedirectWriter; // Target stderr's file writer
+                                    targetFilePath = stderrRedirectPath;
+                                    writeToConsole = writeStdErrToConsole; // Use stderr's console status
+                                    consoleStream = System.Console.Error;   // Write to stderr console if applicable
+                                    System.Console.WriteLine($"DEBUG (Executor Output): Routing regular object via 1>&2 merge.");
                                 }
-                                else // Normal stdout or 1>file
+                                else // Normal output (stdout) or 1>file
                                 {
-                                    primaryWriter = stdoutRedirectWriter;
-                                    primaryPath = stdoutRedirectPath;
-                                    writeToPrimaryConsole = writeStdOutToConsole;
+                                    targetFileWriter = stdoutRedirectWriter;
+                                    targetFilePath = stdoutRedirectPath;
+                                    writeToConsole = writeStdOutToConsole; // Use stdout's console status
+                                    consoleStream = System.Console.Out;    // Write to stdout console if applicable
                                 }
                             }
 
-                            // Write to File(s) if redirected
-                            if (primaryWriter != null)
+                            // Write to File if redirected
+                            if (targetFileWriter != null)
                             {
                                 try
                                 {
-                                    primaryWriter.WriteLine(outputString);
-                                    primaryWriter.Flush(); // Flush immediately for testing
-                                    System.Console.WriteLine($"DEBUG (Executor Output): Item #{outputCount} written and flushed to primary target file '{primaryPath}'.");
+                                    targetFileWriter.WriteLine(outputString);
+                                    targetFileWriter.Flush(); // Flush immediately for testing
+                                    System.Console.WriteLine($"DEBUG (Executor Output): Item #{outputCount} written and flushed to target file '{targetFilePath}'.");
                                 }
                                 catch (Exception ex)
                                 {
                                     System.Console.ForegroundColor = ConsoleColor.Red;
-                                    System.Console.WriteLine($"ERROR: Failed writing/flushing to primary redirect file '{primaryPath}': {ex.GetType().Name} - {ex.Message}");
+                                    System.Console.WriteLine($"ERROR: Failed writing/flushing to redirect file '{targetFilePath}': {ex.GetType().Name} - {ex.Message}");
                                     System.Console.ResetColor();
-                                    try { primaryWriter.Dispose(); } catch { /* Ignore */ }
-                                    // Null out the writer that failed
-                                    if (primaryWriter == stdoutRedirectWriter) stdoutRedirectWriter = null;
-                                    if (primaryWriter == stderrRedirectWriter) stderrRedirectWriter = null;
-                                    // Fallback the corresponding stream to console
-                                    if (isError && !mergeStderrToStdout) writeStdErrToConsole = true; // Fallback error to console if not merged
-                                    if (!isError && !mergeStdoutToStderr) writeStdOutToConsole = true; // Fallback output to console if not merged
-                                    // If merged, the fallback depends on the *other* stream's console status
-                                    if (isError && mergeStderrToStdout) writeStdOutToConsole = true; // Fallback merged error via stdout console status
-                                    if (!isError && mergeStdoutToStderr) writeStdErrToConsole = true; // Fallback merged output via stderr console status
-
-                                    primaryWriter = null; // Ensure we don't try to write again below if console fallback is also true
+                                    try { targetFileWriter.Dispose(); } catch { /* Ignore */ }
+                                    
+                                    // Null out the writer that failed and potentially enable console fallback
+                                    if (targetFileWriter == stdoutRedirectWriter) 
+                                    {
+                                        stdoutRedirectWriter = null;
+                                        // If stdout file failed, enable console output for stdout *unless* it was merged to stderr
+                                        if (!mergeStdoutToStderr) writeStdOutToConsole = true; 
+                                    }
+                                    if (targetFileWriter == stderrRedirectWriter) 
+                                    {
+                                         stderrRedirectWriter = null;
+                                         // If stderr file failed, enable console output for stderr *unless* it was merged to stdout
+                                         if (!mergeStderrToStdout) writeStdErrToConsole = true;
+                                    }
+                                    
+                                    // Re-evaluate if we should write to console now based on updated flags
+                                    if (isError) {
+                                        writeToConsole = mergeStderrToStdout ? writeStdOutToConsole : writeStdErrToConsole;
+                                    } else {
+                                        writeToConsole = mergeStdoutToStderr ? writeStdErrToConsole : writeStdOutToConsole;
+                                    }
+                                    targetFileWriter = null; // Ensure we don't try to use it again
                                 }
                             }
-                            // Note: secondaryWriter logic for complex merges (e.g., tee) is not implemented here.
-
-                            // Write to Console if applicable
-                            if (writeToPrimaryConsole)
+                            
+                            // Write to Console if applicable (either originally intended or as fallback)
+                            if (writeToConsole)
                             {
-                                // Use Console.Error for errors, Console.Out for regular output
-                                if (isError)
-                                {
-                                    System.Console.Error.WriteLine(outputString);
-                                }
-                                else
-                                {
-                                    System.Console.Out.WriteLine(outputString);
-                                }
+                                consoleStream.WriteLine(outputString);
                             }
                         }
                          if (outputCount == 0 && outputOfLastStage.IsAddingCompleted) {
@@ -419,16 +492,9 @@ namespace ArbSh.Console
                     finally
                     {
                         // Dispose any open stream writers
-                        if (stdoutRedirectWriter != null)
-                        {
-                            System.Console.WriteLine($"DEBUG (Executor Output): Flushing and Disposing StreamWriter for stdout '{stdoutRedirectPath}'.");
-                            try { stdoutRedirectWriter.Flush(); stdoutRedirectWriter.Dispose(); } catch (Exception ex) { System.Console.WriteLine($"ERROR: Exception during final flush/dispose of stdout redirect file: {ex.Message}"); }
-                        }
-                        if (stderrRedirectWriter != null) // Added
-                        {
-                            System.Console.WriteLine($"DEBUG (Executor Output): Flushing and Disposing StreamWriter for stderr '{stderrRedirectPath}'.");
-                            try { stderrRedirectWriter.Flush(); stderrRedirectWriter.Dispose(); } catch (Exception ex) { System.Console.WriteLine($"ERROR: Exception during final flush/dispose of stderr redirect file: {ex.Message}"); }
-                        }
+                        stdoutRedirectWriter?.Dispose(); // Use null-conditional operator
+                        stderrRedirectWriter?.Dispose(); // Use null-conditional operator
+                        
                         outputOfLastStage.Dispose(); // Dispose the final collection
                     }
                 }
@@ -659,8 +725,8 @@ namespace ArbSh.Console
                             System.Console.WriteLine($"WARN (Binder): Skipping non-string positional argument at index {paramAttr.Position} for parameter '{prop.Name}'. Subexpression execution not implemented.");
                             // Mark as 'used' to prevent array binder from trying it again? Or leave unused? Leave unused for now.
                         }
-                    } // <-- Correct placement for the 'else if' block's closing brace
-                } // <-- Correct placement for the 'if (!found && paramAttr.Position >= 0)' block's closing brace
+                    } 
+                } 
 
                 // 3. Set the property value if bound (either by name or position) and value is ready
                 // Note: 'found' here means bound by *name* OR *position*.
@@ -695,7 +761,7 @@ namespace ArbSh.Console
                         ParameterName = prop.Name // Store the property name
                     };
                 }
-            }
+            } // <<< End of foreach loop for properties
 
             // TODO: Handle remaining positional arguments (e.g., pass via pipeline or error)
             // This check might be less relevant now if cmdlets primarily use pipeline input
@@ -708,17 +774,44 @@ namespace ArbSh.Console
                     // Check type before logging
                     if (command.Arguments[i] is string unusedStringArg)
                     {
-                        System.Console.WriteLine($"WARN (Binder): Unused positional string argument detected: {unusedStringArg}");
-                        // Depending on shell strictness, this could be an error:
-                        // throw new ParameterBindingException($"Unexpected positional argument: {unusedStringArg}");
+                         // Don't warn about the TypeLiteral pseudo-arguments
+                        if (!unusedStringArg.StartsWith("TypeLiteral:")) {
+                             System.Console.WriteLine($"WARN (Binder): Unused positional string argument detected: {unusedStringArg}");
+                             // Depending on shell strictness, this could be an error:
+                             // throw new ParameterBindingException($"Unexpected positional argument: {unusedStringArg}");
+                        }
                     }
-                    else // It's likely a parsed subexpression List<ParsedCommand>
+                    else // It's likely a parsed subexpression List<ParsedCommand> or other object
                     {
-                        System.Console.WriteLine($"WARN (Binder): Unused positional subexpression argument detected at index {i}.");
-                        // Execution not implemented yet.
+                        System.Console.WriteLine($"WARN (Binder): Unused positional argument of type {command.Arguments[i]?.GetType().Name ?? "null"} detected at index {i}. Subexpression execution not implemented.");
                     }
                 }
             }
         }
+
+        /// <summary>
+        /// Executes a sub-expression (represented by parsed commands) and returns its output as a single string.
+        /// NOTE: This is a simplified implementation. PowerShell has more complex rules for subexpression output conversion.
+        /// </summary>
+        private static string ExecuteSubExpression(List<ParsedCommand> subCommands)
+        {
+            // This needs a way to run the executor pipeline but capture the output instead of writing to console/file.
+            // For now, return a placeholder string indicating execution is needed.
+            // TODO: Implement actual sub-expression execution and output capture.
+            System.Console.WriteLine($"DEBUG (Executor): Placeholder execution for subexpression starting with '{subCommands.FirstOrDefault()?.CommandName ?? "N/A"}'.");
+            
+            // --- Placeholder Logic ---
+            // In a real implementation:
+            // 1. Create temporary input/output BlockingCollections for the sub-pipeline.
+            // 2. Call a modified version of the main Execute loop logic for the subCommands list,
+            //    directing the final output to a temporary collection instead of console/file.
+            // 3. Wait for the sub-pipeline tasks to complete.
+            // 4. Collect all PipelineObjects from the temporary output collection.
+            // 5. Convert the collected objects to a string (e.g., join with spaces or newlines).
+            // 6. Return the resulting string.
+
+            return $"[SubExprResult:{subCommands.FirstOrDefault()?.CommandName ?? "Empty"}]"; 
+        }
+
     }
 }

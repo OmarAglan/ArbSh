@@ -58,16 +58,16 @@ To create a powerful, extensible shell environment built on .NET that:
 **Phase 4: Porting ArbSh UTF-8 & BiDi Algorithms to C# (Current Phase)**
 
 - [✅] **BLOCKER RESOLVED:** Resolved UTF-8 input/output encoding corruption when running via PowerShell `Start-Process` with redirected streams.
-- [ ] Systematically port the UTF-8 handling logic from `src/utils/utf8.c` to a C# utility class/module.
-- [ ] Carefully port the Unicode Bidirectional Algorithm (UAX #9) implementation from `src/i18n/bidi/bidi.c` to C#.
-- [ ] Port supporting functions (e.g., character classification, string utilities) as needed from `src/utils/` and `src/i18n/`.
+- [✅] Systematically port the UTF-8 handling logic from `src/utils/utf8.c` to a C# utility class/module. *(Decision: Standard .NET UTF-8 APIs deemed sufficient, no direct port needed)*.
+- [✅] Carefully port the Unicode Bidirectional Algorithm (UAX #9) implementation from `src/i18n/bidi/bidi.c` to C#. *(Core logic ported to `I18n/BidiAlgorithm.cs`; based on simplified C implementation)*.
+- [✅] Port supporting functions (e.g., character classification, string utilities) as needed from `src/utils/` and `src/i18n/`. *(Determined not necessary as .NET APIs cover needs)*.
 - [ ] Develop C# unit tests for the ported i18n logic.
-- [ ] **Fix Runtime Issues from v0.7.5 Testing:**
+- [ ] **Fix Runtime Issues from v0.7.5 Testing & Implement Phase 3 Execution:**
   - [✅] Resolved UTF-8 encoding corruption issues when *capturing* C# process output externally (e.g., via PowerShell `ReadToEnd()`).
   - [✅] Fix erroneous default redirection attempts in Executor (prevent `Value cannot be null` error when no redirection is specified).
-  - [🚧] Fix/Verify Tokenizer handling of Arabic/mixed-script identifiers and special characters (e.g., `:`) (Now unblocked).
-  - [🚧] Implement Executor logic for input redirection (`<`).
-  - [🚧] Implement Executor logic for stream redirection merging (`2>&1`, `>&2`).
+  - [🚧] Fix/Verify Tokenizer handling of Arabic/mixed-script identifiers and special characters (e.g., `:`) (Now unblocked). *(Basic verification done via tests, seems OK)*.
+  - [✅] Implement Executor logic for input redirection (`<`).
+  - [✅] Implement Executor logic for stream redirection merging (`2>&1`, `>&2`).
   - [🚧] Implement Executor logic for subexpression (`$(...)`) execution.
 
 **Phase 5: C# Console I/O with Integrated BiDi Rendering**
