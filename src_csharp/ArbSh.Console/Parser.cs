@@ -222,29 +222,71 @@ namespace ArbSh.Console
                 if (currentToken.Type == TokenType.Operator)
                 {
                     string opValue = currentToken.Value;
-                    ParsedCommand.RedirectionInfo? redirection = TryParseRedirectionOperator(opValue, remainingTokens, i);
 
-                    if (redirection != null)
+                    // Handle Input Redirection '<'
+                    if (opValue == "<")
                     {
-                        parsedCommand.AddRedirection(redirection.Value);
-                        // Determine how many tokens were consumed (1 for stream, 2 for file)
-                        int tokensToRemove = (redirection.Value.TargetType == ParsedCommand.RedirectionTargetType.StreamHandle) ? 1 : 2;
+                        if (i + 1 < remainingTokens.Count)
+                        {
+                            Token targetToken = remainingTokens[i + 1];
+                            if (targetToken.Type == TokenType.Identifier || targetToken.Type == TokenType.StringLiteralDQ || targetToken.Type == TokenType.StringLiteralSQ)
+                            {
+                                string targetPath = targetToken.Value;
+                                // Remove quotes from string literals if present
+                                if (targetToken.Type == TokenType.StringLiteralDQ || targetToken.Type == TokenType.StringLiteralSQ)
+                                {
+                                    if (targetPath.Length >= 2) targetPath = targetPath.Substring(1, targetPath.Length - 2);
+                                }
 
-                        // Remove consumed tokens (in reverse index order)
-                        if (tokensToRemove == 2) remainingTokens.RemoveAt(i + 1);
-                        remainingTokens.RemoveAt(i);
-                        processed = true;
-                        // Do NOT increment i, list shifted, restart check from current index
-                        continue;
+                                if (parsedCommand.InputRedirectPath != null)
+                                {
+                                    System.Console.WriteLine($"WARN (Parser): Multiple input redirections specified. Using last one: '{targetPath}'. Previous was: '{parsedCommand.InputRedirectPath}'.");
+                                }
+                                parsedCommand.SetInputRedirection(targetPath);
+                                
+                                remainingTokens.RemoveAt(i + 1); // Remove file path token
+                                remainingTokens.RemoveAt(i);     // Remove '<' token
+                                processed = true;
+                                continue; // Restart check from current index
+                            }
+                            else
+                            {
+                                System.Console.WriteLine($"WARN (Parser): Input redirection operator '<' found without a valid file path target. Unexpected token type: '{targetToken.Type}'.");
+                                remainingTokens.RemoveAt(i); // Remove the invalid '<' operator token
+                                processed = true;
+                                continue; // Restart check from current index
+                            }
+                        }
+                        else
+                        {
+                            System.Console.WriteLine($"WARN (Parser): Input redirection operator '<' found at the end of command without a target file path.");
+                            remainingTokens.RemoveAt(i); // Remove the invalid '<' operator token
+                            processed = true;
+                            continue; // Restart check from current index
+                        }
                     }
-                    // Handle cases where the token looked like an operator but wasn't valid redirection
-                    else if (opValue.Contains(">")) // If it looked like redirection but failed parsing
+                    // Handle Output Redirection (>, >>, 2>, etc.)
+                    else if (opValue.Contains(">")) // Check if it's an output redirection operator
                     {
-                         System.Console.WriteLine($"WARN (Parser): Failed to parse redirection for operator token '{opValue}'.");
-                         remainingTokens.RemoveAt(i); // Remove the invalid operator token
-                         processed = true;
-                         continue; // Restart check from current index
+                        ParsedCommand.RedirectionInfo? redirection = TryParseRedirectionOperator(opValue, remainingTokens, i);
+                        if (redirection != null)
+                        {
+                            parsedCommand.AddRedirection(redirection.Value);
+                            int tokensToRemove = (redirection.Value.TargetType == ParsedCommand.RedirectionTargetType.StreamHandle) ? 1 : 2;
+                            if (tokensToRemove == 2) remainingTokens.RemoveAt(i + 1);
+                            remainingTokens.RemoveAt(i);
+                            processed = true;
+                            continue; // Restart check from current index
+                        }
+                        else
+                        {
+                            System.Console.WriteLine($"WARN (Parser): Failed to parse output redirection for operator token '{opValue}'.");
+                            remainingTokens.RemoveAt(i); // Remove the invalid operator token
+                            processed = true;
+                            continue; // Restart check from current index
+                        }
                     }
+                    // Potentially other operators not related to redirection could be here
                 }
 
                 // If the token wasn't processed as redirection, move to the next one
@@ -329,10 +371,17 @@ namespace ArbSh.Console
                             parenNestingLevel--;
                             if (parenNestingLevel == 0) break; // Found matching end
                         }
+                        // Check for the closing parenthesis *before* adding the token
+                        if (subToken.Type == TokenType.GroupEnd || subToken.Type == TokenType.SubExpressionEnd)
+                        {
+                            parenNestingLevel--;
+                            if (parenNestingLevel == 0) break; // Found matching end, break loop *before* adding ')'
+                        }
                         subExpressionTokens.Add(subToken);
-                        i++;
+                        i++; // Consume the token added or the token that caused the break
                     }
 
+                    // Check if loop finished because we ran out of tokens before finding the end
                     if (parenNestingLevel != 0)
                     {
                         System.Console.WriteLine("WARN (Parser): Unterminated subexpression '$()' found.");
@@ -358,6 +407,20 @@ namespace ArbSh.Console
                         }
                     }
                 }
+                // --- Type Literal Parsing ---
+                else if (currentToken.Type == TokenType.TypeLiteral)
+                {
+                    // If we were building an argument, add it first
+                    if (currentArgumentBuilder.Length > 0)
+                    {
+                        arguments.Add(currentArgumentBuilder.ToString());
+                        currentArgumentBuilder.Clear();
+                    }
+
+                    string typeName = currentToken.Value.Substring(1, currentToken.Value.Length - 2).Trim(); // Remove [ and ] and trim
+                    arguments.Add($"TypeLiteral:{typeName}"); // Add as a special string argument for now
+                    System.Console.WriteLine($"DEBUG (Parser): Added TypeLiteral '{typeName}' as argument.");
+                }
                 else // It's part of a regular argument (Identifier, StringLiteral, Variable, Operator not handled as redirection, etc.)
                 {
                     string valueToAppend;
@@ -368,9 +431,17 @@ namespace ArbSh.Console
                         valueToAppend = GetVariableValue(varName);
                         System.Console.WriteLine($"DEBUG (Parser): Expanding variable '{currentToken.Value}' to '{valueToAppend}' for argument building.");
                     }
-                    // TODO: Handle StringLiterals - remove quotes, process escapes?
-                    // else if (currentToken.Type == TokenType.StringLiteralDQ) { valueToAppend = ProcessStringLiteral(currentToken.Value); }
-                    // else if (currentToken.Type == TokenType.StringLiteralSQ) { valueToAppend = ProcessStringLiteral(currentToken.Value); }
+                    else if (currentToken.Type == TokenType.StringLiteralDQ)
+                    {
+                        // Remove surrounding quotes and process escapes
+                        string rawString = currentToken.Value.Length >= 2 ? currentToken.Value.Substring(1, currentToken.Value.Length - 2) : "";
+                        valueToAppend = ProcessEscapesInString(rawString);
+                    }
+                    else if (currentToken.Type == TokenType.StringLiteralSQ)
+                    {
+                        // Remove surrounding quotes, no escape processing for single quotes
+                        valueToAppend = currentToken.Value.Length >= 2 ? currentToken.Value.Substring(1, currentToken.Value.Length - 2) : "";
+                    }
                     else
                     {
                         // Append other token types' values directly
@@ -495,5 +566,56 @@ namespace ArbSh.Console
 
 
         // NOTE: Old state machine tokenizer (TokenizeInput, TokenizerStateSM enum, helper methods) removed.
+
+        /// <summary>
+        /// Processes escape sequences within a string that was originally double-quoted.
+        /// </summary>
+        /// <param name="rawString">The raw string content without the surrounding double quotes.</param>
+        /// <returns>The string with recognized escape sequences processed.</returns>
+        private static string ProcessEscapesInString(string rawString)
+        {
+            // PowerShell-like escapes: ` (backtick) is the escape character.
+            // Common escapes: `` (literal backtick), `0 (null), `a (alert), `b (backspace),
+            // `e (escape), `f (form feed), `n (newline), `r (carriage return), `t (tab), `v (vertical tab).
+            // Also handles escaping $, ", and \ (though \ is not the primary escape char here,
+            // the tokenizer handles \ within DQ strings for compatibility with general expectations).
+            // For this shell, we'll focus on common C-style escapes for now, as `\` is used in tokenizer.
+            // Let's assume \ is the escape char as per StringLiteralDQ regex: \" \\ \$ etc.
+            // The regex `(?:\\.|[^""\\])*` in StringLiteralDQ captures `\\.` for escapes.
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < rawString.Length; i++)
+            {
+                if (rawString[i] == '\\' && i + 1 < rawString.Length)
+                {
+                    i++; // Move to the character after backslash
+                    switch (rawString[i])
+                    {
+                        case '"': sb.Append('"'); break;
+                        case '\\': sb.Append('\\'); break;
+                        case '$': sb.Append('$'); break; // Important for preventing unintended variable expansion if string is re-parsed
+                        case '0': sb.Append('\0'); break;
+                        case 'a': sb.Append('\a'); break;
+                        case 'b': sb.Append('\b'); break;
+                        case 'f': sb.Append('\f'); break;
+                        case 'n': sb.Append('\n'); break;
+                        case 'r': sb.Append('\r'); break;
+                        case 't': sb.Append('\t'); break;
+                        case 'v': sb.Append('\v'); break;
+                        // TODO: Add \uXXXX and \xXX unicode/hex escapes if needed
+                        default:
+                            // If not a recognized escape sequence, just append the character following the backslash literally.
+                            // (The backslash itself is consumed by the escape check `rawString[i] == '\\'`)
+                            sb.Append(rawString[i]);
+                            break;
+                    }
+                }
+                else
+                {
+                    sb.Append(rawString[i]);
+                }
+            }
+            return sb.ToString();
+        }
     }
 }

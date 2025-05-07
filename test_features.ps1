@@ -113,8 +113,11 @@ $arbshCommands = @(
     'Write-Output ''Literal Pipe -> \|''' # Escape | for ArbSh
     'Write-Output ''Literal Semicolon -> \;''' # Escape ; for ArbSh
     'Write-Output ''Literal Quote -> \"''' # Escape " for ArbSh
-    # Known Issue: The following two lines fail due to tokenizer escape handling (See README/Roadmap)
-    # 'Write-Output "Quoted string with \\"escaped quote\\" inside"'
+    '# Test escapes inside double quotes (Phase 3 Change)'
+    'Write-Output "Quoted string with \\"escaped quote\\" inside"' # Should now work
+    'Write-Output "Line1\nLine2"' # Test newline escape
+    'Write-Output "Value is:\t\$testVar"' # Test tab and escaped dollar
+    # Known Issue: The following line might still have issues depending on backslash handling outside quotes
     # 'Write-Output Argument\\ WithSpace'
     ''
     '# --- Parameter Binding Errors ---'
@@ -138,6 +141,12 @@ $arbshCommands = @(
     'Write-Output ''Multi Redirect Test'' > temp_multi_out.txt 2> temp_multi_err.txt'
     'احصل-مساعدة > temp_redirect_test.txt 2> temp_stderr_test.txt # Test with Arabic command'
     ''
+    '# --- Input Redirection Parsing Tests (Phase 3) ---'
+    '# Create a dummy input file first using ArbSh itself'
+    'Write-Output "Line for input redirection" > temp_input.txt'
+    'Get-Command < temp_input.txt # Test parser recognition of <'
+    'Write-Output < temp_input.txt # Another test'
+    ''
     '# --- Sub-Expression Parsing Tests (v0.7.5+) ---'
     '# Note: Executor does not yet HANDLE these, this tests PARSER recognition'
     'Write-Output $(Get-Command)'
@@ -145,6 +154,12 @@ $arbshCommands = @(
     'Write-Output $(Get-Command | Write-Output)'
     'Write-Output $(Write-Output Outer $(Get-Command) Inner)' # Nested test
     'Get-Help -CommandName $(Write-Output Get-Command)' # Subexpression as parameter value
+    ''
+    '# --- Type Literal Parsing Tests (Phase 3) ---'
+    'Write-Output [int] 123'
+    'Write-Output [System.ConsoleColor] "Red"'
+    'Write-Output [ عربي ] "Test"' # Test with spaces and Arabic
+    'Write-Output Before[string]After' # Test adjacent to identifiers
     ''
     '# --- Mixed Script Tests (v0.7.5+) ---'
     '# Test parser handling of mixed scripts in various contexts'

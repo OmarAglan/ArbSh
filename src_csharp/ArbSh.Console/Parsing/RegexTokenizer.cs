@@ -36,6 +36,8 @@ namespace ArbSh.Console.Parsing
             // File Redirection (e.g., 2>>, >>, 2>, >) - Must come AFTER stream redirection
             (TokenType.Operator,        @"(?<Operator>\d*>>)"),     // e.g., 2>>, >>
             (TokenType.Operator,        @"(?<Operator>\d*>)"),      // e.g., 2>, >
+            // Input Redirection
+            (TokenType.Operator,        @"(?<Operator><)"),           // < Input redirection
             // Other Operators
             (TokenType.SubExpressionStart,@"(?<SubExpressionStart>\$\()"), // $( Subexpression start
             (TokenType.Separator,       @"(?<Separator>;)"),          // ;
@@ -43,9 +45,12 @@ namespace ArbSh.Console.Parsing
             (TokenType.GroupStart,      @"(?<GroupStart>\()"),         // ( Grouping
             (TokenType.GroupEnd,        @"(?<GroupEnd>\))"),           // )
             (TokenType.SubExpressionEnd,@"(?<SubExpressionEnd>\))"),     // ) - Same as GroupEnd, context determines meaning
-            // TODO: Add other operators like &, type literals [], etc.
+            
+            // Type Literals (e.g., [int], [System.ConsoleColor])
+            (TokenType.TypeLiteral,     @"(?<TypeLiteral>\[\s*[\p{L}_][\p{L}\p{N}_\.]*\s*\])"),
+            // TODO: Add other operators like &, etc.
 
-            // Identifiers / Arguments (Must come after parameters/variables)
+            // Identifiers / Arguments (Must come after parameters/variables/type literals)
             // Allows letters (inc. Arabic), numbers, underscore, hyphen. Also allows '.', '\', '/' for paths.
             (TokenType.Identifier,      @"(?<Identifier>[\p{L}_\./\\-][\p{L}\p{N}_\./\\-]*)"), // Starts with letter, _, ., /, \, - followed by more
 

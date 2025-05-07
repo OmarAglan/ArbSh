@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.6] - 2025-05-07
+
+### Added
+- **Parser:** Added parsing support for type literals (e.g., `[int]`, `[string]`, `[System.ConsoleColor]`). Recognized via `TokenType.TypeLiteral` and stored as a special argument string (`"TypeLiteral:TypeName"`) in `ParsedCommand`.
+- **Parser:** Added parsing support for input redirection (`< file.txt`). Recognized via `TokenType.Operator` (`<`) and stored in the new `InputRedirectPath` property of `ParsedCommand`.
+
+### Fixed
+- **Parser:** Correctly interpret standard escape sequences (`\n`, `\t`, `\"`, `\\`, `\$`, etc.) within double-quoted strings (`StringLiteralDQ`). Added `ProcessEscapesInString` helper method. Single-quoted strings remain literal.
+- **Parser:** Fixed sub-expression (`$(...)`) parsing regression. Nested sub-expressions and pipelines within them are now parsed correctly without causing "unterminated" errors or incorrect token consumption.
+
+### Changed
+- Updated `README.md` and `ROADMAP.md` to reflect completion of Phase 3 parsing enhancements.
+
 ## [0.7.5] - 2025-05-06
 
 ### Fixed

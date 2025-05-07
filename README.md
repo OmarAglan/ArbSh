@@ -31,8 +31,10 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
     -   Identify pipeline stages using pipes (`|`) respecting quotes/escapes.
     -   **Tokenizer Refactoring:** Replaced the internal state-machine tokenizer with a new Regex-based tokenizer (`RegexTokenizer.cs`) using Unicode properties (`\p{L}`) for better handling of mixed-script identifiers and complex syntax elements like redirection operators.
     -   **Variable Expansion:** Fixed the regression; variables like `$testVar` are now correctly expanded and concatenated within arguments (e.g., `ValueIs:$testVar` works).
-    -   **Advanced Redirection:** Detect and parse advanced redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`, etc.) using the new tokenizer. *(Input redirection `<` still needs to be added to the tokenizer)*.
-    -   **Sub-expressions:** Recognize `$()` syntax, recursively parse the inner command(s), and store the result (currently a `List<ParsedCommand>`) as an argument object. *(Execution of sub-expressions is not yet implemented)*.
+    -   **Advanced Redirection:** Detect and parse advanced redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`, etc.) and **input redirection (`<`)** using the new tokenizer.
+    -   **Sub-expressions:** Recognize `$()` syntax, recursively parse the inner command(s), and store the result (a `List<ParsedCommand>`) as an argument object. *(Execution of sub-expressions is not yet implemented)*.
+    -   **Type Literals:** Recognize type literals like `[int]`, `[string]`, `[System.ConsoleColor]` and parse them as distinct arguments (currently stored as prefixed strings like `"TypeLiteral:int"`). *(Using these for casting or binding is not yet implemented)*.
+    -   **Escape Sequences:** Interpret standard escape sequences (`\n`, `\t`, `\"`, `\\`, `\$`, etc.) within double-quoted strings. Single-quoted strings remain literal.
 -   **Parameter Binding:** Added `ParameterAttribute` (with pipeline support flags) and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks, boolean switches, basic type conversion (`TypeConverter`/`Convert.ChangeType`), improved error reporting for conversion failures, and binding remaining positional arguments to array parameters. **Update:** Parameter binder now also recognizes the `[ArabicName]` attribute on cmdlet properties, allowing parameters to be specified using assigned Arabic names (e.g., `-الاسم`).
 -   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation. **Update:** Command discovery now also recognizes the `[ArabicName]` attribute on cmdlet classes, allowing cmdlets to be invoked using assigned Arabic names (e.g., `احصل-مساعدة`).
 -   **Concurrent Pipeline:** The `Executor` now uses `Task` and `BlockingCollection` to execute pipeline stages concurrently within each statement. `CmdletBase` includes logic (`BindPipelineParameters`) to handle binding pipeline input (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`).
@@ -42,7 +44,7 @@ The project is in the **early stages** of the C# refactoring (Phase 1 complete, 
 -   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, `CHANGELOG.md`, etc.) has been updated to reflect the C# refactoring status.
 -   **C Code Reference:** The original C source code and build files have been moved to the `old_c_code/` directory for reference during the porting process.
 
-*The shell can now be built and run via `dotnet run`, providing a basic prompt. It uses a new Regex-based tokenizer. It can parse commands with quoted arguments, escape sequences, pipelines (`|`), statement separators (`;`), variable expansion (`$var`), and most standard redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`). It can discover cmdlets (including Arabic aliases via `[ArabicName]` attribute), perform parameter binding (including pipeline input, basic arrays, and Arabic parameter aliases via `[ArabicName]` attribute), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. The executor handles stdout and stderr file redirection. The major encoding blocker for testing Arabic features is resolved. However, input redirection parsing (`<`), stream redirection *execution* (`>&1`), sub-expression execution, type literal parsing (`[int]`), robust type conversion, comprehensive error handling (beyond basic exceptions and `IsError` flag), and full Arabic text rendering support are still needed.*
+*The shell can now be built and run via `dotnet run`, providing a basic prompt. It uses a new Regex-based tokenizer. It can parse commands with quoted arguments (interpreting escapes in double quotes), pipelines (`|`), statement separators (`;`), variable expansion (`$var`), type literals (`[int]`), sub-expressions (`$(...)`), and standard redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`, `<`). It can discover cmdlets (including Arabic aliases via `[ArabicName]` attribute), perform parameter binding (including pipeline input, basic arrays, and Arabic parameter aliases via `[ArabicName]` attribute), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. The executor handles stdout and stderr file redirection. The major encoding blocker for testing Arabic features is resolved. However, **input redirection execution**, **stream redirection merging execution** (`>&1`), **sub-expression execution**, **using type literals for casting/binding**, robust type conversion, comprehensive error handling (beyond basic exceptions and `IsError` flag), and full Arabic text rendering support are still needed.*
 
 ## New Code Structure
 
@@ -78,17 +80,17 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
 -   **Console Rendering:** Integrating the ported BiDi logic with .NET console output mechanisms (`System.Console` or potentially libraries like `Spectre.Console`) to achieve correct RTL/mixed text rendering.
 -   **Arabic Command Parsing:** Designing and implementing a robust parser in C# that correctly handles Arabic script alongside potential English keywords/parameters and object syntax.
 
-## Known Issues and Limitations (Current State)
+## Known Issues and Limitations (Current State - v0.7.6)
 
 -   **Encoding:** **RESOLVED!** The previous UTF-8 input/output corruption issues when using redirected streams with `Start-Process` have been fixed.
 -   **Parsing/Tokenization:**
-    -   Input redirection operator `<` is not yet recognized by the tokenizer.
-    -   Sub-expression `$(...)` parsing is implemented, but execution is not.
-    -   Type literals `[int]` are not yet parsed.
-    -   Mixed-script identifiers (e.g., `Commandمرحبا`) need verification/improvement in the tokenizer.
+    -   Mixed-script identifiers (e.g., `Commandمرحبا`) need further verification/testing with the tokenizer.
+    -   Handling of escapes outside quoted strings (e.g., `Argument\ WithSpace`) may need refinement.
 -   **Execution:**
-    -   Stream redirection merging (`2>&1`, `1>&2`) is parsed but not implemented in the Executor.
-    -   Sub-expression execution is not implemented.
+    -   **Input Redirection (`<`)**: Parsed, but not yet handled by the Executor.
+    -   **Stream Redirection Merging (`2>&1`, `1>&2`)**: Parsed, but not yet fully implemented in the Executor.
+    -   **Sub-expression Execution (`$(...)`)**: Parsing is implemented, but execution is not. The parsed structure is passed as an argument object.
+    -   **Type Literal Usage**: Parsed, but not yet used for casting or parameter binding.
     -   No external process execution support yet.
 -   **Parameter Binding:**
     -   Type conversion is basic (relies on `TypeConverter` and `Convert.ChangeType`, no complex type handling like script blocks or hashtables).
@@ -96,7 +98,7 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
     -   Unknown named parameters are currently ignored instead of causing an error.
 -   **Error Handling:** Rudimentary (basic exceptions caught, `PipelineObject.IsError` flag added, but no rich `ErrorRecord` objects like PowerShell).
 -   **Features:**
-    -   Basic Arabic command and parameter name support is implemented via the `[ArabicName]` attribute, but cannot be fully tested due to the input encoding issue. Full Arabic text rendering (BiDi/RTL) is not yet implemented.
+    -   Basic Arabic command and parameter name support is implemented via the `[ArabicName]` attribute. Full Arabic text rendering (BiDi/RTL) is not yet implemented.
     -   No scripting features (variables are hardcoded in Parser, no functions, flow control, etc.).
     -   No tab completion, history, or aliasing.
 

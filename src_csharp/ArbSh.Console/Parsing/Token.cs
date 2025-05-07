@@ -20,8 +20,9 @@ namespace ArbSh.Console.Parsing
         SubExpressionEnd,   // )
         GroupStart,     // (
         GroupEnd,       // )
-        Separator       // ;
-        // Add other types as needed (e.g., TypeLiteral [int])
+        Separator,      // ;
+        TypeLiteral     // e.g., [int], [string], [MyNamespace.MyClass]
+        // Add other types as needed
     }
 
     /// <summary>

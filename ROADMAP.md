@@ -23,7 +23,7 @@ To create a powerful, extensible shell environment built on .NET that:
 - [✅] Update `.gitignore` for C# artifacts.
 - [✅] Update `docs/PROJECT_ORGANIZATION.md`.
 
-**Phase 2: Basic Cmdlet Framework & Execution Engine (C#) (Current Phase)**
+**Phase 2: Basic Cmdlet Framework & Execution Engine (C#) (Completed)**
 
 - [✅] Basic REPL (Read-Eval-Print Loop) implementation in `ArbSh.Console`.
 - [✅] Develop the initial C# parser (`Parser.cs`) for simple syntax, handling quoted args, parameters (`-`), and pipelines (`|`).
@@ -39,23 +39,23 @@ To create a powerful, extensible shell environment built on .NET that:
 - [✅] **Basic Error Handling:** Added `IsError` flag to `PipelineObject` and updated `GetHelpCmdlet` to use it.
 - [✅] **Basic Executor Redirection:** Implemented handling for stdout (`>`, `>>`) and stderr (`2>`, `2>>`) file redirection in `Executor.cs`.
 
-**Phase 3: Arabic Command Parsing & Tokenization (C#) - Regex Approach (In Progress)**
+**Phase 3: Arabic Command Parsing & Tokenization (C#) - Regex Approach (Completed)**
 
 -   [✅] **Refactor Tokenizer using Regex:** Replace the state machine tokenizer with a Regex-based approach.
     -   [✅] Define Token Types (`TokenType` enum) & `Token` struct in `Parsing/Token.cs`.
     -   [✅] Implement `RegexTokenizer` Class/Method in `Parsing/RegexTokenizer.cs` with initial Regex patterns.
     -   [✅] Integrate Tokenizer into Parser (`Parser.cs` now calls `RegexTokenizer.Tokenize`).
-    -   [✅] Refine Tokenizer Regex Patterns: Fixed patterns for stream redirection (`>&1`, `>&2`).
-    -   [✅] Refine Redirection & Argument Parsing in `Parser.cs`: Logic updated to use `Token` objects and correctly parse all redirection types.
-    -   [✅] Testing and Verification: Basic functionality confirmed. **Encoding issues resolved.** **Variable expansion regression fixed.** Mixed-script identifier tokenization needs improvement.
--   [🚧] Implement mechanisms to map Arabic command names/parameters. *(Existing `[ArabicName]` attribute approach likely still valid)*.
--   [🚧] **Refine Parser (Advanced - Post-Tokenizer Refactor):**
+    -   [✅] Refine Tokenizer Regex Patterns: Fixed patterns for stream redirection (`>&1`, `>&2`). Added input redirection (`<`). Added type literals (`[type]`).
+    -   [✅] Refine Redirection & Argument Parsing in `Parser.cs`: Logic updated to use `Token` objects and correctly parse all redirection types (including input `<`).
+    -   [✅] Testing and Verification: Basic functionality confirmed. **Encoding issues resolved.** **Variable expansion regression fixed.** Sub-expression parsing regression fixed. Escape sequence interpretation fixed.
+-   [✅] Implement mechanisms to map Arabic command names/parameters. *(Verified `[ArabicName]` attribute approach works)*.
+-   [✅] **Refine Parser (Advanced - Post-Tokenizer Refactor):**
     -   [✅] Implement variable expansion logic within the argument parsing loop (using StringBuilder).
-    -   [ ] Implement parsing logic (using the new token stream) for sub-expressions `$(...)`.
-    -   [ ] Implement parsing logic for type literals `[int]`.
-    -   [ ] Re-verify complex escape sequence handling based on the new token stream.
+    -   [✅] Implement parsing logic (using the new token stream) for sub-expressions `$(...)`. *(Parsing structure complete; execution is Phase 4)*.
+    -   [✅] Implement parsing logic for type literals `[int]`. *(Parsed as special argument; usage is later phase)*.
+    -   [✅] Re-verify complex escape sequence handling based on the new token stream. *(Interpretation of common escapes in double-quoted strings implemented)*.
 
-**Phase 4: Porting ArbSh UTF-8 & BiDi Algorithms to C# (Ready)**
+**Phase 4: Porting ArbSh UTF-8 & BiDi Algorithms to C# (Current Phase)**
 
 - [✅] **BLOCKER RESOLVED:** Resolved UTF-8 input/output encoding corruption when running via PowerShell `Start-Process` with redirected streams.
 - [ ] Systematically port the UTF-8 handling logic from `src/utils/utf8.c` to a C# utility class/module.
@@ -66,8 +66,9 @@ To create a powerful, extensible shell environment built on .NET that:
   - [✅] Resolved UTF-8 encoding corruption issues when *capturing* C# process output externally (e.g., via PowerShell `ReadToEnd()`).
   - [✅] Fix erroneous default redirection attempts in Executor (prevent `Value cannot be null` error when no redirection is specified).
   - [🚧] Fix/Verify Tokenizer handling of Arabic/mixed-script identifiers and special characters (e.g., `:`) (Now unblocked).
-  - [🚧] Enhance/Fix Parser for subexpressions and input redirection (`<`).
-  - [🚧] Implement Executor logic for stream redirection merging (`2>&1`, `>&2`) and subexpression (`$(...)`) execution.
+  - [🚧] Implement Executor logic for input redirection (`<`).
+  - [🚧] Implement Executor logic for stream redirection merging (`2>&1`, `>&2`).
+  - [🚧] Implement Executor logic for subexpression (`$(...)`) execution.
 
 **Phase 5: C# Console I/O with Integrated BiDi Rendering**
 

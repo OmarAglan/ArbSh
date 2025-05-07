@@ -71,7 +71,12 @@ namespace ArbSh.Console
         /// </summary>
         public List<RedirectionInfo> Redirections { get; }
 
-        // TODO: Add properties for input redirection (<)
+        /// <summary>
+        /// Gets the file path specified for input redirection ("< file.txt").
+        /// Null if no input redirection is specified.
+        /// </summary>
+        public string? InputRedirectPath { get; private set; }
+
         // TODO: Add information about pipeline position (start, middle, end)
 
         public ParsedCommand(string commandName, List<object> arguments, Dictionary<string, string> parameters) // Updated argument type
@@ -88,7 +93,16 @@ namespace ArbSh.Console
         internal void AddRedirection(RedirectionInfo redirection)
         {
             Redirections.Add(redirection);
-            System.Console.WriteLine($"DEBUG (ParsedCommand): Added redirection: {redirection}");
+            System.Console.WriteLine($"DEBUG (ParsedCommand): Added output redirection: {redirection}");
+        }
+
+        /// <summary>
+        /// Internal method used by the parser to set the input redirection path.
+        /// </summary>
+        internal void SetInputRedirection(string filePath)
+        {
+            InputRedirectPath = filePath;
+            System.Console.WriteLine($"DEBUG (ParsedCommand): Set input redirection to: < {filePath}");
         }
     }
 }

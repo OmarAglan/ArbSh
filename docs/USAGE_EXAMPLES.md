@@ -2,7 +2,7 @@
 
 This document provides examples for the currently implemented commands in the ArbSh C# prototype.
 
-**Note:** The shell is in early development (v0.6.0). Features like advanced parsing, robust error handling, and Arabic language support are still under development. Pipeline execution is now concurrent.
+**Note:** The shell is in early development (v0.7.6). Features like advanced parsing, robust error handling, and Arabic language support are still under development. Pipeline execution is concurrent. Parsing for type literals, input redirection, and sub-expressions is implemented, but execution logic for these is pending.
 
 ## Running ArbSh
 
@@ -198,7 +198,10 @@ Variables start with `$` followed by their name. The parser replaces the variabl
 
 ## Escape Characters (`\`)
 
-The backslash (`\`) is used as an escape character. It causes the character immediately following it to be treated literally, ignoring its special meaning (like space, `$`, `;`, `|`, `"`). This works both outside and inside double quotes.
+The backslash (`\`) is used as an escape character.
+*   **Outside Quotes:** It causes the character immediately following it to be treated literally, ignoring its special meaning (like space, `$`, `;`, `|`).
+*   **Inside Double Quotes (`"`):** Standard C-style escape sequences like `\n` (newline), `\t` (tab), `\"` (literal quote), `\\` (literal backslash), and `\$` (literal dollar) are interpreted. Unrecognized sequences (e.g., `\q`) result in the character following the backslash being included literally (e.g., `q`).
+*   **Inside Single Quotes (`'`):** All characters, including backslashes, are treated literally.
 
 **Examples:**
 
@@ -209,19 +212,32 @@ The backslash (`\`) is used as an escape character. It causes the character imme
     Command1 | Command2
     Argument;WithSemicolon
     ```
-*   **Escaping Quotes Inside Quotes:**
+*   **Escaping Quotes Inside Double Quotes:**
     ```powershell
     ArbSh> Write-Output "Argument with \"escaped quote\""
     # ... (DEBUG output) ...
     Argument with "escaped quote"
     ```
-*   **Escaping Backslash:**
+*   **Escaping Backslash Inside Double Quotes:**
     ```powershell
-    ArbSh> Write-Output Argument\\WithBackslash
+    ArbSh> Write-Output "Path: C:\\Users\\Test"
     # ... (DEBUG output) ...
-    Argument\WithBackslash
+    Path: C:\Users\Test
     ```
-*   **Escaping Variable Expansion:**
+*   **Newline and Tab Inside Double Quotes:**
+    ```powershell
+    ArbSh> Write-Output "First Line\nSecond Line\tIndented"
+    # ... (DEBUG output) ...
+    First Line
+    Second Line	Indented
+    ```
+*   **Escaping Variable Expansion Inside Double Quotes:**
+    ```powershell
+    ArbSh> Write-Output "Value is \$testVar"
+    # ... (DEBUG output) ...
+    Value is $testVar
+    ```
+*   **Escaping Variable Expansion Outside Quotes:**
     ```powershell
     ArbSh> Write-Output \$testVar
     # ... (DEBUG output) ...
@@ -285,7 +301,98 @@ The backslash (`\`) is used as an escape character. It causes the character imme
         ```powershell
         ArbSh> Command-With-Output-And-Error > output.log 2> error.log # Separates streams
         ```
-    *(Note: The parser recognizes all these forms. The `Executor` currently handles stdout (`>`, `>>`) and stderr (`2>`, `2>>`) file redirection. Stream merging (`2>&1`, `1>&2`) is parsed but not yet handled during execution. Input redirection `<` is not yet parsed.)*
+    *(Note: The parser recognizes all these forms, including input redirection `<`. The `Executor` currently handles stdout (`>`, `>>`) and stderr (`2>`, `2>>`) file redirection. Stream merging (`2>&1`, `1>&2`) and input redirection (`<`) execution are not yet implemented.)*
+
+## Type Literals (`[TypeName]`) (v0.7.6+)
+
+The parser now recognizes type literals enclosed in square brackets, like `[int]`, `[string]`, `[System.ConsoleColor]`. Whitespace inside the brackets is allowed, and Unicode characters are supported in the type name.
+
+Currently, the parser identifies these tokens and passes the extracted type name (e.g., "int", "System.ConsoleColor") as a special string argument (`"TypeLiteral:TypeName"`) to the command. The shell does not yet *use* this type information for casting or parameter validation.
+
+**Examples:**
+
+```powershell
+ArbSh> Write-Output [int] 123
+# ... (DEBUG output) ...
+DEBUG (Parser): Added TypeLiteral 'int' as argument.
+# ...
+TypeLiteral:int # Output shows the parsed argument
+
+ArbSh> Write-Output [System.ConsoleColor] "Red"
+# ... (DEBUG output) ...
+DEBUG (Parser): Added TypeLiteral 'System.ConsoleColor' as argument.
+# ...
+TypeLiteral:System.ConsoleColor # Output shows the parsed argument
+
+ArbSh> Write-Output Before[string]After
+# ... (DEBUG output) ...
+DEBUG (Parser): Added TypeLiteral 'string' as argument.
+# ...
+Before # Write-Output receives "Before", "TypeLiteral:string", "After" as args
+       # and outputs the first one.
+```
+
+## Input Redirection (`<`) (v0.7.6+)
+
+The parser now recognizes the input redirection operator `<` followed by a filename (which can be quoted).
+
+Currently, the parser identifies the operator and filename and stores the path in the `ParsedCommand` object. The `Executor` does not yet use this information to redirect standard input for the command.
+
+**Examples:**
+
+```powershell
+# First, create a file to read from:
+ArbSh> Write-Output "This is the input file." > input.txt
+
+# Now, use input redirection (Parser recognizes it, Executor ignores it for now):
+ArbSh> Get-Command < input.txt
+# ... (DEBUG output) ...
+DEBUG (ParsedCommand): Set input redirection to: < input.txt
+# ... (Output of Get-Command is shown, as stdin isn't actually redirected yet) ...
+احصل-مساعدة
+Get-Command
+Get-Help
+Test-Array-Binding
+Write-Output
+```
+
+## Sub-expressions (`$(...)`) (v0.7.6+)
+
+The parser now correctly recognizes and parses sub-expressions enclosed in `$()`. It handles nested sub-expressions and pipelines within them.
+
+The parser recursively parses the content inside the `$()` and stores the resulting command structure (a `List<ParsedCommand>`) as an argument object passed to the outer command.
+
+**Important:** The `Executor` does **not** yet execute these sub-expressions. Therefore, the outer command receives the parsed structure itself as an argument, not the *output* of the sub-expression.
+
+**Examples:**
+
+*   **Simple Sub-expression:**
+    ```powershell
+    ArbSh> Write-Output $(Get-Command)
+    # ... (DEBUG output) ...
+    DEBUG (Parser): Recursively parsing subexpression content: 'Get-Command'
+    DEBUG (Parser): Added parsed subexpression (statement 0) as argument.
+    WARN (Binder): Skipping non-string positional argument at index 0 for parameter 'InputObject'. Subexpression execution not implemented.
+    # ... (No output from Write-Output as it received a List<ParsedCommand> object)
+    ```
+*   **Sub-expression with Pipeline:**
+    ```powershell
+    ArbSh> Write-Output $(Get-Command | Write-Output)
+    # ... (DEBUG output) ...
+    DEBUG (Parser): Recursively parsing subexpression content: 'Get-Command | Write-Output'
+    DEBUG (Parser): Added parsed subexpression (statement 0) as argument.
+    WARN (Binder): Skipping non-string positional argument at index 0 for parameter 'InputObject'. Subexpression execution not implemented.
+    # ... (No output from outer Write-Output)
+    ```
+*   **Sub-expression as Parameter Value:**
+    ```powershell
+    ArbSh> Get-Help -CommandName $(Write-Output Get-Command)
+    # ... (DEBUG output) ...
+    DEBUG (Parser): Recursively parsing subexpression content: 'Write-Output Get-Command'
+    DEBUG (Parser): Added parsed subexpression (statement 0) as argument.
+    WARN (Binder): Skipping non-string positional argument at index 0 for parameter 'CommandName'. Subexpression execution not implemented.
+    # ... (Get-Help likely shows general help or an error as CommandName wasn't bound)
+    ```
 
 ## Arabic Command and Parameter Names (v0.7.0+)
 
