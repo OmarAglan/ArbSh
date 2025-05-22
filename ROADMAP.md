@@ -61,7 +61,10 @@ To create a powerful, extensible shell environment built on .NET that:
 - [✅] Systematically port the UTF-8 handling logic from `src/utils/utf8.c` to a C# utility class/module. *(Decision: Standard .NET UTF-8 APIs deemed sufficient, no direct port needed)*.
 - [✅] Carefully port the Unicode Bidirectional Algorithm (UAX #9) implementation from `src/i18n/bidi/bidi.c` to C#. *(Core logic ported to `I18n/BidiAlgorithm.cs`; includes `GetCharType`, `ProcessRuns`, `ReorderRunsForDisplay`, `ProcessString`)*.
 - [✅] Port supporting functions (e.g., character classification, string utilities) as needed from `src/utils/` and `src/i18n/`. *(Determined not necessary as .NET APIs cover needs)*.
-- [ ] Develop C# unit tests for the ported i18n logic (especially `BidiAlgorithm.cs`).
+- [🚧] Develop C# unit tests for the ported i18n logic:
+  - [✅] Comprehensive unit tests for `BidiAlgorithm.GetCharType`.
+  - [🚧] Unit tests for `BidiAlgorithm.ProcessRuns` (in progress, debugging level assignment with explicit codes).
+  - [ ] Unit tests for `BidiAlgorithm.ReorderRunsForDisplay` and `BidiAlgorithm.ProcessString`.
 - [ ] **Implement/Refine Phase 3 Execution & Runtime Enhancements:**
   - [✅] Resolved UTF-8 encoding corruption issues when *capturing* C# process output externally.
   - [✅] Fix erroneous default redirection attempts in Executor (prevent `Value cannot be null` error when no redirection is specified).

@@ -19,7 +19,7 @@ This shell aims to provide a seamless and powerful command-line experience for A
 
 ## Current Refactoring Status (v0.7.6 - Targeting v0.8.0)
 
-The project is in the **advanced stages of C# refactoring (Phase 4 nearing completion, Phase 5 is next):**
+The project is in the **advanced stages of C# refactoring (Phase 4 in progress, focusing on BiDi algorithm testing and refinement; Phase 5 is next):**
 
 - **C# Project Structure:** A .NET solution (`src_csharp/ArbSh.sln`) and console application project (`src_csharp/ArbSh.Console/`) are established.
 - **Core Object Pipeline:** Classes for the object pipeline (`PipelineObject`, `CmdletBase`), parsing (`Parser`, `ParsedCommand`), and execution (`Executor`) are functional.
@@ -59,6 +59,8 @@ The project is in the **advanced stages of C# refactoring (Phase 4 nearing compl
   - Implements stream merging (`2>&1`, `1>&2`).
 - **BiDi Algorithm Porting (`I18n/BidiAlgorithm.cs`):**
   - The core logic for UAX #9 (determining character types, resolving embedding levels via explicit formatting codes, reordering runs per Rule L2) has been ported from the C implementation. *(Integration with console rendering is Phase 5)*.
+- **Unit Testing:** `GetCharType` is now extensively unit-tested. Initial unit tests for `ProcessRuns` (handling explicit formatting codes and run segmentation) have been added; this part is under active debugging and refinement.
+  - *(Integration with console rendering is Phase 5)*.
 - **Encoding:** UTF-8 input/output encoding issues resolved for console and redirected streams.
 - **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `CHANGELOG.md`, etc.) updated for C# refactoring.
 - **C Code Reference:** Original C source code moved to `old_c_code/`.
@@ -115,6 +117,7 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
   - No external process execution support yet (e.g., running `git`, `notepad`).
 - **BiDi / Rendering:**
   - The ported BiDi algorithm logic (`BidiAlgorithm.cs`) correctly processes levels and reorders runs based on the original C implementation's logic. However, it requires **comprehensive unit testing** and potential refinement against UAX #9 for full compliance if the C version was simplified.
+  - Unit tests for `GetCharType` are complete. `ProcessRuns` is currently being unit tested and debugged to ensure correct segmentation and level assignment, especially in complex scenarios with explicit formatting codes.
   - **Integration with console rendering (Phase 5) is needed to actually display text visually reordered according to BiDi rules.** Currently, output is sent to the console as-is without visual reordering.
 - **Parameter Binding:**
   - Type conversion relies on `TypeConverter` and `Convert.ChangeType`, which handles common types but not complex types like script blocks or hashtables (as in PowerShell).

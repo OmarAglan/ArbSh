@@ -5,9 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7] - 2025-05-22
+
+### Added
+
+- **Unit Testing (BiDi):** Introduced xUnit test project (`ArbSh.Test`).
+- **Unit Testing (BiDi):** Added comprehensive unit tests for `BidiAlgorithm.GetCharType`, covering:
+  - Basic character types (L, R, AL, EN, AN, WS, B).
+  - Explicit directional formatting codes (LRE, RLE, PDF, LRO, RLO, LRI, RLI, FSI, PDI, LRM, RLM).
+  - Other types (ES, CS, NSM, S, ON) and default classification logic.
+- **Unit Testing (BiDi):** Added initial unit tests for `BidiAlgorithm.ProcessRuns` covering:
+  - Purely LTR and purely RTL text scenarios with varying base paragraph directions.
+  - Simple mixed LTR/RTL text.
+  - Scenarios with explicit embedding codes (LRE, RLE, PDF) and nested embeddings. (Note: These tests revealed issues in `ProcessRuns` logic requiring further debugging).
+
+### Changed
+
+- **BiDi Algorithm:** Made an initial correction to `BidiAlgorithm.GetCharType` to prioritize `AN` (Arabic Number) check before the broader `AL` (Arabic Letter) check for overlapping Unicode ranges, resolving a test failure.
+- **BiDi Algorithm:** Attempted refactoring of `BidiAlgorithm.ProcessRuns` to improve level assignment logic for runs, particularly around explicit formatting codes. (Note: This refactoring introduced regressions, currently under investigation).
+
+### Fixed
+
+- Corrected a misclassification in `BidiAlgorithm.GetCharType` where Arabic numbers were being identified as Arabic letters. Unit tests now confirm correct classification.
+
 ## [0.7.6] - 2025-05-07
 
 ### Added
+
 - **Parser:** Added parsing support for type literals (e.g., `[int]`, `[string]`, `[System.ConsoleColor]`). Recognized via `TokenType.TypeLiteral` and stored as a special argument string (`"TypeLiteral:TypeName"`) in `ParsedCommand`.
 - **Parser:** Added parsing support for input redirection (`< file.txt`). Recognized via `TokenType.Operator` (`<`) and stored in the new `InputRedirectPath` property of `ParsedCommand`.
 - **BiDi Algorithm:** Ported core BiDi algorithm logic (determining character types, resolving embedding levels via explicit codes, reordering runs per Rule L2) from the original C implementation to `I18n/BidiAlgorithm.cs`. Includes `GetCharType`, `ProcessRuns`, `ReorderRunsForDisplay`, and `ProcessString` methods. (Note: Based on simplified C logic, requires testing and rendering integration).
@@ -15,46 +39,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Executor:** Implemented execution logic for stream redirection merging (`2>&1`, `1>&2`). Output/Error objects are now correctly routed to the target stream's file handle or console stream based on merge directives.
 
 ### Fixed
+
 - **Parser:** Correctly interpret standard escape sequences (`\n`, `\t`, `\"`, `\\`, `\$`, etc.) within double-quoted strings (`StringLiteralDQ`). Added `ProcessEscapesInString` helper method. Single-quoted strings remain literal.
 - **Parser:** Fixed sub-expression (`$(...)`) parsing regression. Nested sub-expressions and pipelines within them are now parsed correctly without causing "unterminated" errors or incorrect token consumption.
 - Fixed build warnings related to unused variables in `Executor.cs`'s output handling logic.
 - Fixed build warning related to empty switch block in `I18n/BidiAlgorithm.cs`.
 
 ### Changed
+
 - Updated `README.md` and `ROADMAP.md` to reflect completion of Phase 3 parsing enhancements and Phase 4 progress (BiDi porting, redirection execution).
 
 ## [0.7.5] - 2025-05-06
 
 ### Fixed
+
 - **Encoding Issues:** Resolved persistent UTF-8 input/output corruption when running via PowerShell `Start-Process` with redirected streams. This involved:
-    - Setting `StandardInputEncoding`, `StandardOutputEncoding`, and `StandardErrorEncoding` to UTF-8 in `test_features.ps1`.
-    - Modifying `Program.cs` to use `StreamReader` with explicit UTF-8 encoding for `Console.OpenStandardInput()` and ensuring `Console.OutputEncoding` is also UTF-8.
-    - Arabic commands/parameters and output are now handled correctly in test scenarios.
+  - Setting `StandardInputEncoding`, `StandardOutputEncoding`, and `StandardErrorEncoding` to UTF-8 in `test_features.ps1`.
+  - Modifying `Program.cs` to use `StreamReader` with explicit UTF-8 encoding for `Console.OpenStandardInput()` and ensuring `Console.OutputEncoding` is also UTF-8.
+  - Arabic commands/parameters and output are now handled correctly in test scenarios.
 - **Variable Expansion Regression:** Fixed the parser logic in `Parser.cs` to correctly handle variable expansion (`$var`) within arguments, ensuring adjacent tokens are concatenated properly (e.g., `ValueIs:$testVar` now works as expected). Implemented using a `StringBuilder` in the argument parsing loop.
 
 ### Changed
+
 - Updated `README.md` and `docs/USAGE_EXAMPLES.md` to reflect the encoding and variable expansion fixes.
 - Updated `ROADMAP.md` to mark the encoding blocker as resolved and the variable expansion fix as complete.
 - **Tokenizer Refactoring:** Replaced the internal state-machine tokenizer with a new Regex-based tokenizer (`Parsing/RegexTokenizer.cs`) using Unicode properties (`\p{L}`) for potentially better handling of mixed-script identifiers and complex syntax elements. Created `Parsing/Token.cs` for token definitions. Integrated the new tokenizer into `Parser.cs`.
 - **Parser Logic:** Updated redirection and argument/parameter parsing logic in `Parser.cs` to work with the new `List<Token>` structure.
 - **Redirection Parsing:** Refined Regex patterns in `RegexTokenizer.cs` and parsing logic in `Parser.cs` to correctly identify and parse all standard redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`).
 - **Executor Redirection Handling:**
-    - Implemented handling for stdout file redirection (`>`, `>>`) in `Executor.cs`.
-    - Implemented handling for stderr file redirection (`2>`, `2>>`) in `Executor.cs`.
-    - Fixed null path error when no redirection was specified.
+  - Implemented handling for stdout file redirection (`>`, `>>`) in `Executor.cs`.
+  - Implemented handling for stderr file redirection (`2>`, `2>>`) in `Executor.cs`.
+  - Fixed null path error when no redirection was specified.
 - **Error Handling:** Added `IsError` flag to `PipelineObject.cs` and updated `GetHelpCmdlet.cs` to use it for "command not found" errors.
 - **Test Script:** Updated `test_features.ps1` to log temporary file contents line-by-line to avoid `Add-Content` stream errors. Changed default file encoding for `test_output.log` to UTF-8 with BOM.
 
 ### Known Issues / Regressions
+
 - **Tokenizer:**
-    - Input redirection operator `<` is not yet recognized.
-    - Mixed-script identifiers (e.g., `Commandمرحبا`) need verification/improvement.
+  - Input redirection operator `<` is not yet recognized.
+  - Mixed-script identifiers (e.g., `Commandمرحبا`) need verification/improvement.
 - **Parser:**
-    - Sub-expression `$(...)` parsing is implemented, but execution is not.
-    - Type literals `[int]` are not yet parsed.
+  - Sub-expression `$(...)` parsing is implemented, but execution is not.
+  - Type literals `[int]` are not yet parsed.
 - **Execution:**
-    - Stream redirection merging (`2>&1`, `1>&2`) is parsed but not implemented in the Executor.
-    - Sub-expression execution is not implemented.
+  - Stream redirection merging (`2>&1`, `1>&2`) is parsed but not implemented in the Executor.
+  - Sub-expression execution is not implemented.
 
 ## [0.7.0] - 2025-05-03
 
@@ -72,6 +101,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Testing:** Added tests to `test_features.ps1` for Arabic command/parameter aliases.
 
 ### Fixed
+
 - **Parser Tokenization:** Corrected tokenizer logic (`Parser.cs`) to properly handle hyphens within command names (e.g., `Get-Command`) and dots within arguments/filenames (e.g., `temp_file.txt`), preventing incorrect splitting.
 - **Redirection:** Resolved issue where output redirection (`>`, `>>`) failed due to incorrect filename parsing. Files are now created correctly. Added explicit `Flush()` calls in `Executor.cs` for robustness.
 - **Test Script Encoding:** Fixed `test_features.ps1` to correctly send UTF-8 encoded input to the ArbSh process by writing bytes directly to the standard input stream, enabling proper testing of Arabic characters. Confirmed successful parsing and execution of Arabic aliases.
