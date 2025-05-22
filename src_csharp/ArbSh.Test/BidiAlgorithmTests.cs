@@ -251,5 +251,220 @@ namespace ArbSh.Test.I18n
             // So it should fall to BidiCharacterType.ON by default.
             Assert.Equal(BidiCharacterType.ON, BidiAlgorithm.GetCharType(0x00E9)); // LATIN SMALL LETTER E WITH ACUTE
         }
+        [Fact]
+        public void ProcessRuns_PurelyLtrText_BaseLtr_ReturnsSingleLtrRun()
+        {
+            // Arrange
+            string text = "Hello"; // All L characters
+            int baseLevel = 0; // LTR paragraph
+
+            // Act
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Assert
+            Assert.NotNull(runs);
+            Assert.Single(runs);
+            var run = runs[0];
+            Assert.Equal(0, run.Start);
+            Assert.Equal(text.Length, run.Length);
+            Assert.Equal(baseLevel, run.Level); // Should stay at base LTR level
+        }
+
+        [Fact]
+        public void ProcessRuns_PurelyLtrText_BaseRtl_ReturnsSingleLtrRun_AtAdjustedLevel()
+        {
+            // Arrange
+            string text = "Hello"; // All L characters
+            int baseLevel = 1; // RTL paragraph
+
+            // Act
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Assert
+            Assert.NotNull(runs);
+            Assert.Single(runs);
+            var run = runs[0];
+            Assert.Equal(0, run.Start);
+            Assert.Equal(text.Length, run.Length);
+            // According to UAX#9 X5c (and simplified logic in C# port for L chars):
+            // If currentLevel is odd (RTL base), an L char would make the newLevel currentLevel+1 (even).
+            // So the run of L characters should get an even level.
+            // The ported C# code's ProcessRuns does:
+            //   newLevel = (currentLevel % 2 == 0) ? currentLevel : currentLevel + 1; // Stay or increase to even
+            //   if (newLevel > MaxDepth) newLevel = MaxDepth;
+            //   newLevel &= ~1; // Ensure even
+            // If baseLevel is 1, currentLevel starts at 1.
+            // For 'H', newLevel = (1 % 2 == 0) ? 1 : 1 + 1 = 2. Then newLevel &= ~1 keeps it 2.
+            // The *run* should be created with the currentLevel *before* this character causes a potential level change.
+            // The C code for default case:
+            //   if (new_level != current_level) create_new_run = 1;
+            //   current_level = new_level; // This was the C code logic flaw for the run level itself.
+            // The C# port:
+            //   if (newLevel != currentLevel) { createNewRun = true; }
+            //   // ...
+            //   if (createNewRun) { runs.Add(new BidiRun(runStart, i - runStart, currentLevel)); ... currentLevel = newLevel; }
+            // This means the first run (if the whole string is one type) uses the initial currentLevel.
+            // If 'H' (L type) is met and currentLevel is 1 (RTL), newLevel becomes 2.
+            // The run from runStart=0 to i (before 'H') would have level 1. Then 'H' starts a new run at level 2.
+            // Let's trace: text="H", base=1. currentLevel=1. runStart=0.
+            // i=0, char='H', type=L. overrideStatus=-1. effectiveCharType=L.
+            // newLevel=(1%2==0)?1:1+1 = 2. newLevel&=~1 -> 2.
+            // newLevel (2) != currentLevel (1) -> createNewRun = true.
+            // if (createNewRun) -> if (i > runStart) is false. runStart=0. currentLevel becomes 2.
+            // i=1. Loop ends.
+            // Add final run: runs.Add(new BidiRun(runStart=0, length-runStart=1, currentLevel=2))
+            // So, for "Hello" with base 1, it should be one run at level 2.
+            Assert.Equal(2, run.Level); // Expected level 2 (even)
+        }
+
+        [Fact]
+        public void ProcessRuns_PurelyRtlText_BaseRtl_ReturnsSingleRtlRun()
+        {
+            // Arrange
+            string text = "مرحبا"; // All AL characters
+            int baseLevel = 1; // RTL paragraph
+
+            // Act
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Assert
+            Assert.NotNull(runs);
+            Assert.Single(runs);
+            var run = runs[0];
+            Assert.Equal(0, run.Start);
+            Assert.Equal(text.Length, run.Length);
+            Assert.Equal(baseLevel, run.Level); // Should stay at base RTL level
+        }
+
+        [Fact]
+        public void ProcessRuns_PurelyRtlText_BaseLtr_ReturnsSingleRtlRun_AtAdjustedLevel()
+        {
+            // Arrange
+            string text = "مرحبا"; // All AL characters
+            int baseLevel = 0; // LTR paragraph
+
+            // Act
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Assert
+            Assert.NotNull(runs);
+            Assert.Single(runs);
+            var run = runs[0];
+            Assert.Equal(0, run.Start);
+            Assert.Equal(text.Length, run.Length);
+            // For 'م' (AL type) and currentLevel is 0 (LTR base), newLevel becomes 1.
+            // Final run will be at level 1.
+            Assert.Equal(1, run.Level); // Expected level 1 (odd)
+        }
+
+        [Fact]
+        public void ProcessRuns_EmptyText_ReturnsEmptyList()
+        {
+            // Arrange
+            string text = "";
+            int baseLevel = 0;
+
+            // Act
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Assert
+            Assert.NotNull(runs);
+            Assert.Empty(runs);
+        }
+        [Fact]
+        public void ProcessRuns_LtrThenRtlText_BaseLtr_ReturnsTwoRunsCorrectLevels()
+        {
+            // Arrange
+            string text = "Hello مرحبا"; // LTR then RTL
+            int baseLevel = 0;    // LTR paragraph
+
+            // Act
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Assert
+            Assert.NotNull(runs);
+            Assert.Equal(2, runs.Count);
+
+            // Run 1: "Hello " (includes space as it's neutral, takes level of preceding strong)
+            var run1 = runs[0];
+            Assert.Equal(0, run1.Start);
+            Assert.Equal(6, run1.Length); // "Hello "
+            Assert.Equal(0, run1.Level);  // LTR level
+
+            // Run 2: "مرحبا"
+            var run2 = runs[1];
+            Assert.Equal(6, run2.Start);
+            Assert.Equal(5, run2.Length); // "مرحبا"
+            Assert.Equal(1, run2.Level);  // RTL level
+        }
+
+        [Fact]
+        public void ProcessRuns_RtlThenLtrText_BaseRtl_ReturnsTwoRunsCorrectLevels()
+        {
+            // Arrange
+            string text = "مرحبا Hello"; // RTL then LTR
+            int baseLevel = 1;    // RTL paragraph
+
+            // Act
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Assert
+            Assert.NotNull(runs);
+            Assert.Equal(2, runs.Count);
+
+            // Run 1: "مرحبا "
+            var run1 = runs[0];
+            Assert.Equal(0, run1.Start);
+            Assert.Equal(6, run1.Length); // "مرحبا "
+            Assert.Equal(1, run1.Level);  // RTL level
+
+            // Run 2: "Hello"
+            var run2 = runs[1];
+            Assert.Equal(6, run2.Start);
+            Assert.Equal(5, run2.Length); // "Hello"
+            Assert.Equal(2, run2.Level);  // LTR characters in RTL context get next even level
+        }
+
+        [Fact]
+        public void ProcessRuns_LtrRtlLtrText_BaseLtr_ReturnsThreeRunsCorrectLevels()
+        {
+            // Arrange
+            string text = "abc مرحبا def"; // LTR - RTL - LTR
+            int baseLevel = 0;     // LTR paragraph
+
+            // Act
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Assert
+            Assert.NotNull(runs);
+            Assert.Equal(3, runs.Count);
+
+            // Run 1: "abc "
+            var run1 = runs[0];
+            Assert.Equal(0, run1.Start);
+            Assert.Equal(4, run1.Length);
+            Assert.Equal(0, run1.Level);
+
+            // Run 2: "مرحبا "
+            var run2 = runs[1];
+            Assert.Equal(4, run2.Start);
+            Assert.Equal(6, run2.Length);
+            Assert.Equal(1, run2.Level);
+
+            // Run 3: "def"
+            var run3 = runs[2];
+            Assert.Equal(10, run3.Start);
+            Assert.Equal(3, run3.Length);
+            // After an RTL run (level 1), subsequent LTR text should get level (1+1)&~1 = 2,
+            // but our simplified model might reset to paragraph level if not inside explicit embedding.
+            // Let's trace the C# code's logic carefully for currentLevel updates.
+            // After "مرحبا ": currentLevel is 1.
+            // Next char 'd' (L): newLevel = (1%2==0)?1:1+1 = 2. newLevel &= ~1 -> 2.
+            // createNewRun = true because newLevel (2) != currentLevel (1).
+            // The run "مرحبا " is created with level 1.
+            // runStart becomes index of 'd'. currentLevel becomes 2.
+            // Then "def" forms a run with level 2.
+            Assert.Equal(2, run3.Level);
+        }
     }
 }
