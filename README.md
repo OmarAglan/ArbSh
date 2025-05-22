@@ -10,99 +10,125 @@ The refactored ArbSh aims to be a modern, cross-platform command-line shell buil
 
 A primary and distinguishing feature is its **native support for the Arabic language**:
 
-1.  **Arabic Commands:** Users will be able to write and execute commands using Arabic script (e.g., `احصل-محتوى` instead of `Get-Content`).
-2.  **Full Arabic Text Handling:** Leveraging ported logic from the original ArbSh, it will correctly handle UTF-8 encoding, complex bidirectional text (UAX #9 BiDi algorithm), and Right-to-Left (RTL) rendering in the console.
-3.  **Object Pipeline:** Commands (cmdlets) will operate on rich .NET objects, enabling more powerful scripting and data manipulation than traditional text-based shells.
-4.  **Cross-Platform:** Targeting .NET Core / .NET 5+ ensures compatibility across Windows, macOS, and Linux.
+1. **Arabic Commands:** Users will be able to write and execute commands using Arabic script (e.g., `احصل-محتوى` instead of `Get-Content`).
+2. **Full Arabic Text Handling:** Leveraging ported logic from the original ArbSh, it will correctly handle UTF-8 encoding, complex bidirectional text (UAX #9 BiDi algorithm), and Right-to-Left (RTL) rendering in the console.
+3. **Object Pipeline:** Commands (cmdlets) will operate on rich .NET objects, enabling more powerful scripting and data manipulation than traditional text-based shells.
+4. **Cross-Platform:** Targeting .NET Core / .NET 5+ ensures compatibility across Windows, macOS, and Linux.
 
 This shell aims to provide a seamless and powerful command-line experience for Arabic-speaking users and developers.
 
-## Current Refactoring Status
+## Current Refactoring Status (v0.7.6 - Targeting v0.8.0)
 
-The project is in the **early stages** of the C# refactoring (Phase 1 complete, Phase 2 in progress):
+The project is in the **advanced stages of C# refactoring (Phase 4 nearing completion, Phase 5 is next):**
 
--   **C# Project Structure:** A new .NET solution (`src_csharp/ArbSh.sln`) and console application project (`src_csharp/ArbSh.Console/`) have been created.
--   **Core Placeholders:** Initial classes for the object pipeline (`PipelineObject`, `CmdletBase`), parsing (`Parser`, `ParsedCommand`), and execution (`Executor`) are in place.
--   **Basic REPL:** A functional Read-Eval-Print Loop exists in `Program.cs`.
--   **Basic Parsing:** The parser (`Parser.cs`) can now:
-    -   Tokenize input respecting double quotes (`"..."`).
-    -   Handle general escape characters (`\`) both outside quotes and within double quotes (escaping `$`, `"`, `\`). Single quotes treat content literally.
-    -   Identify separate statements using semicolons (`;`) respecting quotes/escapes.
-    -   Identify pipeline stages using pipes (`|`) respecting quotes/escapes.
-    -   **Tokenizer Refactoring:** Replaced the internal state-machine tokenizer with a new Regex-based tokenizer (`RegexTokenizer.cs`) using Unicode properties (`\p{L}`) for better handling of mixed-script identifiers and complex syntax elements like redirection operators.
-    -   **Variable Expansion:** Fixed the regression; variables like `$testVar` are now correctly expanded and concatenated within arguments (e.g., `ValueIs:$testVar` works).
-    -   **Advanced Redirection:** Detect and parse advanced redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`, etc.) and **input redirection (`<`)** using the new tokenizer.
-    -   **Sub-expressions:** Recognize `$()` syntax, recursively parse the inner command(s), and store the result (a `List<ParsedCommand>`) as an argument object. *(Execution of sub-expressions is not yet implemented)*.
-    -   **Type Literals:** Recognize type literals like `[int]`, `[string]`, `[System.ConsoleColor]` and parse them as distinct arguments (currently stored as prefixed strings like `"TypeLiteral:int"`). *(Using these for casting or binding is not yet implemented)*.
-    -   **Escape Sequences:** Interpret standard escape sequences (`\n`, `\t`, `\"`, `\\`, `\$`, etc.) within double-quoted strings. Single-quoted strings remain literal.
--   **Parameter Binding:** Added `ParameterAttribute` (with pipeline support flags) and implemented parameter binding in the `Executor` using reflection. Supports named/positional parameters, mandatory parameter checks, boolean switches, basic type conversion (`TypeConverter`/`Convert.ChangeType`), improved error reporting for conversion failures, and binding remaining positional arguments to array parameters. **Update:** Parameter binder now also recognizes the `[ArabicName]` attribute on cmdlet properties, allowing parameters to be specified using assigned Arabic names (e.g., `-الاسم`).
--   **Command Discovery:** Added `CommandDiscovery` class to find available cmdlets via reflection based on class name convention (e.g., `GetHelpCmdlet` -> `Get-Help`). The `Executor` now uses this for dynamic cmdlet instantiation. **Update:** Command discovery now also recognizes the `[ArabicName]` attribute on cmdlet classes, allowing cmdlets to be invoked using assigned Arabic names (e.g., `احصل-مساعدة`).
--   **Concurrent Pipeline:** The `Executor` now uses `Task` and `BlockingCollection` to execute pipeline stages concurrently within each statement. `CmdletBase` includes logic (`BindPipelineParameters`) to handle binding pipeline input (`ValueFromPipeline`, `ValueFromPipelineByPropertyName`).
--   **Basic Cmdlets:** `Write-Output`, `Get-Help`, and `Get-Command` have functional implementations. `Get-Help` displays detailed parameter info (including pipeline acceptance) and now outputs an error object (`PipelineObject` with `IsError=true`) if a command is not found. `Get-Command` outputs structured `CommandInfo` objects.
--   **Executor Redirection:** The `Executor` now handles file redirection for stdout (`>`, `>>`) and stderr (`2>`, `2>>`). **Update:** Execution logic for **input redirection (`<`)** and **stream merging (`2>&1`, `1>&2`)** has been implemented.
--   **BiDi Algorithm Porting:** The core logic for determining character types, resolving embedding levels based on explicit formatting codes, and reordering runs (UAX #9 Rule L2) has been ported from the original C implementation to `I18n/BidiAlgorithm.cs`. *(Note: This is based on the C code's potentially simplified UAX #9 implementation and requires testing and integration with console rendering)*.
--   **Encoding Issues Resolved:** Fixed the persistent UTF-8 input/output encoding corruption when running via PowerShell `Start-Process` with redirected streams by adjusting C# input reading (`StreamReader`) and setting appropriate encodings in the test script (`StandardInput/Output/ErrorEncoding`). Arabic commands/parameters are now received and logged correctly in tests.
--   **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `PROJECT_ORGANIZATION.md`, `CHANGELOG.md`, etc.) has been updated to reflect the C# refactoring status.
--   **C Code Reference:** The original C source code and build files have been moved to the `old_c_code/` directory for reference during the porting process.
+- **C# Project Structure:** A .NET solution (`src_csharp/ArbSh.sln`) and console application project (`src_csharp/ArbSh.Console/`) are established.
+- **Core Object Pipeline:** Classes for the object pipeline (`PipelineObject`, `CmdletBase`), parsing (`Parser`, `ParsedCommand`), and execution (`Executor`) are functional.
+- **REPL:** A functional Read-Eval-Print Loop exists in `Program.cs`.
+- **Advanced Parsing (`Parser.cs` with `RegexTokenizer.cs`):**
+  - Tokenizes input respecting double quotes (`"..."`) and single quotes (`'...'`).
+  - Handles general escape characters (`\`) including standard C-style escapes (`\n`, `\t`, `\"`, `\\`, `\$`) within double-quoted strings. Single-quoted strings remain literal.
+  - Identifies separate statements using semicolons (`;`) respecting quotes/escapes.
+  - Identifies pipeline stages using pipes (`|`) respecting quotes/escapes.
+  - Handles variable expansion (e.g., `$testVar`) within arguments, including concatenation with adjacent literals.
+  - Parses redirection operators:
+    - Output: `>`, `>>`
+    - Error: `2>`, `2>>`
+    - Input: `<`
+    - Stream Merging: `>&1`, `>&2` (and variants like `2>&1`)
+  - Parses sub-expressions `$(...)` recursively, storing the inner command structure.
+  - Parses type literals `[...]` (e.g., `[int]`, `[string]`) as distinct argument tokens.
+- **Parameter Binding (`Executor.cs`, `ParameterAttribute.cs`):**
+  - Dynamic parameter binding using reflection and `[ParameterAttribute]`.
+  - Supports named parameters, positional parameters, and boolean switches.
+  - Handles mandatory parameter checks and basic type conversion.
+  - Supports binding remaining positional arguments to array parameters.
+  - Recognizes `[ArabicName]` attribute on cmdlet properties for Arabic parameter aliases (e.g., `-الاسم`).
+- **Command Discovery (`CommandDiscovery.cs`):**
+  - Finds cmdlets via reflection based on class name (e.g., `GetHelpCmdlet` -> `Get-Help`).
+  - Recognizes `[ArabicName]` attribute on cmdlet classes for Arabic command aliases (e.g., `احصل-مساعدة`).
+- **Concurrent Pipeline Execution (`Executor.cs`):**
+  - Uses `Task` and `BlockingCollection<PipelineObject>` to execute pipeline stages concurrently within each statement.
+  - `CmdletBase` handles pipeline input binding via `ValueFromPipeline` and `ValueFromPipelineByPropertyName` attributes.
+- **Basic Cmdlets Implemented:**
+  - `Write-Output`: Functional with pipeline and parameter input.
+  - `Get-Help`: Displays detailed parameter info (including pipeline acceptance and Arabic names) and handles "command not found" errors.
+  - `Get-Command`: Outputs structured `CommandInfo` objects.
+  - `Test-Array-Binding`: For testing array parameter binding.
+- **Redirection Execution (`Executor.cs`):**
+  - Handles file redirection for stdout (`>`, `>>`), stderr (`2>`, `2>>`), and stdin (`<`).
+  - Implements stream merging (`2>&1`, `1>&2`).
+- **BiDi Algorithm Porting (`I18n/BidiAlgorithm.cs`):**
+  - The core logic for UAX #9 (determining character types, resolving embedding levels via explicit formatting codes, reordering runs per Rule L2) has been ported from the C implementation. *(Integration with console rendering is Phase 5)*.
+- **Encoding:** UTF-8 input/output encoding issues resolved for console and redirected streams.
+- **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `CHANGELOG.md`, etc.) updated for C# refactoring.
+- **C Code Reference:** Original C source code moved to `old_c_code/`.
 
-*The shell can now be built and run via `dotnet run`, providing a basic prompt. It uses a new Regex-based tokenizer. It can parse commands with quoted arguments (interpreting escapes in double quotes), pipelines (`|`), statement separators (`;`), variable expansion (`$var`), type literals (`[int]`), sub-expressions (`$(...)`), and standard redirection operators (`>`, `>>`, `2>`, `2>>`, `>&1`, `>&2`, `<`). It can discover cmdlets (including Arabic aliases via `[ArabicName]` attribute), perform parameter binding (including pipeline input, basic arrays, and Arabic parameter aliases via `[ArabicName]` attribute), execute pipeline stages concurrently, and run basic `Get-Help`, `Get-Command`, and `Write-Output` cmdlets. The executor handles stdout/stderr file redirection, input file redirection (`<`), and stream merging (`2>&1`, `1>&2`). The core BiDi algorithm logic is ported. However, **sub-expression execution**, **using type literals for casting/binding**, robust type conversion, comprehensive error handling (beyond basic exceptions and `IsError` flag), and full Arabic text rendering support (integrating the ported BiDi logic) are still needed.*
+*The shell can be built and run via `dotnet run`. It parses complex commands with quotes, escapes, variables, pipelines, statements, redirection (input, output, error, merging), sub-expressions, and type literals. It discovers and executes cmdlets (including Arabic aliases) concurrently, with parameter binding (including pipeline input and Arabic aliases). The executor handles all parsed redirection types. The core BiDi algorithm is ported. Key pending items include **sub-expression execution**, **using type literals for casting/binding**, robust type conversion, advanced error handling, and **full Arabic text rendering in the console by integrating the ported BiDi logic (Phase 5)**.*
 
 ## New Code Structure
 
--   **`src_csharp/`**: Contains the new C#/.NET solution and projects.
-    -   `ArbSh.Console/`: The main console application executable.
-    -   (Future libraries for core logic, cmdlets, i18n ports will reside here).
--   **`old_c_code/`**: Contains the original C/C++ source, headers, tests, and CMake build files, preserved for reference.
--   **`docs/`**: Project documentation (updated for C#).
--   **`.gitignore`**: Updated for C#.
+- **`src_csharp/`**: Contains the new C#/.NET solution and projects.
+  - `ArbSh.Console/`: The main console application executable.
+  - `ArbSh.Console/Commands/`: Directory for cmdlet implementations.
+  - `ArbSh.Console/Parsing/`: Directory for tokenizer and token definitions.
+  - `ArbSh.Console/I18n/`: Directory for internationalization code, including `BidiAlgorithm.cs`.
+  - `ArbSh.Console/Models/`: Directory for data model classes (e.g., `CommandInfo`).
+- **`old_c_code/`**: Contains the original C/C++ source, headers, tests, and CMake build files, preserved for reference.
+- **`docs/`**: Project documentation (updated for C#).
+- **`.gitignore`**: Updated for C#.
 
-The project now uses the standard .NET build tools (`dotnet build`). The CMake build system in `old_c_code/` is deprecated.
+The project uses the standard .NET build tools (`dotnet build`).
 
 ## Creating a Release
 
 A PowerShell script (`create-release.ps1`) is available in the project root to automate the creation of a release build and archive.
 
-1.  Open PowerShell in the project root directory.
-2.  Run the script, providing the desired version number:
+1. Open PowerShell in the project root directory.
+2. Run the script, providing the desired version number:
+
     ```powershell
     .\create-release.ps1 -Version "x.y.z"
     ```
-    (Replace `x.y.z` with the actual semantic version number).
 
-This will update the changelog, create a self-contained `win-x64` build, and package it into a zip file in the `releases/` directory.
+    (Replace `x.y.z` with the actual semantic version number, e.g., "0.8.0").
+
+This will update the changelog, create a self-contained `win-x64` release build for `net9.0` (as per script configuration), and package it into a zip file in the `releases/` directory.
 
 ## Roadmap Overview
 
-Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refactoring and feature implementation plan.
+Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refactoring and feature implementation plan. The project is currently focused on completing Phase 4 (execution enhancements) and moving into Phase 5 (console I/O with BiDi rendering).
 
-## Technical Challenges (Porting Focus)
+## Technical Challenges (Focus)
 
--   **Porting BiDi Algorithm:** Accurately translating the complex UAX #9 logic from `old_c_code/src/i18n/bidi/bidi.c` to C# requires careful attention to detail.
--   **Console Rendering:** Integrating the ported BiDi logic with .NET console output mechanisms (`System.Console` or potentially libraries like `Spectre.Console`) to achieve correct RTL/mixed text rendering.
--   **Arabic Command Parsing:** Designing and implementing a robust parser in C# that correctly handles Arabic script alongside potential English keywords/parameters and object syntax.
+- **Console Rendering with BiDi:** The next major challenge is integrating the ported BiDi algorithm (`BidiAlgorithm.cs`) with .NET console output mechanisms (`System.Console` or potentially libraries like `Spectre.Console`) to achieve correct visual rendering of RTL and mixed-direction text (Phase 5).
+- **Sub-expression Execution:** Implementing the execution logic for parsed `$(...)` sub-expressions.
+- **Type Literal Utilization:** Using parsed type literals `[...]` for actual type casting or parameter validation.
 
-## Known Issues and Limitations (Current State - v0.8.0)
+## Known Issues and Limitations (Current State - Targeting v0.8.0)
 
--   **Parsing/Tokenization:**
-    -   Mixed-script identifiers (e.g., `Commandمرحبا`) need further verification/testing with the tokenizer.
-    -   Handling of escapes outside quoted strings (e.g., `Argument\ WithSpace`) may need refinement.
--   **Execution:**
-    -   **Sub-expression Execution (`$(...)`)**: Parsing is implemented, but execution is not. The parsed structure is passed as an argument object.
-    -   **Type Literal Usage**: Parsed, but not yet used for casting or parameter binding.
-    -   No external process execution support yet.
--   **BiDi / Rendering:**
-    -   The ported BiDi algorithm logic requires unit testing and potentially refinement (as it's based on the C code's potentially simplified UAX #9 implementation).
-    -   Integration with console rendering (Phase 5) is needed to actually display text correctly using the BiDi logic. Currently, output is not visually reordered.
--   **Parameter Binding:**
-    -   Type conversion is basic (relies on `TypeConverter` and `Convert.ChangeType`, no complex type handling like script blocks or hashtables).
-    -   Does not yet support named array parameters or advanced pipeline binding scenarios (e.g., binding specific properties of complex input objects without `ValueFromPipelineByPropertyName`).
-    -   Unknown named parameters are currently ignored instead of causing an error.
--   **Error Handling:** Rudimentary (basic exceptions caught, `PipelineObject.IsError` flag added, but no rich `ErrorRecord` objects like PowerShell).
--   **Features:**
-    -   Basic Arabic command and parameter name support is implemented via the `[ArabicName]` attribute. Full Arabic text rendering (BiDi/RTL) is not yet implemented.
-    -   No scripting features (variables are hardcoded in Parser, no functions, flow control, etc.).
-    -   No tab completion, history, or aliasing.
+- **Parsing/Tokenization:**
+  - While generally robust, edge cases with extremely complex mixed-script identifiers or highly nested structures might require further testing.
+  - Handling of escape characters outside quoted strings (e.g., `Argument\ WithSpace`) is basic and might need refinement for more complex shell scripting scenarios.
+- **Execution:**
+  - **Sub-expression Execution (`$(...)`)**: Parsing is implemented, but the execution logic (running the inner commands and substituting their output) is **not yet implemented**. The parsed structure is passed as an argument object.
+  - **Type Literal Usage**: Parsed (e.g., `[int]`), but **not yet used for casting parameter values or for type validation** during binding.
+  - No external process execution support yet (e.g., running `git`, `notepad`).
+- **BiDi / Rendering:**
+  - The ported BiDi algorithm logic (`BidiAlgorithm.cs`) correctly processes levels and reorders runs based on the original C implementation's logic. However, it requires **comprehensive unit testing** and potential refinement against UAX #9 for full compliance if the C version was simplified.
+  - **Integration with console rendering (Phase 5) is needed to actually display text visually reordered according to BiDi rules.** Currently, output is sent to the console as-is without visual reordering.
+- **Parameter Binding:**
+  - Type conversion relies on `TypeConverter` and `Convert.ChangeType`, which handles common types but not complex types like script blocks or hashtables (as in PowerShell).
+  - Does not yet support named array parameters (e.g., `-Names "a","b"`) or advanced pipeline binding scenarios (e.g., binding specific properties of complex input objects to parameters without `ValueFromPipelineByPropertyName`).
+  - Unknown named parameters are currently ignored by the binder instead of causing an error.
+- **Error Handling:**
+  - Basic error handling exists (exceptions are caught, `PipelineObject.IsError` flag is used for some cmdlet errors like "command not found").
+  - Lacks rich `ErrorRecord` objects or sophisticated error reporting mechanisms found in shells like PowerShell.
+- **Features:**
+  - Arabic command and parameter name support is implemented via the `[ArabicName]` attribute.
+  - **Full Arabic text rendering (visual BiDi/RTL display in the console) is not yet implemented (pending Phase 5).**
+  - No scripting features (variables are hardcoded in Parser for testing, no user-defined variables, functions, flow control, etc.).
+  - No tab completion, interactive command history (beyond basic OS terminal history), or shell aliasing features.
 
 ## Conclusion
 
-ArbSh is embarking on an ambitious refactoring to become a modern, PowerShell-inspired C# shell with unique, first-class support for Arabic commands and text. The robust i18n logic from the original C implementation provides a strong foundation for the porting effort. Development is currently focused on establishing the core C# architecture and beginning the porting process.
+ArbSh is making strong progress in its transformation into a modern, PowerShell-inspired C# shell with a unique emphasis on first-class Arabic language support. The core parsing and concurrent execution engine is robust, and the foundational BiDi logic has been successfully ported. The immediate next steps involve implementing sub-expression execution, followed by the critical Phase 5 task of integrating the BiDi algorithm with console rendering to bring true Arabic display capabilities to the shell.

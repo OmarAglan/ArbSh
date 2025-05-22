@@ -41,54 +41,63 @@ To create a powerful, extensible shell environment built on .NET that:
 
 **Phase 3: Arabic Command Parsing & Tokenization (C#) - Regex Approach (Completed)**
 
--   [✅] **Refactor Tokenizer using Regex:** Replace the state machine tokenizer with a Regex-based approach.
-    -   [✅] Define Token Types (`TokenType` enum) & `Token` struct in `Parsing/Token.cs`.
-    -   [✅] Implement `RegexTokenizer` Class/Method in `Parsing/RegexTokenizer.cs` with initial Regex patterns.
-    -   [✅] Integrate Tokenizer into Parser (`Parser.cs` now calls `RegexTokenizer.Tokenize`).
-    -   [✅] Refine Tokenizer Regex Patterns: Fixed patterns for stream redirection (`>&1`, `>&2`). Added input redirection (`<`). Added type literals (`[type]`).
-    -   [✅] Refine Redirection & Argument Parsing in `Parser.cs`: Logic updated to use `Token` objects and correctly parse all redirection types (including input `<`).
-    -   [✅] Testing and Verification: Basic functionality confirmed. **Encoding issues resolved.** **Variable expansion regression fixed.** Sub-expression parsing regression fixed. Escape sequence interpretation fixed.
--   [✅] Implement mechanisms to map Arabic command names/parameters. *(Verified `[ArabicName]` attribute approach works)*.
--   [✅] **Refine Parser (Advanced - Post-Tokenizer Refactor):**
-    -   [✅] Implement variable expansion logic within the argument parsing loop (using StringBuilder).
-    -   [✅] Implement parsing logic (using the new token stream) for sub-expressions `$(...)`. *(Parsing structure complete; execution is Phase 4)*.
-    -   [✅] Implement parsing logic for type literals `[int]`. *(Parsed as special argument; usage is later phase)*.
-    -   [✅] Re-verify complex escape sequence handling based on the new token stream. *(Interpretation of common escapes in double-quoted strings implemented)*.
+- [✅] **Refactor Tokenizer using Regex:** Replace the state machine tokenizer with a Regex-based approach.
+  - [✅] Define Token Types (`TokenType` enum) & `Token` struct in `Parsing/Token.cs`.
+  - [✅] Implement `RegexTokenizer` Class/Method in `Parsing/RegexTokenizer.cs` with initial Regex patterns.
+  - [✅] Integrate Tokenizer into Parser (`Parser.cs` now calls `RegexTokenizer.Tokenize`).
+  - [✅] Refine Tokenizer Regex Patterns: Fixed patterns for stream redirection (`>&1`, `>&2`). Added input redirection (`<`). Added type literals (`[type]`). Added sub-expression `$(...)`.
+  - [✅] Refine Redirection & Argument Parsing in `Parser.cs`: Logic updated to use `Token` objects and correctly parse all redirection types (including input `<`).
+  - [✅] Testing and Verification: Basic functionality confirmed. **Encoding issues resolved.** **Variable expansion regression fixed.** Sub-expression parsing regression fixed. Escape sequence interpretation fixed.
+- [✅] Implement mechanisms to map Arabic command names/parameters (Verified `[ArabicName]` attribute approach works).
+- [✅] **Refine Parser (Advanced - Post-Tokenizer Refactor):**
+  - [✅] Implement variable expansion logic within the argument parsing loop (using StringBuilder).
+  - [✅] Implement parsing logic (using the new token stream) for sub-expressions `$(...)`. *(Parsing structure complete; execution is Phase 4)*.
+  - [✅] Implement parsing logic for type literals `[int]`. *(Parsed as special argument; usage is later phase)*.
+  - [✅] Re-verify complex escape sequence handling based on the new token stream. *(Interpretation of common escapes in double-quoted strings implemented)*.
 
-**Phase 4: Porting ArbSh UTF-8 & BiDi Algorithms to C# (Current Phase)**
+**Phase 4: Porting ArbSh UTF-8 & BiDi Algorithms to C#, Advanced Execution Logic (Nearing Completion)**
 
 - [✅] **BLOCKER RESOLVED:** Resolved UTF-8 input/output encoding corruption when running via PowerShell `Start-Process` with redirected streams.
 - [✅] Systematically port the UTF-8 handling logic from `src/utils/utf8.c` to a C# utility class/module. *(Decision: Standard .NET UTF-8 APIs deemed sufficient, no direct port needed)*.
-- [✅] Carefully port the Unicode Bidirectional Algorithm (UAX #9) implementation from `src/i18n/bidi/bidi.c` to C#. *(Core logic ported to `I18n/BidiAlgorithm.cs`; based on simplified C implementation)*.
+- [✅] Carefully port the Unicode Bidirectional Algorithm (UAX #9) implementation from `src/i18n/bidi/bidi.c` to C#. *(Core logic ported to `I18n/BidiAlgorithm.cs`; includes `GetCharType`, `ProcessRuns`, `ReorderRunsForDisplay`, `ProcessString`)*.
 - [✅] Port supporting functions (e.g., character classification, string utilities) as needed from `src/utils/` and `src/i18n/`. *(Determined not necessary as .NET APIs cover needs)*.
-- [ ] Develop C# unit tests for the ported i18n logic.
-- [ ] **Fix Runtime Issues from v0.7.5 Testing & Implement Phase 3 Execution:**
-  - [✅] Resolved UTF-8 encoding corruption issues when *capturing* C# process output externally (e.g., via PowerShell `ReadToEnd()`).
+- [ ] Develop C# unit tests for the ported i18n logic (especially `BidiAlgorithm.cs`).
+- [ ] **Implement/Refine Phase 3 Execution & Runtime Enhancements:**
+  - [✅] Resolved UTF-8 encoding corruption issues when *capturing* C# process output externally.
   - [✅] Fix erroneous default redirection attempts in Executor (prevent `Value cannot be null` error when no redirection is specified).
-  - [🚧] Fix/Verify Tokenizer handling of Arabic/mixed-script identifiers and special characters (e.g., `:`) (Now unblocked). *(Basic verification done via tests, seems OK)*.
+  - [✅] Verify Tokenizer handling of Arabic/mixed-script identifiers and special characters (e.g., `:`) (Seems OK from tests).
   - [✅] Implement Executor logic for input redirection (`<`).
   - [✅] Implement Executor logic for stream redirection merging (`2>&1`, `>&2`).
-  - [🚧] Implement Executor logic for subexpression (`$(...)`) execution.
+  - [ ] Implement Executor logic for subexpression (`$(...)`) execution.
+  - [ ] Implement utilization of parsed type literals `[...]` for parameter type conversion or validation.
 
-**Phase 5: C# Console I/O with Integrated BiDi Rendering**
+**Phase 5: C# Console I/O with Integrated BiDi Rendering (Next Major Phase)**
 
-- [ ] Implement console input reading in C# that handles potential complexities of RTL input.
-- [ ] Implement console output writing routines in C# that utilize the ported BiDi algorithm (from Phase 4) to correctly shape and render mixed English/Arabic text to the console.
-- [ ] Investigate and potentially integrate with libraries like `System.Console` or more advanced TUI libraries (e.g., `Spectre.Console`) ensuring BiDi compatibility.
+- [ ] Implement console input reading in C# that handles potential complexities of RTL input (e.g., correct cursor movement during editing).
+- [ ] Implement console output writing routines in C# that utilize the ported BiDi algorithm (from Phase 4) to correctly shape and render mixed English/Arabic text to the console. This involves:
+  - Applying `BidiAlgorithm.ProcessString()` to text before writing.
+  - Ensuring the console (e.g., `System.Console` or a TUI library) correctly displays the pre-processed string.
+- [ ] Investigate and potentially integrate with libraries like `System.Console` (with careful handling of its limitations) or more advanced TUI libraries (e.g., `Spectre.Console`, `Terminal.Gui`) ensuring BiDi compatibility and control over rendering.
 
 **Phase 6: External Process Execution & IO Handling**
 
 - [ ] Implement functionality to execute external commands and applications using `System.Diagnostics.Process`.
-- [ ] Handle redirection of stdin, stdout, and stderr for external processes.
+- [ ] Handle redirection of stdin, stdout, and stderr for external processes, respecting ArbSh redirection syntax.
 - [ ] Ensure correct encoding (likely UTF-8) when interacting with external processes.
+- [ ] Manage process lifetime and exit codes.
 
 **Phase 7: Scripting, Error Handling, Advanced Features**
 
-- [ ] Design and implement a basic scripting capability.
-- [ ] Implement robust error handling and reporting mechanisms.
-- [ ] Develop features like tab completion, history, aliasing (potentially with Arabic support).
-- [ ] Explore module system for extending the shell with more cmdlets.
-- [ ] Cross-platform testing and refinement.
+- [ ] Design and implement a basic scripting capability:
+  - [ ] User-defined variables (session state).
+  - [ ] Basic flow control (e.g., `if`, `foreach`).
+  - [ ] Functions or script blocks.
+- [ ] Implement robust error handling and reporting mechanisms (e.g., `ErrorRecord` objects similar to PowerShell).
+- [ ] Develop features like tab completion (basic command/parameter completion).
+- [ ] Implement command history (interactive history navigation and recall).
+- [ ] Implement shell aliasing.
+- [ ] Explore a module system for extending the shell with more cmdlets.
+- [ ] Comprehensive cross-platform testing and refinement (Windows, Linux, macOS).
 
 **Future Considerations:**
 
