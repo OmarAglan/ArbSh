@@ -9,7 +9,7 @@ namespace ArbSh.Console.I18n
     public static class BidiAlgorithm
     {
         // Corresponds to MAX_DEPTH in bidi.h
-        private const int MaxDepth = 125; 
+        private const int MaxDepth = 125;
 
         /// <summary>
         /// Determines the bidirectional character type for a given Unicode codepoint.
@@ -19,6 +19,14 @@ namespace ArbSh.Console.I18n
         /// <returns>The BidiCharacterType.</returns>
         public static BidiCharacterType GetCharType(int codepoint)
         {
+            // Check for Arabic Numbers FIRST, as their range (e.g., 0x0660-0x0669)
+            // can overlap with the broader Arabic script range.
+            if ((codepoint >= 0x0660 && codepoint <= 0x0669) ||   // Arabic-Indic digits
+               (codepoint >= 0x06F0 && codepoint <= 0x06F9))     // Extended Arabic-Indic digits
+            {
+                return BidiCharacterType.AN;
+            }
+
             // Arabic Letters (includes Presentation Forms)
             if ((codepoint >= 0x0600 && codepoint <= 0x06FF) || // Arabic
                 (codepoint >= 0x0750 && codepoint <= 0x077F) || // Arabic Supplement
@@ -26,17 +34,17 @@ namespace ArbSh.Console.I18n
                 (codepoint >= 0xFB50 && codepoint <= 0xFDFF) || // Arabic Presentation Forms-A
                 (codepoint >= 0xFE70 && codepoint <= 0xFEFF))   // Arabic Presentation Forms-B
             {
-                 // Note: UAX#9 classifies Arabic letters as AL.
-                 // The original C code used AL only for 0x0600-0x06FF, 0x0750-0x077F, 0x08A0-0x08FF.
-                 // For simplicity in porting, we stick to the C code's ranges for now,
-                 // but ideally, a full Unicode character database lookup would be better.
-                 // Let's match the C code exactly for now.
-                 if ((codepoint >= 0x0600 && codepoint <= 0x06FF) ||
-                     (codepoint >= 0x0750 && codepoint <= 0x077F) ||
-                     (codepoint >= 0x08A0 && codepoint <= 0x08FF))
-                 {
+                // Note: UAX#9 classifies Arabic letters as AL.
+                // The original C code used AL only for 0x0600-0x06FF, 0x0750-0x077F, 0x08A0-0x08FF.
+                // For simplicity in porting, we stick to the C code's ranges for now,
+                // but ideally, a full Unicode character database lookup would be better.
+                // Let's match the C code exactly for now.
+                if ((codepoint >= 0x0600 && codepoint <= 0x06FF) ||
+                    (codepoint >= 0x0750 && codepoint <= 0x077F) ||
+                    (codepoint >= 0x08A0 && codepoint <= 0x08FF))
+                {
                     return BidiCharacterType.AL;
-                 }
+                }
             }
 
             // Hebrew Letters
@@ -46,11 +54,6 @@ namespace ArbSh.Console.I18n
             // European Numbers (ASCII Digits)
             if (codepoint >= 0x0030 && codepoint <= 0x0039)
                 return BidiCharacterType.EN;
-
-            // Arabic Numbers
-            if ((codepoint >= 0x0660 && codepoint <= 0x0669) ||   // Arabic-Indic digits
-                (codepoint >= 0x06F0 && codepoint <= 0x06F9))     // Extended Arabic-Indic digits
-                return BidiCharacterType.AN;
 
             // Directional Formatting Characters (Explicit Codes)
             switch (codepoint)
@@ -86,7 +89,7 @@ namespace ArbSh.Console.I18n
 
             // European Number Separator (+, -)
             if (codepoint == '+' || codepoint == '-')
-                 return BidiCharacterType.ES;
+                return BidiCharacterType.ES;
 
             // European Number Terminator (Currency symbols, degree, percent etc.)
             // This is a simplification, UAX#9 is more complex. Matching C code's lack of specific ET handling.
@@ -94,13 +97,13 @@ namespace ArbSh.Console.I18n
             // Common Number Separator (., ,, :, / etc.)
             // This is a simplification, UAX#9 is more complex. Matching C code's lack of specific CS handling.
             if (codepoint == '.' || codepoint == ',' || codepoint == ':' || codepoint == '/')
-                 return BidiCharacterType.CS;
+                return BidiCharacterType.CS;
 
 
             // Non-Spacing Mark (NSM) - Basic check for common combining marks range
             // This is a vast simplification. A proper implementation needs Unicode database lookup.
             if (codepoint >= 0x0300 && codepoint <= 0x036F) // Combining Diacritical Marks
-                 return BidiCharacterType.NSM;
+                return BidiCharacterType.NSM;
 
 
             // Default to LTR for basic Latin/ASCII range (excluding handled types above)
@@ -108,12 +111,12 @@ namespace ArbSh.Console.I18n
             // The C code defaulted to L for < 0x80 if not otherwise classified.
             if (codepoint < 0x0080) // Check if it's within ASCII range
             {
-                 // Re-check if it was already classified above (e.g., EN, WS, B, S, ES, CS)
-                 // This is inefficient, but mirrors the structure. A better way is needed.
-                 if (GetCharTypeInternalSimplified(codepoint) == BidiCharacterType.ON) // If not classified yet by simplified checks
-                 {
-                     return BidiCharacterType.L;
-                 }
+                // Re-check if it was already classified above (e.g., EN, WS, B, S, ES, CS)
+                // This is inefficient, but mirrors the structure. A better way is needed.
+                if (GetCharTypeInternalSimplified(codepoint) == BidiCharacterType.ON) // If not classified yet by simplified checks
+                {
+                    return BidiCharacterType.L;
+                }
             }
 
             // Default to Other Neutral (ON) for everything else not explicitly handled
@@ -124,18 +127,23 @@ namespace ArbSh.Console.I18n
         // Helper to avoid infinite recursion in the LTR default check
         private static BidiCharacterType GetCharTypeInternalSimplified(int codepoint)
         {
-             // Only includes checks *before* the LTR default in the main function
+            // Check for Arabic Numbers FIRST here as well for consistency
+            if ((codepoint >= 0x0660 && codepoint <= 0x0669) ||
+                (codepoint >= 0x06F0 && codepoint <= 0x06F9)) return BidiCharacterType.AN;
+
+            // Only includes checks *before* the LTR default in the main function
             if ((codepoint >= 0x0600 && codepoint <= 0x06FF) ||
                 (codepoint >= 0x0750 && codepoint <= 0x077F) ||
                 (codepoint >= 0x08A0 && codepoint <= 0x08FF)) return BidiCharacterType.AL;
             if (codepoint >= 0x0590 && codepoint <= 0x05FF) return BidiCharacterType.R;
             if (codepoint >= 0x0030 && codepoint <= 0x0039) return BidiCharacterType.EN;
             if ((codepoint >= 0x0660 && codepoint <= 0x0669) || (codepoint >= 0x06F0 && codepoint <= 0x06F9)) return BidiCharacterType.AN;
-            switch (codepoint) { 
+            switch (codepoint)
+            {
                 // Explicit codes LRM..PDI would be handled here if needed, but GetCharType handles them.
                 // This helper is only for the LTR default check logic.
                 default: break; // Add default break to satisfy CS1522
-            } 
+            }
             if (codepoint == 0x0020 || codepoint == 0x0009 || codepoint == 0x00A0) return BidiCharacterType.WS;
             if (codepoint == 0x000A || codepoint == 0x000D || codepoint == 0x2029) return BidiCharacterType.B;
             // Note: 0x0009 is both WS and S in C code? Prioritize WS. Let's assume S is only 0x001F here.
@@ -183,7 +191,7 @@ namespace ArbSh.Console.I18n
             int length = text.Length;
             int currentLevel = baseLevel;
             int runStart = 0;
-            
+
             // Stack for embedding levels
             var levelStack = new Stack<int>();
             levelStack.Push(baseLevel);
@@ -232,7 +240,7 @@ namespace ArbSh.Console.I18n
                         break;
 
                     case BidiCharacterType.RLE: // Right-to-Left Embedding
-                         if (levelStack.Count < MaxDepth)
+                        if (levelStack.Count < MaxDepth)
                         {
                             int nextOddLevel = (currentLevel % 2 == 0) ? currentLevel + 1 : currentLevel + 2; // Find next higher odd level
                             if (nextOddLevel > MaxDepth) nextOddLevel = MaxDepth; // Clamp
@@ -252,7 +260,7 @@ namespace ArbSh.Console.I18n
                             int nextOddLevel = (currentLevel % 2 == 0) ? currentLevel + 1 : currentLevel + 2;
                             if (nextOddLevel > MaxDepth) nextOddLevel = MaxDepth;
                             int resolvedLevel = (nextOddLevel + 1) & ~1; // Next even level
-                             if (resolvedLevel > MaxDepth) resolvedLevel = MaxDepth;
+                            if (resolvedLevel > MaxDepth) resolvedLevel = MaxDepth;
 
                             levelStack.Push(resolvedLevel);
                             currentLevel = resolvedLevel;
@@ -293,16 +301,19 @@ namespace ArbSh.Console.I18n
                     case BidiCharacterType.LRI: // Left-to-Right Isolate
                     case BidiCharacterType.RLI: // Right-to-Left Isolate
                     case BidiCharacterType.FSI: // First Strong Isolate (Treat as RLI for simplicity like C code)
-                         if (levelStack.Count < MaxDepth)
+                        if (levelStack.Count < MaxDepth)
                         {
                             // Determine level based on type (LRI=even, RLI/FSI=odd)
                             int resolvedLevel;
-                            if (charType == BidiCharacterType.LRI) {
+                            if (charType == BidiCharacterType.LRI)
+                            {
                                 int nextOddLevel = (currentLevel % 2 == 0) ? currentLevel + 1 : currentLevel + 2;
                                 if (nextOddLevel > MaxDepth) nextOddLevel = MaxDepth;
                                 resolvedLevel = (nextOddLevel + 1) & ~1; // Next even level
                                 if (resolvedLevel > MaxDepth) resolvedLevel = MaxDepth;
-                            } else { // RLI or FSI
+                            }
+                            else
+                            { // RLI or FSI
                                 int nextOddLevel = (currentLevel % 2 == 0) ? currentLevel + 1 : currentLevel + 2;
                                 if (nextOddLevel > MaxDepth) nextOddLevel = MaxDepth;
                                 resolvedLevel = nextOddLevel | 1; // Ensure odd level
@@ -352,7 +363,7 @@ namespace ArbSh.Console.I18n
                         {
                             newLevel = (currentLevel % 2 != 0) ? currentLevel : currentLevel + 1; // Stay or increase to odd
                             if (newLevel > MaxDepth) newLevel = MaxDepth;
-                             newLevel |= 1; // Ensure odd
+                            newLevel |= 1; // Ensure odd
                         }
                         else
                         {
@@ -363,13 +374,13 @@ namespace ArbSh.Console.I18n
                         // If the character's natural level differs from the current run level, start new run
                         if (newLevel != currentLevel)
                         {
-                             // Create run for previous segment before changing level
-                             createNewRun = true;
-                             // The *next* run will have 'newLevel', but the run ending *here*
-                             // keeps the 'currentLevel'. The level change happens *after* this char.
-                             // So, the level used when creating the run below should be 'currentLevel'.
-                             // The 'newLevel' calculated here is only used to *trigger* the run break.
-                             // We update currentLevel = newLevel *after* creating the run.
+                            // Create run for previous segment before changing level
+                            createNewRun = true;
+                            // The *next* run will have 'newLevel', but the run ending *here*
+                            // keeps the 'currentLevel'. The level change happens *after* this char.
+                            // So, the level used when creating the run below should be 'currentLevel'.
+                            // The 'newLevel' calculated here is only used to *trigger* the run break.
+                            // We update currentLevel = newLevel *after* creating the run.
                         }
                         break;
                 }
@@ -388,23 +399,30 @@ namespace ArbSh.Console.I18n
                     // Let's stick to the C code's apparent logic: level changes *after* the formatting code.
                     // For strong types, the level change also happens *after* the character.
                     // Re-evaluating the level based on the character type that triggered the break:
-                     switch (charType) {
-                         case BidiCharacterType.LRE: case BidiCharacterType.RLE:
-                         case BidiCharacterType.LRO: case BidiCharacterType.RLO:
-                         case BidiCharacterType.LRI: case BidiCharacterType.RLI: case BidiCharacterType.FSI:
-                             currentLevel = levelStack.Peek(); // Level was already pushed
-                             break;
-                         case BidiCharacterType.PDF: case BidiCharacterType.PDI:
-                             currentLevel = levelStack.Peek(); // Level was popped
-                             break;
-                         default:
-                             // If triggered by L/R/AL, update currentLevel to the calculated newLevel
-                             if (newLevel != currentLevel) { // Check if it was a strong type change
-                                 currentLevel = newLevel;
-                             }
-                             // Otherwise (neutrals etc.), currentLevel remains unchanged for the next run start
-                             break;
-                     }
+                    switch (charType)
+                    {
+                        case BidiCharacterType.LRE:
+                        case BidiCharacterType.RLE:
+                        case BidiCharacterType.LRO:
+                        case BidiCharacterType.RLO:
+                        case BidiCharacterType.LRI:
+                        case BidiCharacterType.RLI:
+                        case BidiCharacterType.FSI:
+                            currentLevel = levelStack.Peek(); // Level was already pushed
+                            break;
+                        case BidiCharacterType.PDF:
+                        case BidiCharacterType.PDI:
+                            currentLevel = levelStack.Peek(); // Level was popped
+                            break;
+                        default:
+                            // If triggered by L/R/AL, update currentLevel to the calculated newLevel
+                            if (newLevel != currentLevel)
+                            { // Check if it was a strong type change
+                                currentLevel = newLevel;
+                            }
+                            // Otherwise (neutrals etc.), currentLevel remains unchanged for the next run start
+                            break;
+                    }
                 }
 
                 // Advance index
@@ -524,7 +542,7 @@ namespace ArbSh.Console.I18n
                 // If no runs were generated (e.g., empty input after filtering), return empty or original?
                 // Let's filter formatting codes even if no reordering happens.
                 // ReorderRunsForDisplay handles filtering.
-                 return ReorderRunsForDisplay(text, runs); // Will filter codes even with no runs
+                return ReorderRunsForDisplay(text, runs); // Will filter codes even with no runs
             }
 
             return ReorderRunsForDisplay(text, runs);
