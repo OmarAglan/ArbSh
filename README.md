@@ -17,9 +17,9 @@ A primary and distinguishing feature is its **native support for the Arabic lang
 
 This shell aims to provide a seamless and powerful command-line experience for Arabic-speaking users and developers.
 
-## Current Refactoring Status (v0.7.6 - Targeting v0.8.0)
+## ## Current Refactoring Status (v0.7.7.1 - Targeting v0.8.0 & beyond for full BiDi)
 
-The project is in the **advanced stages of C# refactoring (Phase 4 in progress, focusing on BiDi algorithm testing and refinement; Phase 5 is next):**
+The project is in the **advanced stages of C# refactoring (Phase 4 significantly progressed, focusing on BiDi algorithm foundation and UAX #9 compliance; Phase 5 is console integration):**
 
 - **C# Project Structure:** A .NET solution (`src_csharp/ArbSh.sln`) and console application project (`src_csharp/ArbSh.Console/`) are established.
 - **Core Object Pipeline:** Classes for the object pipeline (`PipelineObject`, `CmdletBase`), parsing (`Parser`, `ParsedCommand`), and execution (`Executor`) are functional.
@@ -57,10 +57,12 @@ The project is in the **advanced stages of C# refactoring (Phase 4 in progress, 
 - **Redirection Execution (`Executor.cs`):**
   - Handles file redirection for stdout (`>`, `>>`), stderr (`2>`, `2>>`), and stdin (`<`).
   - Implements stream merging (`2>&1`, `1>&2`).
-- **BiDi Algorithm Porting (`I18n/BidiAlgorithm.cs`):**
-  - The core logic for UAX #9 (determining character types, resolving embedding levels via explicit formatting codes, reordering runs per Rule L2) has been ported from the C implementation. *(Integration with console rendering is Phase 5)*.
-- **Unit Testing:** `GetCharType` is now extensively unit-tested. Initial unit tests for `ProcessRuns` (handling explicit formatting codes and run segmentation) have been added; this part is under active debugging and refinement.
-  - *(Integration with console rendering is Phase 5)*.
+- **BiDi Algorithm Foundation (`I18n/BidiAlgorithm.cs` & `BidiCharacterType.cs`):**
+  - Integrated the **ICU4N library** for accurate Unicode character property data.
+  - `BidiAlgorithm.GetCharType()` now uses ICU4N to determine the UAX #9 `Bidi_Class` for Unicode codepoints, providing a much more accurate foundation than the initial port.
+  - `BidiCharacterType` enum updated for better UAX #9 alignment (e.g., includes `BN`).
+  - **Unit Testing:** `GetCharType` is now extensively unit-tested against ICU data and passing. `ProcessRuns` currently has placeholder logic; full UAX #9 rule implementation is the next major BiDi task.
+
 - **Encoding:** UTF-8 input/output encoding issues resolved for console and redirected streams.
 - **Documentation:** Core documentation (`README.md`, `ROADMAP.md`, `CHANGELOG.md`, etc.) updated for C# refactoring.
 - **C Code Reference:** Original C source code moved to `old_c_code/`.
@@ -114,11 +116,11 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
 - **Execution:**
   - **Sub-expression Execution (`$(...)`)**: Parsing is implemented, but the execution logic (running the inner commands and substituting their output) is **not yet implemented**. The parsed structure is passed as an argument object.
   - **Type Literal Usage**: Parsed (e.g., `[int]`), but **not yet used for casting parameter values or for type validation** during binding.
-  - No external process execution support yet (e.g., running `git`, `notepad`).
+  - No external process execution support yet (e.g., running `git`, `notepad`) (Phase 6).
 - **BiDi / Rendering:**
-  - The ported BiDi algorithm logic (`BidiAlgorithm.cs`) correctly processes levels and reorders runs based on the original C implementation's logic. However, it requires **comprehensive unit testing** and potential refinement against UAX #9 for full compliance if the C version was simplified.
-  - Unit tests for `GetCharType` are complete. `ProcessRuns` is currently being unit tested and debugged to ensure correct segmentation and level assignment, especially in complex scenarios with explicit formatting codes.
-  - **Integration with console rendering (Phase 5) is needed to actually display text visually reordered according to BiDi rules.** Currently, output is sent to the console as-is without visual reordering.
+  - `BidiAlgorithm.GetCharType()` is now accurate, using ICU4N.
+  - `BidiAlgorithm.ProcessRuns()` (for level resolution based on X, W, N, I rules) and `ReorderRunsForDisplay()` (for L rules) **require full implementation according to UAX #9**. Current `ProcessRuns` logic is a placeholder.
+  - **Integration with console rendering (Phase 5) is needed to visually display text reordered by the *completed* BiDi algorithm.**
 - **Parameter Binding:**
   - Type conversion relies on `TypeConverter` and `Convert.ChangeType`, which handles common types but not complex types like script blocks or hashtables (as in PowerShell).
   - Does not yet support named array parameters (e.g., `-Names "a","b"`) or advanced pipeline binding scenarios (e.g., binding specific properties of complex input objects to parameters without `ValueFromPipelineByPropertyName`).
@@ -129,9 +131,9 @@ Please refer to the updated `ROADMAP.md` for the detailed phases of the C# refac
 - **Features:**
   - Arabic command and parameter name support is implemented via the `[ArabicName]` attribute.
   - **Full Arabic text rendering (visual BiDi/RTL display in the console) is not yet implemented (pending Phase 5).**
-  - No scripting features (variables are hardcoded in Parser for testing, no user-defined variables, functions, flow control, etc.).
+  - No scripting features (variables are hardcoded in Parser for testing, no user-defined variables, functions, flow control, etc.) (Phase 7).
   - No tab completion, interactive command history (beyond basic OS terminal history), or shell aliasing features.
 
 ## Conclusion
 
-ArbSh is making strong progress in its transformation into a modern, PowerShell-inspired C# shell with a unique emphasis on first-class Arabic language support. The core parsing and concurrent execution engine is robust, and the foundational BiDi logic has been successfully ported. The immediate next steps involve implementing sub-expression execution, followed by the critical Phase 5 task of integrating the BiDi algorithm with console rendering to bring true Arabic display capabilities to the shell.
+ArbSh is making strong progress in its transformation into a modern, PowerShell-inspired C# shell with a unique emphasis on first-class Arabic language support. The core parsing and concurrent execution engine is robust. The critical `GetCharType` component of the BiDi algorithm is now accurately implemented using ICU4N. The immediate next steps involve the **full implementation of UAX #9 level resolution (X,W,N,I rules) in `ProcessRuns`**, followed by implementing sub-expression execution, and then the critical Phase 5 task of integrating the BiDi algorithm with console rendering.

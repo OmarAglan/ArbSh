@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.1] - 2025-05-22
+
+### Added
+
+- **BiDi Algorithm Enhancement (Foundation):**
+  - Integrated `ICU4N` library for accessing Unicode Character Database properties.
+  - Refactored `BidiAlgorithm.GetCharType(int codepoint)` to use `ICU4N` for determining the UAX #9 `Bidi_Class` of Unicode codepoints, replacing previous hardcoded range checks. This provides significantly more accurate character type classification.
+  - Updated `BidiCharacterType` enum to include `BN` (Boundary Neutral) and align more closely with UAX #9 terminology. LRM/RLM are now correctly classified as BN by `GetCharType`.
+
+### Changed
+
+- **Unit Tests (BiDi):** Updated and expanded unit tests for `BidiAlgorithm.GetCharType` to verify correct classification based on ICU data, including LRM, RLM (as BN), Tab (as S), and various other character types according to their UCD `Bidi_Class`. All `GetCharType` tests are now passing.
+- Placeholder logic in `BidiAlgorithm.ProcessRuns` updated slightly to use the new `GetCharType` for its basic P2/P3 paragraph level detection. (Full `ProcessRuns` UAX #9 implementation is the next major task).
+
+### Fixed
+
+- Test failures in `BidiAlgorithmTests.cs` related to LRM/RLM classification are now resolved by updating tests to expect `BN` and refining `GetCharType`.
+
 ## [0.7.7] - 2025-05-22
 
 ### Added
