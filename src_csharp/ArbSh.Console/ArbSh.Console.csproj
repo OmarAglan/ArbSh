@@ -7,4 +7,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ICU4N" Version="60.1.0-alpha.437" />
+  </ItemGroup>
+
 </Project>

@@ -55,25 +55,122 @@ To create a powerful, extensible shell environment built on .NET that:
   - [✅] Implement parsing logic for type literals `[int]`. *(Parsed as special argument; usage is later phase)*.
   - [✅] Re-verify complex escape sequence handling based on the new token stream. *(Interpretation of common escapes in double-quoted strings implemented)*.
 
-**Phase 4: Porting ArbSh UTF-8 & BiDi Algorithms to C#, Advanced Execution Logic (Nearing Completion)**
+**Phase 4: BiDi Algorithm UAX #9 Compliance Enhancement, Advanced Execution Logic (In Progress)**
 
-- [✅] **BLOCKER RESOLVED:** Resolved UTF-8 input/output encoding corruption when running via PowerShell `Start-Process` with redirected streams.
-- [✅] Systematically port the UTF-8 handling logic from `src/utils/utf8.c` to a C# utility class/module. *(Decision: Standard .NET UTF-8 APIs deemed sufficient, no direct port needed)*.
-- [✅] Carefully port the Unicode Bidirectional Algorithm (UAX #9) implementation from `src/i18n/bidi/bidi.c` to C#. *(Core logic ported to `I18n/BidiAlgorithm.cs`; includes `GetCharType`, `ProcessRuns`, `ReorderRunsForDisplay`, `ProcessString`)*.
-- [✅] Port supporting functions (e.g., character classification, string utilities) as needed from `src/utils/` and `src/i18n/`. *(Determined not necessary as .NET APIs cover needs)*.
-- [🚧] Develop C# unit tests for the ported i18n logic:
-  - [✅] Comprehensive unit tests for `BidiAlgorithm.GetCharType`.
-  - [🚧] Unit tests for `BidiAlgorithm.ProcessRuns` (in progress, debugging level assignment with explicit codes).
-  - [ ] Unit tests for `BidiAlgorithm.ReorderRunsForDisplay` and `BidiAlgorithm.ProcessString`.
-- [ ] **Implement/Refine Phase 3 Execution & Runtime Enhancements:**
+- **Initial BiDi Algorithm Port (Completed Foundation):**
+  - [✅] Carefully port the Unicode Bidirectional Algorithm (UAX #9) implementation from `src/i18n/bidi/bidi.c` to C#. *(Core simplified logic ported to `I18n/BidiAlgorithm.cs`; includes `GetCharType`, `ProcessRuns`, `ReorderRunsForDisplay`, `ProcessString`. **Further work below for full UAX #9 compliance.**)*.
+  - [✅] Port supporting functions (e.g., character classification, string utilities) as needed from `src/utils/` and `src/i18n/`. *(Decision: .NET APIs cover most needs for general utilities; BiDi-specific support functions are part of the algorithm itself)*.
+
+- **BiDi Algorithm Enhancement (Towards Full UAX #9 Compliance):**
+  - The initial port provided foundational BiDi logic. This sub-phase focuses on enhancing it significantly to align more closely with the Unicode Bidirectional Algorithm (UAX #9) standard.
+
+  - [ ] **Revise `BidiAlgorithm.GetCharType` for Full UAX #9 `Bidi_Class` Properties:**
+    - **Sub-Task 1.1 (Research & Decision):**
+      - [ ] Investigate pros/cons of using ICU4N vs. manual parsing of UCD files (e.g., `DerivedBidiClass.txt`, `UnicodeData.txt`) vs. other .NET Unicode libraries for obtaining `Bidi_Class` property.
+      - [ ] **Discussion Point:** Choose the preferred method. Consider dependencies, maintenance, and completeness.
+    - **Sub-Task 1.2 (Implementation - if ICU4N or other lib):**
+      - [ ] Add the chosen library (e.g., ICU4N NuGet package) to the `ArbSh.Console` project.
+      - [ ] Refactor `GetCharType` to query the library for the `Bidi_Class` of a given codepoint.
+      - [ ] Map the library's Bidi class representation to our `BidiCharacterType` enum.
+    - **Sub-Task 1.3 (Implementation - if UCD parsing):**
+      - [ ] Develop a parser (or script) to process relevant UCD files.
+      - [ ] Design an efficient data structure (e.g., sorted array of ranges, dictionary) to store and query the parsed `Bidi_Class` data.
+      - [ ] Refactor `GetCharType` to use this data structure.
+    - **Sub-Task 1.4 (Initial Testing):**
+      - [ ] Create unit tests for `GetCharType` focusing on codepoints that were previously misclassified or unclassified by the hardcoded ranges, using UAX #9 Table 3 as a reference.
+      - [ ] Test boundary conditions and various Unicode planes.
+
+  - [ ] **Re-implement/Refine `BidiAlgorithm.ProcessRuns` for UAX #9 Rule Adherence:**
+    - **Sub-Task 2.1 (Study & Design - X Rules):**
+      - [ ] Thoroughly study UAX #9 rules X1-X10 (Explicit Levels and Directions).
+      - [ ] Design the data structure for the "directional status stack" (needs to hold embedding level, override status, and isolate status).
+      - **Discussion Point:** How will we represent override (LRO/RLO -> L/R) and isolate (LRI/RLI/FSI -> L/R with isolation) states on the stack?
+    - **Sub-Task 2.2 (Implement Basic Explicit Formatting - X1-X4, X6-X8, simplified X10 for LRE/RLE/LRO/RLO/PDF):**
+      - [ ] Implement logic for LRE, RLE, PDF (X1, X2, X3, X7, X8).
+      - [ ] Implement logic for LRO, RLO (X4, X5, X7, X8).
+      - [ ] Ensure correct level calculation (e.g., `(current_level + 2) & ~1` for next even, `(current_level + 1) | 1` for next odd).
+      - [ ] Implement initial handling for stack overflow (X9).
+      - [ ] Implement removal of these explicit formatting codes from consideration for level assignment (part of X10, though full BN removal is later).
+    - **Sub-Task 2.3 (Implement Isolates - X5a-X5c, X6a, remaining X10):**
+      - [ ] Implement logic for LRI, RLI, FSI, PDI.
+      - [ ] Correctly handle pairing of isolates (e.g., finding matching PDI or end of paragraph/higher isolate).
+      - [ ] Correctly resolve levels within and of isolated sequences.
+      - **Discussion Point:** FSI requires determining the direction of the first strong type within its scope. How will this pre-scan be handled?
+    - **Sub-Task 2.4 (Study & Design - W Rules):**
+      - [ ] Thoroughly study UAX #9 rules W1-W7 (Resolving Weak Types).
+    - **Sub-Task 2.5 (Implement W Rules):**
+      - [ ] Implement W1: Resolve ES, ET.
+      - [ ] Implement W2: Change EN to AN if preceded by AL.
+      - [ ] Implement W3: Change AL to R. (Usually AL is already R from GetCharType, this rule clarifies).
+      - [ ] Implement W4: Resolve NI (Neutrals between L/R and EN/AN).
+      - [ ] Implement W5: Resolve CS.
+      - [ ] Implement W6: Separate EN/AN from surrounding L/R.
+      - [ ] Implement W7: Change EN to L.
+      - **Discussion Point:** These rules require iterating and potentially changing character types or levels based on context. How will these changes be tracked and applied before the next stage?
+    - **Sub-Task 2.6 (Study & Design - N Rules):**
+      - [ ] Thoroughly study UAX #9 rules N0-N2 (Resolving Neutral Types and BN).
+    - **Sub-Task 2.7 (Implement N Rules):**
+      - [ ] Implement N0: Resolve BN (Boundary Neutrals, which include PDF, LRI, RLI, FSI, PDI at this algorithm stage).
+      - [ ] Implement N1: Resolve NI (Neutrals between L and R).
+      - [ ] Implement N2: Resolve remaining NI.
+    - **Sub-Task 2.8 (Study & Design - I Rules):**
+      - [ ] Thoroughly study UAX #9 rules I1-I2 (Resolving Implicit Levels).
+    - **Sub-Task 2.9 (Implement I Rules):**
+      - [ ] Implement I1: Resolve characters to paragraph embedding level if LTR.
+      - [ ] Implement I2: Resolve characters to paragraph embedding level if RTL.
+    - **Sub-Task 2.10 (Refine Run Segmentation Logic):**
+      - [ ] Ensure `List<BidiRun>` is populated correctly based on changes in the *fully resolved* embedding level after X, W, N, and I rules.
+      - [ ] Each `BidiRun` should contain the start index, length (in original string), and the final resolved embedding level.
+
+  - [ ] **Verify/Refine `BidiAlgorithm.ReorderRunsForDisplay`:**
+    - **Sub-Task 3.1 (Study L Rules):**
+      - [ ] Thoroughly study UAX #9 rules L1-L4 (Reordering Resolved Levels).
+    - **Sub-Task 3.2 (Implement/Verify L1 - BN Removal):**
+      - [ ] Ensure that all characters that were resolved as BN (Boundary Neutral) by rule N0 (including explicit formatting codes like PDF, LRI, RLI, FSI, PDI and original BN characters) are removed from the string before or during reordering for display.
+      - [ ] Also ensure LRE, RLE, LRO, RLO are removed as per X10 if not already handled as BN.
+      - **Discussion Point:** Your current `ReorderRunsForDisplay` filters LRE-PDI. Does this cover all BN types correctly as per L1?
+    - **Sub-Task 3.3 (Verify L2 - Run Reordering):**
+      - [ ] The existing logic (iterate `maxLevel` down to 0, append runs, reverse RTL runs using `StringInfo.ParseCombiningCharacters`) is a good basis for L2.
+      - [ ] Verify its correctness against `BidiTest.txt` once `ProcessRuns` provides accurate levels.
+    - **Sub-Task 3.4 (Consider L3 - Combining Marks, L4 - Digit Shaping - Optional/Renderer):**
+      - [ ] L3 (reordering combining marks) is generally handled by grapheme cluster logic (`StringInfo.ParseCombiningCharacters` helps).
+      - [ ] L4 (digit shaping) is typically a rendering engine task.
+      - **Discussion Point:** Confirm we are not expected to implement L4.
+
+  - [ ] **(Optional) Implement Paragraph Level Determination (P1-P3) in `BidiAlgorithm.ProcessString`:**
+    - **Sub-Task 4.1 (Study P Rules):**
+      - [ ] Thoroughly study UAX #9 rules P1-P3 (Determining the Paragraph Embedding Level).
+  - **Sub-Task 4.2 (Implement P2-P3):**
+    - [ ] Add logic to `ProcessString` (or a helper) to scan the input text for the first strong character (L, R, or AL) to determine the paragraph level as per P2 and P3.
+    - [ ] Allow `ProcessString` to use this auto-detected level if an explicit `baseLevel` is not provided (e.g., by passing a sentinel value like -1 for `baseLevel`).
+
+  - [ ] **Comprehensive BiDi Algorithm Unit Testing (Expansion of existing tests):**
+official `BidiTest.txt`.
+    - **Sub-Task 5.1 (Setup BidiTest.txt Framework):**
+      - [ ] Develop a test runner or utility to parse `BidiTest.txt` (from Unicode.org). This file defines test cases with input, paragraph level, expected levels, and expected reordered output.
+    - **Sub-Task 5.2 (GetCharType UCD Testing):**
+      - [ ] Expand `GetCharType` tests to cover a wider range of UCD-defined `Bidi_Class` values once the new property access method is implemented.
+    - **Sub-Task 5.3 (Rule-Specific Testing for ProcessRuns):**
+      - [ ] Create targeted unit tests for *each* X, W, N, and I rule or small groups of related rules, using crafted strings before tackling the full `BidiTest.txt`.
+    - **Sub-Task 5.4 (BidiTest.txt Integration for ProcessRuns + ReorderRunsForDisplay):**
+      - [ ] Feed test cases from `BidiTest.txt` into `ProcessString`.
+      - [ ] Assert that the resolved levels for each character (intermediate step, if exposed for testing) match `BidiTest.txt`.
+      - [ ] Assert that the final reordered string matches the expected output from `BidiTest.txt`.
+    - **Sub-Task 5.5 (Edge Case Testing):**
+      - [ ] Add tests for empty strings, strings with only neutrals, strings with only formatting codes, strings exceeding `MaxDepth`.
+
+- **UTF-8 and Encoding:**
+  - [✅] BLOCKER RESOLVED: Resolved UTF-8 input/output encoding corruption when running via PowerShell `Start-Process` with redirected streams.
+  - [✅] Standard .NET UTF-8 APIs deemed sufficient for general encoding/decoding.
   - [✅] Resolved UTF-8 encoding corruption issues when *capturing* C# process output externally.
+
+- **Execution & Runtime Enhancements:**
   - [✅] Fix erroneous default redirection attempts in Executor (prevent `Value cannot be null` error when no redirection is specified).
   - [✅] Verify Tokenizer handling of Arabic/mixed-script identifiers and special characters (e.g., `:`) (Seems OK from tests).
   - [✅] Implement Executor logic for input redirection (`<`).
   - [✅] Implement Executor logic for stream redirection merging (`2>&1`, `>&2`).
   - [ ] Implement Executor logic for subexpression (`$(...)`) execution.
   - [ ] Implement utilization of parsed type literals `[...]` for parameter type conversion or validation.
-
 **Phase 5: C# Console I/O with Integrated BiDi Rendering (Next Major Phase)**
 
 - [ ] Implement console input reading in C# that handles potential complexities of RTL input (e.g., correct cursor movement during editing).
