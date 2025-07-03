@@ -1,8 +1,12 @@
-# Project Organization (C# Refactoring)
+# Project Organization
 
 ## Overview
 
-This document outlines the organization structure for the **ArbSh project during its refactoring to C#/.NET**. The original C project structure remains temporarily for reference during the porting process. The goal is to create a maintainable, scalable, and well-documented C# codebase for a PowerShell-inspired shell with first-class Arabic support.
+This document outlines the organization structure for the **ArbSh project** - an Arabic-first shell designed specifically for the Arabic developer community. ArbSh is a PowerShell-inspired shell with complete Arabic language support, including full Unicode BiDi (Bidirectional) text rendering compliance according to UAX #9 standards.
+
+**Current Version:** 0.7.7.11
+**Status:** Phase 4 Complete - Full BiDi Algorithm UAX #9 Compliance
+**Next Phase:** Phase 5 - Console I/O with BiDi Rendering
 
 ## Current Directory Structure
 

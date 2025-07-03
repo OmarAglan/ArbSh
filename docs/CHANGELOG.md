@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.11] - 2025-07-03
+
+### Added
+- **Type Literal Utilization**: Complete implementation of PowerShell-style `[TypeName]` type literal functionality
+  - Implemented `ProcessTypeLiterals` method to extract and map type literals to positional arguments
+  - Added `TypeLiteralContext` class with `ArgumentTypeOverrides` and `ParameterPositionToArgumentIndex` mappings
+  - Enhanced `ResolveTypeName` method with comprehensive type alias support (int, string, bool, double, datetime, ConsoleColor, etc.)
+  - Integrated type literal processing with parameter binding system for automatic type conversion
+  - Added support for multiple type literals in single command (e.g., `[int] 42 [string] hello [bool] true`)
+  - Type literals properly excluded from positional parameter counting
+  - Enhanced type conversion with `TypeConverter` and `Convert.ChangeType` fallback mechanisms
+  - Successfully tested with various type combinations and complex parameter scenarios
+
+### Technical Details
+- Type literals parsed as `"TypeLiteral:TypeName"` strings and processed during parameter binding
+- `ProcessTypeLiterals` creates proper argument index mapping excluding type literal positions
+- Type resolution supports both common aliases (int, string, bool) and fully qualified names
+- Parameter binding enhanced to use type literal overrides when available
+- Maintains backward compatibility with existing parameter binding for non-type-literal arguments
+- Comprehensive debug logging for type literal processing and parameter binding
+- Type conversion handles enum types (ConsoleColor), DateTime parsing, and numeric conversions
+
 ## [0.7.7.10] - 2025-07-03
 
 ### Added

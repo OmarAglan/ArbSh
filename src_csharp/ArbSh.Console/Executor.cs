@@ -624,7 +624,8 @@ namespace ArbSh.Console
                 { "object", typeof(object) },
                 { "datetime", typeof(DateTime) },
                 { "timespan", typeof(TimeSpan) },
-                { "guid", typeof(Guid) }
+                { "guid", typeof(Guid) },
+                { "consolecolor", typeof(ConsoleColor) }
             };
 
             if (typeAliases.TryGetValue(typeName, out Type? aliasType))
