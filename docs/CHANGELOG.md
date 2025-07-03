@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.6] - 2025-07-03
+
+### Fixed
+- **BiDi Algorithm I Rules**: Corrected implementation of UAX #9 I1 and I2 rules for implicit embedding level resolution
+  - I1 Rule: Fixed EN characters with even levels to increase by 2 levels (not 1)
+  - I2 Rule: Fixed AN characters with odd levels to increase by 1 level (was missing)
+  - Added proper BN (Boundary Neutral) character handling per UAX #9 specification
+  - Added level overflow protection for max_depth+1 (126) limit
+- **Test Coverage**: Updated and added 8 new comprehensive I rules unit tests
+  - Fixed existing W2 test to match corrected I1 behavior for AN characters
+  - Added tests for all I1/I2 rule combinations with proper RTL/LTR contexts
+
+### Added
+- **Documentation**: Created comprehensive `docs/BIDI_I_RULES_DESIGN.md` design document
+  - Detailed UAX #9 I rules specification analysis
+  - Implementation architecture and algorithm design
+  - Testing strategy and performance considerations
+- **Run Segmentation Tests**: Added 5 new tests for run segmentation logic verification
+  - Mixed LTR/RTL text segmentation
+  - Explicit formatting character handling
+  - Numeric sequences in different contexts
+  - Edge cases (empty text, single character)
+
+### Technical Details
+- All 70 unit tests passing (62 existing + 8 new)
+- Proper UAX #9 compliance for implicit level resolution
+- Enhanced error handling and boundary condition management
+
 ## [0.7.7.5] - 2025-07-03
 
 ### Added
