@@ -521,6 +521,11 @@ namespace ArbSh.Console
             /// Maps argument index to the Type that should be used for conversion.
             /// </summary>
             public Dictionary<int, Type> ArgumentTypeOverrides { get; } = new Dictionary<int, Type>();
+
+            /// <summary>
+            /// Maps parameter position to argument index (excluding type literals).
+            /// </summary>
+            public Dictionary<int, int> ParameterPositionToArgumentIndex { get; } = new Dictionary<int, int>();
         }
 
         /// <summary>
@@ -542,6 +547,12 @@ namespace ArbSh.Console
                 {
                     positionalToArgumentIndex.Add(i);
                 }
+            }
+
+            // Build the parameter position to argument index mapping
+            for (int pos = 0; pos < positionalToArgumentIndex.Count; pos++)
+            {
+                context.ParameterPositionToArgumentIndex[pos] = positionalToArgumentIndex[pos];
             }
 
             int currentPositionalIndex = 0;
@@ -873,9 +884,9 @@ namespace ArbSh.Console
                         }
                     }
                     // Handle non-array positional parameters (only if not already bound as array)
-                    else if (!prop.PropertyType.IsArray && paramAttr.Position < command.Arguments.Count && !usedPositionalArgs[paramAttr.Position])
+                    else if (!prop.PropertyType.IsArray && typeLiteralContext.ParameterPositionToArgumentIndex.TryGetValue(paramAttr.Position, out int argumentIndex) && !usedPositionalArgs[argumentIndex])
                     {
-                        object positionalArgument = command.Arguments[paramAttr.Position];
+                        object positionalArgument = command.Arguments[argumentIndex];
 
                         if (positionalArgument is string positionalValue) // Check if it's a string
                         {
@@ -885,11 +896,11 @@ namespace ArbSh.Console
                                 Type targetType = prop.PropertyType; // Default to parameter type
                                 string conversionSource = "parameter type";
 
-                                if (typeLiteralContext.ArgumentTypeOverrides.TryGetValue(paramAttr.Position, out Type? overrideType))
+                                if (typeLiteralContext.ArgumentTypeOverrides.TryGetValue(argumentIndex, out Type? overrideType))
                                 {
                                     targetType = overrideType;
                                     conversionSource = "type literal";
-                                    System.Console.WriteLine($"DEBUG (TypeLiteral): Using type literal override {targetType.Name} for argument at position {paramAttr.Position}");
+                                    System.Console.WriteLine($"DEBUG (TypeLiteral): Using type literal override {targetType.Name} for argument at index {argumentIndex} (parameter position {paramAttr.Position})");
                                 }
 
                                 // Attempt conversion using TypeConverter first, then fallback
@@ -920,8 +931,8 @@ namespace ArbSh.Console
                                 }
 
                                 found = true;
-                                usedPositionalArgs[paramAttr.Position] = true; // Mark as used
-                                System.Console.WriteLine($"DEBUG (Binder): Bound positional parameter at {paramAttr.Position} ('{positionalValue}') to property '{prop.Name}' (Type: {prop.PropertyType.Name}, converted via {conversionSource})");
+                                usedPositionalArgs[argumentIndex] = true; // Mark as used
+                                System.Console.WriteLine($"DEBUG (Binder): Bound positional parameter at position {paramAttr.Position} (argument index {argumentIndex}, '{positionalValue}') to property '{prop.Name}' (Type: {prop.PropertyType.Name}, converted via {conversionSource})");
                             }
                             catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
                             {
