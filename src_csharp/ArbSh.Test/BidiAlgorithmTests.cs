@@ -625,5 +625,155 @@ namespace ArbSh.Test.I18n
             Assert.Single(runs);
             Assert.Equal(0, runs[0].Level); // LTR level
         }
+
+        // --- N Rules Tests ---
+
+        [Fact]
+        public void ProcessRuns_BracketPairs_N0_LTRContext_BracketsBecomeLTR()
+        {
+            string text = "a(b)c"; // LTR context with brackets
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // All characters should be LTR level 0 after N0 processing
+            Assert.Single(runs);
+            Assert.Equal(0, runs[0].Level);
+            Assert.Equal(0, runs[0].Start);
+            Assert.Equal(5, runs[0].Length);
+        }
+
+        [Fact]
+        public void ProcessRuns_BracketPairs_N0_RTLContext_BracketsBecomRTL()
+        {
+            string text = "أ(ب)ج"; // RTL context with brackets
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // All characters should be RTL level 1 after N0 processing
+            Assert.Single(runs);
+            Assert.Equal(1, runs[0].Level);
+            Assert.Equal(0, runs[0].Start);
+            Assert.Equal(5, runs[0].Length);
+        }
+
+        [Fact]
+        public void ProcessRuns_NeutralSequence_N1_SurroundingStrongTypes()
+        {
+            string text = "a.b"; // L NI L sequence
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // All characters should be LTR level 0 after N1 processing
+            Assert.Single(runs);
+            Assert.Equal(0, runs[0].Level);
+            Assert.Equal(0, runs[0].Start);
+            Assert.Equal(3, runs[0].Length);
+        }
+
+        [Fact]
+        public void ProcessRuns_IsolatedNeutral_N2_EmbeddingDirection()
+        {
+            string text = "."; // Isolated neutral
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Neutral should take embedding direction (RTL level 1)
+            Assert.Single(runs);
+            Assert.Equal(1, runs[0].Level);
+            Assert.Equal(0, runs[0].Start);
+            Assert.Equal(1, runs[0].Length);
+        }
+
+        // --- Run Segmentation Tests ---
+
+        [Fact]
+        public void ProcessRuns_MixedLtrRtl_CorrectRunSegmentation()
+        {
+            string text = "Hello مرحبا World"; // LTR + RTL + LTR
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs with different levels
+            Assert.True(runs.Count >= 2, $"Expected at least 2 runs, got {runs.Count}");
+
+            // Verify runs cover the entire text
+            int totalLength = runs.Sum(r => r.Length);
+            Assert.Equal(text.Length, totalLength);
+
+            // Verify runs are contiguous
+            int expectedStart = 0;
+            foreach (var run in runs)
+            {
+                Assert.Equal(expectedStart, run.Start);
+                expectedStart += run.Length;
+            }
+        }
+
+        [Fact]
+        public void ProcessRuns_WithExplicitFormatting_CorrectRunSegmentation()
+        {
+            string text = "Hello\u202Dمرحبا\u202C World"; // LTR + LRO + RTL + PDF + LTR
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Verify runs cover the entire text
+            int totalLength = runs.Sum(r => r.Length);
+            Assert.Equal(text.Length, totalLength);
+
+            // Verify runs are contiguous and non-overlapping
+            int expectedStart = 0;
+            foreach (var run in runs)
+            {
+                Assert.True(run.Start >= 0, $"Run start {run.Start} should be non-negative");
+                Assert.True(run.Length > 0, $"Run length {run.Length} should be positive");
+                Assert.Equal(expectedStart, run.Start);
+                expectedStart += run.Length;
+            }
+        }
+
+        [Fact]
+        public void ProcessRuns_WithNumbers_CorrectRunSegmentation()
+        {
+            string text = "Price: 123.45 ريال"; // LTR + EN + RTL
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Verify basic run properties
+            Assert.True(runs.Count > 0, "Should have at least one run");
+
+            // Verify runs cover the entire text
+            int totalLength = runs.Sum(r => r.Length);
+            Assert.Equal(text.Length, totalLength);
+
+            // Verify all runs have valid levels
+            foreach (var run in runs)
+            {
+                Assert.True(run.Level >= 0, $"Run level {run.Level} should be non-negative");
+                Assert.True(run.Level <= 125, $"Run level {run.Level} should not exceed max depth");
+            }
+        }
+
+        [Fact]
+        public void ProcessRuns_EmptyText_ReturnsEmptyRuns()
+        {
+            string text = "";
+            int baseLevel = 0;
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Empty(runs);
+        }
+
+        [Fact]
+        public void ProcessRuns_SingleCharacter_ReturnsSingleRun()
+        {
+            string text = "a";
+            int baseLevel = 0;
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(0, runs[0].Start);
+            Assert.Equal(1, runs[0].Length);
+            Assert.Equal(0, runs[0].Level); // LTR character in LTR paragraph
+        }
     }
 }

@@ -93,12 +93,13 @@ To create a powerful, extensible shell environment built on .NET that:
     - [✅] Implement W6: Remaining separators to Other Neutral. *(Completed: `ApplyW6_RemainingSeparators`)*.
     - [✅] Implement W7: Change EN to L in L context. *(Completed: `ApplyW7_EuropeanNumberFinal`)*.
     - **RESOLVED:** W rules implemented using isolating run sequence processing with proper sos/eos determination and integration with X rules. Enhanced I rules (I1-I2) added for final level assignment including AN support.
-  - **Sub-Task 2.6 (Study & Design - N Rules):**
-    - [ ] Thoroughly study UAX #9 rules N0-N2 (Resolving Neutral Types and BN).
-  - **Sub-Task 2.7 (Implement N Rules):**
-    - [ ] Implement N0: Resolve BN (Boundary Neutrals, which include PDF, LRI, RLI, FSI, PDI at this algorithm stage).
-    - [ ] Implement N1: Resolve NI (Neutrals between L and R).
-    - [ ] Implement N2: Resolve remaining NI.
+  - **Sub-Task 2.6 (Study & Design - N Rules):** ✅ COMPLETED
+    - [✅] Thoroughly study UAX #9 rules N0-N2 (Resolving Neutral Types and BN). *(Completed: Comprehensive design document created at `docs/BIDI_N_RULES_DESIGN.md`)*.
+  - **Sub-Task 2.7 (Implement N Rules):** ✅ COMPLETED
+    - [✅] Implement N0: Bracket pair processing with BD16 algorithm using 63-element stack. *(Completed: `ApplyN0_BracketPairs` with hardcoded bracket mappings)*.
+    - [✅] Implement N1: Neutral sequence resolution based on surrounding strong types. *(Completed: `ApplyN1_SurroundingStrongTypes` treating EN/AN as R)*.
+    - [✅] Implement N2: Embedding direction fallback for remaining neutrals. *(Completed: `ApplyN2_EmbeddingDirection` with even→L, odd→R)*.
+    - **RESOLVED:** N rules implemented with comprehensive bracket pair processing, canonical equivalence support, and proper integration with isolating run sequences. Added 4 new unit tests covering all N rules scenarios.
   - **Sub-Task 2.8 (Study & Design - I Rules):**
     - [ ] Thoroughly study UAX #9 rules I1-I2 (Resolving Implicit Levels).
   - **Sub-Task 2.9 (Implement I Rules):**

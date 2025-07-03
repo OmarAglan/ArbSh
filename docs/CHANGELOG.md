@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.5] - 2025-07-03
+
+### Added
+
+- **BiDi Algorithm Enhancement (UAX #9 N Rules - Complete Implementation):**
+  - **Neutral Type Resolution (N0-N2):** Implemented complete UAX #9 N rules for resolving neutral character types:
+    - N0: Bracket pair processing with BD16 algorithm using 63-element stack for proper bracket pairing
+    - N1: Neutral sequence resolution based on surrounding strong types (treating EN/AN as R)
+    - N2: Embedding direction fallback for remaining neutrals (even level → L, odd level → R)
+  - **Bracket Pair Processing:** Implemented comprehensive bracket pair identification and resolution:
+    - BD14-BD16 definitions for opening/closing paired brackets with ON type requirement
+    - Hardcoded bracket mapping table (fallback for missing ICU4N bracket properties)
+    - Support for basic brackets (), [], {} and Unicode brackets ⟨⟩, 〈〉, ⟦⟧, ⟪⟫, ⦃⦄, ⦅⦆
+    - Canonical equivalence handling for angle brackets (U+3008/U+3009 ↔ U+2329/U+232A)
+    - Sequential processing in logical order of opening brackets
+    - NSM character handling for brackets that change type under N0
+  - **Neutral Type Context Analysis:** Implemented sophisticated neutral type resolution:
+    - Strong type context establishment for bracket pair resolution
+    - Embedding direction matching and opposite direction context checking
+    - Boundary type (sos/eos) integration for isolating run sequence boundaries
+    - Proper handling of mixed strong types within bracket pairs
+  - **Integration with Existing Pipeline:** Seamless integration with W and X rules processing:
+    - Reuse of isolating run sequence infrastructure from W rules
+    - Proper type propagation back to main character type array
+    - Maintained compatibility with existing I rules processing
+  - **Comprehensive Testing:** Added 4 new unit tests covering N rules functionality:
+    - N0 bracket pair tests for LTR and RTL contexts
+    - N1 surrounding strong type resolution tests
+    - N2 embedding direction fallback tests
+    - All 57 tests passing (53 existing + 4 new N rules tests)
+
 ## [0.7.7.2] - 2025-07-03
 
 ### Added

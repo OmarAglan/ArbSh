@@ -1024,6 +1024,423 @@ namespace ArbSh.Console.I18n
             return type == BidiCharacterType.EN || type == BidiCharacterType.AN;
         }
 
+        // --- N Rules (Neutral Type Resolution) ---
+
+        /// <summary>
+        /// Applies UAX #9 N rules (N0-N2) for resolving neutral character types.
+        /// This processes each isolating run sequence to resolve neutral types like ON, WS, S, B.
+        /// </summary>
+        private static void ApplyNRules(string text, BidiCharacterType[] types, int[] levels)
+        {
+            // Build isolating run sequences from level runs (reuse W rules infrastructure)
+            var isolatingRunSequences = BuildIsolatingRunSequences(text, types, levels);
+
+            // Apply N rules to each isolating run sequence
+            foreach (var sequence in isolatingRunSequences)
+            {
+                ApplyNRulesToSequence(text, sequence);
+
+                // Copy resolved types back to the main types array
+                for (int i = 0; i < sequence.Types.Count; i++)
+                {
+                    int textPosition = sequence.Positions[i];
+                    types[textPosition] = sequence.Types[i];
+                }
+            }
+        }
+
+        /// <summary>
+        /// Applies all N rules (N0-N2) to a single isolating run sequence.
+        /// </summary>
+        private static void ApplyNRulesToSequence(string text, IsolatingRunSequence sequence)
+        {
+            ApplyN0_BracketPairs(text, sequence);
+            ApplyN1_SurroundingStrongTypes(sequence);
+            ApplyN2_EmbeddingDirection(sequence);
+        }
+
+        /// <summary>
+        /// N0: Process bracket pairs in an isolating run sequence sequentially in the logical order
+        /// of the text positions of the opening paired brackets. Within this scope, bidirectional
+        /// types EN and AN are treated as R.
+        /// </summary>
+        private static void ApplyN0_BracketPairs(string text, IsolatingRunSequence sequence)
+        {
+            var bracketPairs = IdentifyBracketPairs(text, sequence);
+
+            foreach (var pair in bracketPairs)
+            {
+                ProcessBracketPair(sequence, pair);
+            }
+        }
+
+        /// <summary>
+        /// N1: Look for a sequence of neutrals (NI) between two characters of the same strong type.
+        /// If found, change the neutrals to match that strong type. EN and AN are treated as R.
+        /// </summary>
+        private static void ApplyN1_SurroundingStrongTypes(IsolatingRunSequence sequence)
+        {
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                if (IsNeutralType(sequence.Types[i]))
+                {
+                    // Find the extent of the neutral sequence
+                    int start = i;
+                    while (i < sequence.Types.Count && IsNeutralType(sequence.Types[i]))
+                    {
+                        i++;
+                    }
+                    int end = i - 1;
+
+                    // Get the strong types before and after the neutral sequence
+                    var precedingType = GetPrecedingStrongType(sequence, start);
+                    var followingType = GetFollowingStrongType(sequence, end);
+
+                    // If both sides have the same strong type, change neutrals to that type
+                    if (precedingType == followingType && IsStrongTypeForN1(precedingType))
+                    {
+                        for (int j = start; j <= end; j++)
+                        {
+                            sequence.Types[j] = precedingType;
+                        }
+                    }
+
+                    i--; // Adjust for the outer loop increment
+                }
+            }
+        }
+
+        /// <summary>
+        /// N2: Any remaining neutrals take the embedding direction.
+        /// Even levels → L, Odd levels → R
+        /// </summary>
+        private static void ApplyN2_EmbeddingDirection(IsolatingRunSequence sequence)
+        {
+            var embeddingDirection = GetEmbeddingDirection(sequence.EmbeddingLevel);
+
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                if (IsNeutralType(sequence.Types[i]))
+                {
+                    sequence.Types[i] = embeddingDirection;
+                }
+            }
+        }
+
+        // --- N Rules Helper Methods ---
+
+        /// <summary>
+        /// Bracket pair structure for N0 processing.
+        /// </summary>
+        private struct BracketPair
+        {
+            public int OpeningPosition;    // Position in isolating run sequence
+            public int ClosingPosition;    // Position in isolating run sequence
+            public char OpeningChar;       // Opening bracket character
+            public char ClosingChar;       // Closing bracket character
+
+            public BracketPair(int openPos, int closePos, char openChar, char closeChar)
+            {
+                OpeningPosition = openPos;
+                ClosingPosition = closePos;
+                OpeningChar = openChar;
+                ClosingChar = closeChar;
+            }
+        }
+
+        /// <summary>
+        /// Stack entry for BD16 bracket pair identification algorithm.
+        /// </summary>
+        private struct BracketStackEntry
+        {
+            public char BracketChar;       // Bidi_Paired_Bracket property value
+            public int TextPosition;       // Position in isolating run sequence
+
+            public BracketStackEntry(char bracketChar, int position)
+            {
+                BracketChar = bracketChar;
+                TextPosition = position;
+            }
+        }
+
+        /// <summary>
+        /// Hardcoded bracket pair mappings (fallback for missing ICU4N properties).
+        /// </summary>
+        private static readonly Dictionary<char, char> BracketPairs = new Dictionary<char, char>
+        {
+            // Basic brackets
+            { '(', ')' }, { ')', '(' },
+            { '[', ']' }, { ']', '[' },
+            { '{', '}' }, { '}', '{' },
+
+            // Angle brackets (canonical equivalence)
+            { '⟨', '⟩' }, { '⟩', '⟨' },  // U+27E8, U+27E9
+            { '〈', '〉' }, { '〉', '〈' },  // U+3008, U+3009 (canonical equivalent)
+
+            // Additional Unicode brackets
+            { '⟦', '⟧' }, { '⟧', '⟦' },  // U+27E6, U+27E7
+            { '⟪', '⟫' }, { '⟫', '⟪' },  // U+27EA, U+27EB
+            { '⦃', '⦄' }, { '⦄', '⦃' },  // U+2983, U+2984
+            { '⦅', '⦆' }, { '⦆', '⦅' },  // U+2985, U+2986
+        };
+
+        /// <summary>
+        /// Set of opening bracket characters.
+        /// </summary>
+        private static readonly HashSet<char> OpeningBrackets = new HashSet<char>
+        {
+            '(', '[', '{', '⟨', '〈', '⟦', '⟪', '⦃', '⦅'
+        };
+
+        /// <summary>
+        /// Identifies bracket pairs in an isolating run sequence using BD16 algorithm.
+        /// </summary>
+        private static List<BracketPair> IdentifyBracketPairs(string text, IsolatingRunSequence sequence)
+        {
+            var stack = new BracketStackEntry[63]; // Fixed 63-element stack per BD16
+            int stackTop = -1;
+            var pairs = new List<BracketPair>();
+
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                char currentChar = GetCharFromSequence(text, sequence, i);
+
+                if (IsOpeningBracket(currentChar, sequence.Types[i]))
+                {
+                    // Push opening bracket if there's room
+                    if (stackTop < 62) // 0-based, so 62 is the last valid index
+                    {
+                        stackTop++;
+                        stack[stackTop] = new BracketStackEntry(GetPairedBracket(currentChar), i);
+                    }
+                    else
+                    {
+                        // Stack overflow - return empty list per BD16
+                        return new List<BracketPair>();
+                    }
+                }
+                else if (IsClosingBracket(currentChar, sequence.Types[i]))
+                {
+                    // Look for matching opening bracket in stack
+                    char pairedChar = GetPairedBracket(currentChar);
+
+                    for (int j = stackTop; j >= 0; j--)
+                    {
+                        if (stack[j].BracketChar == currentChar ||
+                            AreCanonicalEquivalent(stack[j].BracketChar, currentChar))
+                        {
+                            // Found matching pair
+                            char openingChar = GetCharFromSequence(text, sequence, stack[j].TextPosition);
+                            pairs.Add(new BracketPair(stack[j].TextPosition, i, openingChar, currentChar));
+
+                            // Pop stack through this element inclusively
+                            stackTop = j - 1;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Sort pairs by opening bracket position
+            pairs.Sort((a, b) => a.OpeningPosition.CompareTo(b.OpeningPosition));
+            return pairs;
+        }
+
+        /// <summary>
+        /// Gets the paired bracket character for a given bracket.
+        /// </summary>
+        private static char GetPairedBracket(char c)
+        {
+            return BracketPairs.TryGetValue(c, out char paired) ? paired : c;
+        }
+
+        /// <summary>
+        /// Checks if a character is an opening bracket with ON type (BD14).
+        /// </summary>
+        private static bool IsOpeningBracket(char c, BidiCharacterType currentType)
+        {
+            return currentType == BidiCharacterType.ON && OpeningBrackets.Contains(c);
+        }
+
+        /// <summary>
+        /// Checks if a character is a closing bracket with ON type (BD15).
+        /// </summary>
+        private static bool IsClosingBracket(char c, BidiCharacterType currentType)
+        {
+            return currentType == BidiCharacterType.ON &&
+                   BracketPairs.ContainsKey(c) &&
+                   !OpeningBrackets.Contains(c);
+        }
+
+        /// <summary>
+        /// Checks if two bracket characters are canonical equivalents.
+        /// </summary>
+        private static bool AreCanonicalEquivalent(char c1, char c2)
+        {
+            // Handle canonical equivalence for angle brackets
+            return (c1 == '⟨' && c2 == '〈') || (c1 == '〈' && c2 == '⟨') ||
+                   (c1 == '⟩' && c2 == '〉') || (c1 == '〉' && c2 == '⟩');
+        }
+
+        /// <summary>
+        /// Gets the character at a specific position in the isolating run sequence.
+        /// </summary>
+        private static char GetCharFromSequence(string text, IsolatingRunSequence sequence, int position)
+        {
+            if (position >= 0 && position < sequence.Positions.Count)
+            {
+                int textPosition = sequence.Positions[position];
+                if (textPosition >= 0 && textPosition < text.Length)
+                {
+                    return text[textPosition];
+                }
+            }
+            return '?'; // Fallback for invalid positions
+        }
+
+        /// <summary>
+        /// Processes a single bracket pair according to N0 rule logic.
+        /// </summary>
+        private static void ProcessBracketPair(IsolatingRunSequence sequence, BracketPair pair)
+        {
+            // Find strong type inside the bracket pair
+            var strongTypeInside = FindStrongTypeInBrackets(sequence, pair.OpeningPosition + 1, pair.ClosingPosition - 1);
+            var embeddingDirection = GetEmbeddingDirection(sequence.EmbeddingLevel);
+
+            BidiCharacterType newType;
+
+            if (strongTypeInside == embeddingDirection)
+            {
+                // Strong type matches embedding direction
+                newType = embeddingDirection;
+            }
+            else if (strongTypeInside != null && IsStrongTypeForN1(strongTypeInside.Value))
+            {
+                // Strong type opposite to embedding direction - check context
+                var precedingType = GetPrecedingStrongType(sequence, pair.OpeningPosition);
+                if (precedingType == strongTypeInside)
+                {
+                    newType = strongTypeInside.Value;
+                }
+                else
+                {
+                    newType = embeddingDirection;
+                }
+            }
+            else
+            {
+                // No strong type inside - leave unchanged for N1/N2
+                return;
+            }
+
+            // Set both brackets to the determined type
+            sequence.Types[pair.OpeningPosition] = newType;
+            sequence.Types[pair.ClosingPosition] = newType;
+
+            // Handle NSM characters following brackets that changed type
+            HandleNSMAfterBrackets(sequence, pair.OpeningPosition, newType);
+            HandleNSMAfterBrackets(sequence, pair.ClosingPosition, newType);
+        }
+
+        /// <summary>
+        /// Finds the first strong type within a bracket pair (treating EN/AN as R).
+        /// </summary>
+        private static BidiCharacterType? FindStrongTypeInBrackets(IsolatingRunSequence sequence, int start, int end)
+        {
+            for (int i = start; i <= end && i < sequence.Types.Count; i++)
+            {
+                var type = sequence.Types[i];
+                if (type == BidiCharacterType.L)
+                    return BidiCharacterType.L;
+                if (type == BidiCharacterType.R || type == BidiCharacterType.AL ||
+                    type == BidiCharacterType.EN || type == BidiCharacterType.AN)
+                    return BidiCharacterType.R;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Handles NSM characters following brackets that changed type in N0.
+        /// </summary>
+        private static void HandleNSMAfterBrackets(IsolatingRunSequence sequence, int bracketPosition, BidiCharacterType newType)
+        {
+            for (int i = bracketPosition + 1; i < sequence.Types.Count; i++)
+            {
+                if (sequence.Types[i] == BidiCharacterType.NSM)
+                {
+                    sequence.Types[i] = newType;
+                }
+                else
+                {
+                    break; // Stop at first non-NSM
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if a character type is neutral (NI) for N rules processing.
+        /// </summary>
+        private static bool IsNeutralType(BidiCharacterType type)
+        {
+            return type == BidiCharacterType.ON ||
+                   type == BidiCharacterType.WS ||
+                   type == BidiCharacterType.S ||
+                   type == BidiCharacterType.B;
+        }
+
+        /// <summary>
+        /// Checks if a character type is strong for N1 rule (treating EN/AN as R).
+        /// </summary>
+        private static bool IsStrongTypeForN1(BidiCharacterType type)
+        {
+            return type == BidiCharacterType.L || type == BidiCharacterType.R;
+        }
+
+        /// <summary>
+        /// Gets the preceding strong type for N1 rule (treating EN/AN as R).
+        /// </summary>
+        private static BidiCharacterType GetPrecedingStrongType(IsolatingRunSequence sequence, int position)
+        {
+            for (int i = position - 1; i >= 0; i--)
+            {
+                var type = sequence.Types[i];
+                if (type == BidiCharacterType.L)
+                    return BidiCharacterType.L;
+                if (type == BidiCharacterType.R || type == BidiCharacterType.AL ||
+                    type == BidiCharacterType.EN || type == BidiCharacterType.AN)
+                    return BidiCharacterType.R;
+            }
+            // Return sos if no strong type found
+            return sequence.Sos == BidiCharacterType.L ? BidiCharacterType.L : BidiCharacterType.R;
+        }
+
+        /// <summary>
+        /// Gets the following strong type for N1 rule (treating EN/AN as R).
+        /// </summary>
+        private static BidiCharacterType GetFollowingStrongType(IsolatingRunSequence sequence, int position)
+        {
+            for (int i = position + 1; i < sequence.Types.Count; i++)
+            {
+                var type = sequence.Types[i];
+                if (type == BidiCharacterType.L)
+                    return BidiCharacterType.L;
+                if (type == BidiCharacterType.R || type == BidiCharacterType.AL ||
+                    type == BidiCharacterType.EN || type == BidiCharacterType.AN)
+                    return BidiCharacterType.R;
+            }
+            // Return eos if no strong type found
+            return sequence.Eos == BidiCharacterType.L ? BidiCharacterType.L : BidiCharacterType.R;
+        }
+
+        /// <summary>
+        /// Gets the embedding direction from the embedding level.
+        /// Even levels → L, Odd levels → R
+        /// </summary>
+        private static BidiCharacterType GetEmbeddingDirection(int level)
+        {
+            return (level % 2 == 0) ? BidiCharacterType.L : BidiCharacterType.R;
+        }
+
         /// <summary>
         /// Applies UAX #9 I rules (I1-I2) for final embedding level assignment.
         /// I1: For all characters with an even (LTR) embedding level, if the character is R or AN, change the level to the next higher odd level.
