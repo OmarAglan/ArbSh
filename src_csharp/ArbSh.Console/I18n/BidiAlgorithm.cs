@@ -133,7 +133,55 @@ namespace ArbSh.Console.I18n
         }
 
 
-        // Placeholder for ProcessRuns - THIS WILL NEED SIGNIFICANT REWORK for UAX #9 X,W,N,I rules
+        /// <summary>
+        /// Represents an entry on the directional status stack used in UAX #9 X rules.
+        /// Each entry tracks the embedding level, directional override status, and isolate status.
+        /// </summary>
+        private struct DirectionalStatusStackEntry
+        {
+            public int EmbeddingLevel { get; }
+            public DirectionalOverrideStatus OverrideStatus { get; }
+            public bool IsolateStatus { get; }
+
+            public DirectionalStatusStackEntry(int embeddingLevel, DirectionalOverrideStatus overrideStatus, bool isolateStatus)
+            {
+                EmbeddingLevel = embeddingLevel;
+                OverrideStatus = overrideStatus;
+                IsolateStatus = isolateStatus;
+            }
+
+            public override string ToString() => $"StackEntry(Level:{EmbeddingLevel}, Override:{OverrideStatus}, Isolate:{IsolateStatus})";
+        }
+
+        /// <summary>
+        /// Represents the directional override status as defined in UAX #9.
+        /// </summary>
+        private enum DirectionalOverrideStatus
+        {
+            Neutral,        // No override is currently active
+            LeftToRight,    // Characters are to be reset to L
+            RightToLeft     // Characters are to be reset to R
+        }
+
+
+
+        /// <summary>
+        /// ProcessRuns - Implements UAX #9 rules for resolving embedding levels.
+        /// This is the main entry point for the bidirectional algorithm's level resolution phase.
+        ///
+        /// The algorithm proceeds through these phases:
+        /// 1. P rules: Determine paragraph embedding level
+        /// 2. X rules: Process explicit formatting characters and determine explicit levels
+        /// 3. W rules: Resolve weak character types
+        /// 4. N rules: Resolve neutral character types
+        /// 5. I rules: Resolve implicit embedding levels
+        ///
+        /// Currently implements: P2/P3 (paragraph level detection) and foundation for X rules
+        /// TODO: Complete implementation of X, W, N, I rules for full UAX #9 compliance
+        /// </summary>
+        /// <param name="text">Input text to process</param>
+        /// <param name="baseLevel">Base paragraph level (0=LTR, 1=RTL, -1=auto-detect)</param>
+        /// <returns>List of BidiRun objects with resolved embedding levels</returns>
         public static List<BidiRun> ProcessRuns(string text, int baseLevel)
         {
             var runs = new List<BidiRun>();
@@ -142,33 +190,451 @@ namespace ArbSh.Console.I18n
                 return runs;
             }
 
-            // TODO: THIS IS THE CRITICAL PART TO RE-IMPLEMENT based on UAX #9 X, W, N, I rules.
-            // The current logic from the C port is highly simplified and incorrect for full BiDi.
-            // For now, to make it compile and allow GetCharType testing, we can return a single run.
-            // This is NOT a functional ProcessRuns for BiDi.
+            // Phase 1: Determine paragraph embedding level (P2, P3)
+            int paragraphLevel = DetermineParagraphLevel(text, baseLevel);
 
-            System.Console.Error.WriteLine("WARNING: BidiAlgorithm.ProcessRuns is NOT YET UAX #9 COMPLIANT and uses placeholder logic.");
+            // Phase 2: Apply X rules for explicit formatting characters
+            // TODO: This is where the main X rules implementation will go
+            var levels = new int[text.Length];
+            var types = new BidiCharacterType[text.Length];
 
-            // Placeholder: create a single run for the whole text with the baseLevel.
-            // This is just to allow GetCharType to be tested in isolation without ProcessRuns fully working.
-            if (text.Length > 0)
+            // Initialize character types and levels
+            InitializeCharacterTypesAndLevels(text, paragraphLevel, types, levels);
+
+            // Apply X1-X8 rules for explicit formatting characters
+            ApplyXRules(text, types, levels, paragraphLevel);
+
+            // Phase 3-5: TODO - Apply W, N, I rules
+
+            // Convert levels array to runs
+            runs = ConvertLevelsToRuns(levels);
+
+            return runs;
+        }
+
+        /// <summary>
+        /// Determines the paragraph embedding level according to UAX #9 rules P2 and P3.
+        /// </summary>
+        private static int DetermineParagraphLevel(string text, int baseLevel)
+        {
+            // If explicit level provided and valid, use it
+            if (baseLevel >= 0 && baseLevel <= 1)
             {
-                // Determine paragraph level P2, P3 if baseLevel is, say, -1 (auto)
-                int paragraphLevel = baseLevel;
-                if (paragraphLevel < 0 || paragraphLevel > 1) // Auto-detect if baseLevel is invalid/sentinel
+                return baseLevel;
+            }
+
+            // Auto-detect paragraph level (P2, P3)
+            // P2: Find first strong character (L, AL, R)
+            // P3: If first strong is L, paragraph level is 0; if AL or R, paragraph level is 1
+            for (int i = 0; i < text.Length;)
+            {
+                int codepoint = char.ConvertToUtf32(text, i);
+                BidiCharacterType charType = GetCharType(codepoint);
+
+                if (charType == BidiCharacterType.L)
                 {
-                    paragraphLevel = 0; // Default to LTR
-                    for (int i = 0; i < text.Length;)
+                    return 0; // LTR paragraph
+                }
+                if (charType == BidiCharacterType.AL || charType == BidiCharacterType.R)
+                {
+                    return 1; // RTL paragraph
+                }
+
+                i += char.IsSurrogatePair(text, i) ? 2 : 1;
+            }
+
+            // No strong characters found, default to LTR
+            return 0;
+        }
+
+        /// <summary>
+        /// Initializes the character types and embedding levels arrays.
+        /// </summary>
+        private static void InitializeCharacterTypesAndLevels(string text, int paragraphLevel, BidiCharacterType[] types, int[] levels)
+        {
+            for (int i = 0; i < text.Length;)
+            {
+                int codepoint = char.ConvertToUtf32(text, i);
+                BidiCharacterType charType = GetCharType(codepoint);
+
+                // Set character type
+                types[i] = charType;
+                if (char.IsSurrogatePair(text, i))
+                {
+                    types[i + 1] = charType; // Surrogate pair shares the same type
+                }
+
+                // Set initial embedding level to paragraph level
+                levels[i] = paragraphLevel;
+                if (char.IsSurrogatePair(text, i))
+                {
+                    levels[i + 1] = paragraphLevel;
+                }
+
+                i += char.IsSurrogatePair(text, i) ? 2 : 1;
+            }
+        }
+
+        /// <summary>
+        /// Applies UAX #9 X rules (X1-X8) for processing explicit formatting characters.
+        /// This implements the core logic for handling LRE, RLE, LRO, RLO, PDF and setting embedding levels.
+        /// </summary>
+        private static void ApplyXRules(string text, BidiCharacterType[] types, int[] levels, int paragraphLevel)
+        {
+            // Initialize directional status stack with paragraph level
+            var stack = new Stack<DirectionalStatusStackEntry>();
+            stack.Push(new DirectionalStatusStackEntry(paragraphLevel, DirectionalOverrideStatus.Neutral, false));
+
+            // X1: Process each character in the text
+            for (int i = 0; i < text.Length;)
+            {
+                BidiCharacterType charType = types[i];
+                DirectionalStatusStackEntry currentEntry = stack.Peek();
+
+                switch (charType)
+                {
+                    case BidiCharacterType.RLE:
+                        // X2: Right-to-Left Embedding
+                        ProcessRLE(stack, levels, i);
+                        break;
+
+                    case BidiCharacterType.LRE:
+                        // X3: Left-to-Right Embedding
+                        ProcessLRE(stack, levels, i);
+                        break;
+
+                    case BidiCharacterType.RLO:
+                        // X4: Right-to-Left Override
+                        ProcessRLO(stack, levels, i);
+                        break;
+
+                    case BidiCharacterType.LRO:
+                        // X5: Left-to-Right Override
+                        ProcessLRO(stack, levels, i);
+                        break;
+
+                    case BidiCharacterType.PDF:
+                        // X7: Pop Directional Formatting
+                        ProcessPDF(stack, levels, i);
+                        break;
+
+                    case BidiCharacterType.LRI:
+                        // X5a: Left-to-Right Isolate
+                        ProcessLRI(stack, levels, i);
+                        break;
+
+                    case BidiCharacterType.RLI:
+                        // X5b: Right-to-Left Isolate
+                        ProcessRLI(stack, levels, i);
+                        break;
+
+                    case BidiCharacterType.FSI:
+                        // X5c: First Strong Isolate
+                        ProcessFSI(text, types, stack, levels, i);
+                        break;
+
+                    case BidiCharacterType.PDI:
+                        // X6a: Pop Directional Isolate
+                        ProcessPDI(stack, levels, i);
+                        break;
+
+                    default:
+                        // X6: For all other character types
+                        ProcessOtherCharacter(currentEntry, types, levels, i);
+                        break;
+                }
+
+                i += char.IsSurrogatePair(text, i) ? 2 : 1;
+            }
+        }
+
+        /// <summary>
+        /// X2: Process RLE (Right-to-Left Embedding) character.
+        /// </summary>
+        private static void ProcessRLE(Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of RLE to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Calculate new embedding level (next odd level)
+            int newLevel = (current.EmbeddingLevel + 1) | 1; // Force to odd
+
+            // Check depth limit
+            if (newLevel <= MaxEmbeddingDepth && stack.Count < MaxEmbeddingDepth)
+            {
+                stack.Push(new DirectionalStatusStackEntry(newLevel, DirectionalOverrideStatus.Neutral, false));
+            }
+            // If depth limit exceeded, don't push to stack (X9 overflow handling)
+        }
+
+        /// <summary>
+        /// X3: Process LRE (Left-to-Right Embedding) character.
+        /// </summary>
+        private static void ProcessLRE(Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of LRE to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Calculate new embedding level (next even level)
+            int newLevel = (current.EmbeddingLevel + 2) & ~1; // Force to even
+
+            // Check depth limit
+            if (newLevel <= MaxEmbeddingDepth && stack.Count < MaxEmbeddingDepth)
+            {
+                stack.Push(new DirectionalStatusStackEntry(newLevel, DirectionalOverrideStatus.Neutral, false));
+            }
+            // If depth limit exceeded, don't push to stack (X9 overflow handling)
+        }
+
+        /// <summary>
+        /// X4: Process RLO (Right-to-Left Override) character.
+        /// </summary>
+        private static void ProcessRLO(Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of RLO to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Calculate new embedding level (next odd level)
+            int newLevel = (current.EmbeddingLevel + 1) | 1; // Force to odd
+
+            // Check depth limit
+            if (newLevel <= MaxEmbeddingDepth && stack.Count < MaxEmbeddingDepth)
+            {
+                stack.Push(new DirectionalStatusStackEntry(newLevel, DirectionalOverrideStatus.RightToLeft, false));
+            }
+            // If depth limit exceeded, don't push to stack (X9 overflow handling)
+        }
+
+        /// <summary>
+        /// X5: Process LRO (Left-to-Right Override) character.
+        /// </summary>
+        private static void ProcessLRO(Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of LRO to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Calculate new embedding level (next even level)
+            int newLevel = (current.EmbeddingLevel + 2) & ~1; // Force to even
+
+            // Check depth limit
+            if (newLevel <= MaxEmbeddingDepth && stack.Count < MaxEmbeddingDepth)
+            {
+                stack.Push(new DirectionalStatusStackEntry(newLevel, DirectionalOverrideStatus.LeftToRight, false));
+            }
+            // If depth limit exceeded, don't push to stack (X9 overflow handling)
+        }
+
+        /// <summary>
+        /// X7: Process PDF (Pop Directional Formatting) character.
+        /// </summary>
+        private static void ProcessPDF(Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of PDF to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Pop from stack if there's more than the initial entry (don't pop paragraph level)
+            if (stack.Count > 1)
+            {
+                stack.Pop();
+            }
+            // If stack only has paragraph level entry, PDF has no effect (unmatched PDF)
+        }
+
+        /// <summary>
+        /// X5a: Process LRI (Left-to-Right Isolate) character.
+        /// </summary>
+        private static void ProcessLRI(Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of LRI to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Calculate new embedding level (next even level)
+            int newLevel = (current.EmbeddingLevel + 2) & ~1; // Force to even
+
+            // Check depth limit
+            if (newLevel <= MaxEmbeddingDepth && stack.Count < MaxEmbeddingDepth)
+            {
+                stack.Push(new DirectionalStatusStackEntry(newLevel, DirectionalOverrideStatus.Neutral, true));
+            }
+            // If depth limit exceeded, don't push to stack (X9 overflow handling)
+        }
+
+        /// <summary>
+        /// X5b: Process RLI (Right-to-Left Isolate) character.
+        /// </summary>
+        private static void ProcessRLI(Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of RLI to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Calculate new embedding level (next odd level)
+            int newLevel = (current.EmbeddingLevel + 1) | 1; // Force to odd
+
+            // Check depth limit
+            if (newLevel <= MaxEmbeddingDepth && stack.Count < MaxEmbeddingDepth)
+            {
+                stack.Push(new DirectionalStatusStackEntry(newLevel, DirectionalOverrideStatus.Neutral, true));
+            }
+            // If depth limit exceeded, don't push to stack (X9 overflow handling)
+        }
+
+        /// <summary>
+        /// X5c: Process FSI (First Strong Isolate) character.
+        /// Determines direction based on first strong character in the isolate sequence.
+        /// </summary>
+        private static void ProcessFSI(string text, BidiCharacterType[] types, Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of FSI to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Determine direction by scanning for first strong character
+            bool isRTL = DetermineFirstStrongDirection(text, types, index + 1);
+
+            // Calculate new embedding level based on determined direction
+            int newLevel;
+            if (isRTL)
+            {
+                newLevel = (current.EmbeddingLevel + 1) | 1; // Force to odd (RTL)
+            }
+            else
+            {
+                newLevel = (current.EmbeddingLevel + 2) & ~1; // Force to even (LTR)
+            }
+
+            // Check depth limit
+            if (newLevel <= MaxEmbeddingDepth && stack.Count < MaxEmbeddingDepth)
+            {
+                stack.Push(new DirectionalStatusStackEntry(newLevel, DirectionalOverrideStatus.Neutral, true));
+            }
+            // If depth limit exceeded, don't push to stack (X9 overflow handling)
+        }
+
+        /// <summary>
+        /// X6a: Process PDI (Pop Directional Isolate) character.
+        /// </summary>
+        private static void ProcessPDI(Stack<DirectionalStatusStackEntry> stack, int[] levels, int index)
+        {
+            DirectionalStatusStackEntry current = stack.Peek();
+
+            // Set the embedding level of PDI to current level
+            levels[index] = current.EmbeddingLevel;
+
+            // Pop from stack if there's more than the initial entry and the current entry is an isolate
+            if (stack.Count > 1 && current.IsolateStatus)
+            {
+                stack.Pop();
+            }
+            // If stack only has paragraph level entry or current entry is not an isolate, PDI has no effect
+        }
+
+        /// <summary>
+        /// Determines the first strong direction for FSI processing.
+        /// Scans forward from the given position to find the first strong character (L, AL, R).
+        /// </summary>
+        private static bool DetermineFirstStrongDirection(string text, BidiCharacterType[] types, int startIndex)
+        {
+            // Scan forward to find first strong character, respecting isolate boundaries
+            int isolateDepth = 0;
+
+            for (int i = startIndex; i < text.Length;)
+            {
+                BidiCharacterType charType = types[i];
+
+                // Handle nested isolates
+                if (charType == BidiCharacterType.LRI || charType == BidiCharacterType.RLI || charType == BidiCharacterType.FSI)
+                {
+                    isolateDepth++;
+                }
+                else if (charType == BidiCharacterType.PDI)
+                {
+                    if (isolateDepth == 0)
                     {
-                        int codepoint = char.ConvertToUtf32(text, i); // Handles surrogates
-                        BidiCharacterType charType = GetCharType(codepoint); // Use our new GetCharType
-                        if (charType == BidiCharacterType.L) { paragraphLevel = 0; break; }
-                        if (charType == BidiCharacterType.AL || charType == BidiCharacterType.R) { paragraphLevel = 1; break; }
-                        i += char.IsSurrogatePair(text, i) ? 2 : 1;
+                        // This PDI matches our FSI, stop scanning
+                        break;
+                    }
+                    isolateDepth--;
+                }
+                else if (isolateDepth == 0) // Only consider characters at our isolate level
+                {
+                    // Check for strong characters
+                    if (charType == BidiCharacterType.L)
+                    {
+                        return false; // LTR
+                    }
+                    if (charType == BidiCharacterType.AL || charType == BidiCharacterType.R)
+                    {
+                        return true; // RTL
                     }
                 }
-                runs.Add(new BidiRun(0, text.Length, paragraphLevel));
+
+                i += char.IsSurrogatePair(text, i) ? 2 : 1;
             }
+
+            // No strong character found, default to LTR
+            return false;
+        }
+
+        /// <summary>
+        /// X6: Process all other character types (non-explicit formatting characters).
+        /// </summary>
+        private static void ProcessOtherCharacter(DirectionalStatusStackEntry currentEntry, BidiCharacterType[] types, int[] levels, int index)
+        {
+            // Set embedding level to current stack level
+            levels[index] = currentEntry.EmbeddingLevel;
+
+            // Apply directional override if active
+            if (currentEntry.OverrideStatus == DirectionalOverrideStatus.LeftToRight)
+            {
+                types[index] = BidiCharacterType.L;
+            }
+            else if (currentEntry.OverrideStatus == DirectionalOverrideStatus.RightToLeft)
+            {
+                types[index] = BidiCharacterType.R;
+            }
+            // If override is Neutral, leave character type unchanged
+        }
+
+        /// <summary>
+        /// Converts an array of embedding levels to a list of BidiRun objects.
+        /// </summary>
+        private static List<BidiRun> ConvertLevelsToRuns(int[] levels)
+        {
+            var runs = new List<BidiRun>();
+            if (levels.Length == 0) return runs;
+
+            int currentLevel = levels[0];
+            int runStart = 0;
+
+            for (int i = 1; i < levels.Length; i++)
+            {
+                if (levels[i] != currentLevel)
+                {
+                    // End current run and start new one
+                    runs.Add(new BidiRun(runStart, i - runStart, currentLevel));
+                    runStart = i;
+                    currentLevel = levels[i];
+                }
+            }
+
+            // Add final run
+            runs.Add(new BidiRun(runStart, levels.Length - runStart, currentLevel));
+
             return runs;
         }
 

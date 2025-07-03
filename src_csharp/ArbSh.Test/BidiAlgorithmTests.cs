@@ -263,6 +263,208 @@ namespace ArbSh.Test.I18n
             Assert.Equal(1, runs[0].Level); // Auto-detected as RTL
         }
 
+        // --- X Rules Tests (Basic Explicit Formatting) ---
+
+        [Fact]
+        public void ProcessRuns_SimpleRLEEmbedding_CreatesCorrectLevels()
+        {
+            // Test: "Hello\u202BWorld\u202C!" (Hello RLE World PDF !)
+            // Expected: Hello(0) RLE(0) World(1) PDF(1) !(0)
+            string text = "Hello\u202BWorld\u202C!";
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs with different levels
+            Assert.True(runs.Count >= 2, "Should have multiple runs for embedded text");
+
+            // Verify that embedding creates higher level
+            bool hasEmbeddedLevel = runs.Any(r => r.Level > 0);
+            Assert.True(hasEmbeddedLevel, "Should have embedded level > 0");
+        }
+
+        [Fact]
+        public void ProcessRuns_SimpleLREEmbedding_CreatesCorrectLevels()
+        {
+            // Test: "مرحبا\u202AHello\u202C!" (Arabic LRE Hello PDF !)
+            // Expected: مرحبا(1) LRE(1) Hello(2) PDF(2) !(1)
+            string text = "مرحبا\u202AHello\u202C!";
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs with different levels
+            Assert.True(runs.Count >= 2, "Should have multiple runs for embedded text");
+
+            // Verify that embedding creates higher level
+            bool hasEmbeddedLevel = runs.Any(r => r.Level > 1);
+            Assert.True(hasEmbeddedLevel, "Should have embedded level > 1");
+        }
+
+        [Fact]
+        public void ProcessRuns_RLOOverride_ForcesRightToLeft()
+        {
+            // Test: "Hello\u202EWorld\u202C!" (Hello RLO World PDF !)
+            // RLO should force "World" to be treated as R type
+            string text = "Hello\u202EWorld\u202C!";
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs
+            Assert.True(runs.Count >= 2, "Should have multiple runs for override text");
+
+            // Verify that override creates odd level (RTL)
+            bool hasOddLevel = runs.Any(r => r.Level % 2 == 1);
+            Assert.True(hasOddLevel, "RLO should create odd (RTL) level");
+        }
+
+        [Fact]
+        public void ProcessRuns_LROOverride_ForcesLeftToRight()
+        {
+            // Test: "مرحبا\u202DWorld\u202C!" (Arabic LRO World PDF !)
+            // LRO should force "World" to be treated as L type
+            string text = "مرحبا\u202DWorld\u202C!";
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs
+            Assert.True(runs.Count >= 2, "Should have multiple runs for override text");
+
+            // Verify that override creates even level (LTR)
+            bool hasEvenLevel = runs.Any(r => r.Level % 2 == 0);
+            Assert.True(hasEvenLevel, "LRO should create even (LTR) level");
+        }
+
+        [Fact]
+        public void ProcessRuns_UnmatchedPDF_DoesNotCrash()
+        {
+            // Test: "Hello\u202C!" (Hello PDF !) - PDF without matching embedding
+            string text = "Hello\u202C!";
+            int baseLevel = 0; // LTR paragraph
+
+            // Should not throw exception
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+            Assert.NotNull(runs);
+            Assert.True(runs.Count > 0, "Should return valid runs even with unmatched PDF");
+        }
+
+        [Fact]
+        public void ProcessRuns_NestedEmbedding_HandlesCorrectly()
+        {
+            // Test: "A\u202B B\u202A C\u202C D\u202C E" (A RLE B LRE C PDF D PDF E)
+            // Nested: A(0) RLE(0) B(1) LRE(1) C(2) PDF(2) D(1) PDF(1) E(0)
+            string text = "A\u202B B\u202A C\u202C D\u202C E";
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should handle nested embedding without crashing
+            Assert.NotNull(runs);
+            Assert.True(runs.Count > 0, "Should return valid runs for nested embedding");
+
+            // Should have multiple different levels
+            var uniqueLevels = runs.Select(r => r.Level).Distinct().ToList();
+            Assert.True(uniqueLevels.Count >= 2, "Should have multiple embedding levels");
+        }
+
+        // --- Isolate Tests (X5a-X5c, X6a) ---
+
+        [Fact]
+        public void ProcessRuns_SimpleLRIIsolate_CreatesCorrectLevels()
+        {
+            // Test: "Hello\u2066World\u2069!" (Hello LRI World PDI !)
+            // Expected: Hello(0) LRI(0) World(2) PDI(2) !(0)
+            string text = "Hello\u2066World\u2069!";
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs with different levels
+            Assert.True(runs.Count >= 2, "Should have multiple runs for isolated text");
+
+            // Verify that isolate creates higher level
+            bool hasIsolatedLevel = runs.Any(r => r.Level > 0);
+            Assert.True(hasIsolatedLevel, "Should have isolated level > 0");
+        }
+
+        [Fact]
+        public void ProcessRuns_SimpleRLIIsolate_CreatesCorrectLevels()
+        {
+            // Test: "مرحبا\u2067Hello\u2069!" (Arabic RLI Hello PDI !)
+            // Expected: مرحبا(1) RLI(1) Hello(3) PDI(3) !(1)
+            string text = "مرحبا\u2067Hello\u2069!";
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs with different levels
+            Assert.True(runs.Count >= 2, "Should have multiple runs for isolated text");
+
+            // Verify that isolate creates higher level
+            bool hasIsolatedLevel = runs.Any(r => r.Level > 1);
+            Assert.True(hasIsolatedLevel, "Should have isolated level > 1");
+        }
+
+        [Fact]
+        public void ProcessRuns_FSIWithLTRContent_DetectsLTR()
+        {
+            // Test: "مرحبا\u2068Hello World\u2069!" (Arabic FSI Hello World PDI !)
+            // FSI should detect LTR from "Hello" and create even level
+            string text = "مرحبا\u2068Hello World\u2069!";
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs
+            Assert.True(runs.Count >= 2, "Should have multiple runs for FSI text");
+
+            // Should have even level for LTR content inside FSI
+            bool hasEvenLevel = runs.Any(r => r.Level % 2 == 0);
+            Assert.True(hasEvenLevel, "FSI with LTR content should create even level");
+        }
+
+        [Fact]
+        public void ProcessRuns_FSIWithRTLContent_DetectsRTL()
+        {
+            // Test: "Hello\u2068مرحبا بك\u2069!" (Hello FSI Arabic PDI !)
+            // FSI should detect RTL from "مرحبا" and create odd level
+            string text = "Hello\u2068مرحبا بك\u2069!";
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should have multiple runs
+            Assert.True(runs.Count >= 2, "Should have multiple runs for FSI text");
+
+            // Should have odd level for RTL content inside FSI
+            bool hasOddLevel = runs.Any(r => r.Level % 2 == 1);
+            Assert.True(hasOddLevel, "FSI with RTL content should create odd level");
+        }
+
+        [Fact]
+        public void ProcessRuns_UnmatchedPDI_DoesNotCrash()
+        {
+            // Test: "Hello\u2069!" (Hello PDI !) - PDI without matching isolate
+            string text = "Hello\u2069!";
+            int baseLevel = 0; // LTR paragraph
+
+            // Should not throw exception
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+            Assert.NotNull(runs);
+            Assert.True(runs.Count > 0, "Should return valid runs even with unmatched PDI");
+        }
+
+        [Fact]
+        public void ProcessRuns_NestedIsolates_HandlesCorrectly()
+        {
+            // Test: "A\u2067 B\u2066 C\u2069 D\u2069 E" (A RLI B LRI C PDI D PDI E)
+            // Nested isolates: A(0) RLI(0) B(1) LRI(1) C(2) PDI(2) D(1) PDI(1) E(0)
+            string text = "A\u2067 B\u2066 C\u2069 D\u2069 E";
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should handle nested isolates without crashing
+            Assert.NotNull(runs);
+            Assert.True(runs.Count > 0, "Should return valid runs for nested isolates");
+
+            // Should have multiple different levels
+            var uniqueLevels = runs.Select(r => r.Level).Distinct().ToList();
+            Assert.True(uniqueLevels.Count >= 2, "Should have multiple isolate levels");
+        }
+
         [Fact]
         public void ProcessRuns_MixedTextLtrFirst_AutoBase_ReturnsSingleLtrRun_Placeholder()
         {
