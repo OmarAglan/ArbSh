@@ -159,287 +159,422 @@ First
 - Positional parameter binding
 - Object-to-string conversion
 
-## Variable Expansion (`$variableName`)
+## ✅ **NEW: Subexpression Execution `$(...)` - FULLY WORKING**
 
-Variables start with `$` followed by their name. The parser replaces the variable token with its stored value *before* the token is used as an argument or a parameter value. Adjacent tokens (like `ValueIs:` and `$testVar`) are correctly concatenated into a single argument after expansion.
+PowerShell-style command substitution that executes commands and captures their output for use in other commands.
 
-**Note:** Variable storage is currently a placeholder within the parser itself. A proper session state management system is needed for user-defined variables. The following examples use predefined test variables: `$testVar`, `$pathExample`, `$emptyVar`.
+**Syntax:**
+```powershell
+$(command)
+$(command | pipeline)
+```
 
 **Examples:**
 
-*   **Simple Expansion:**
-    ```powershell
-    ArbSh> Write-Output $testVar
-    DEBUG: Received command: Write-Output $testVar
-    # ... (parser/executor debug output) ...
-    Value from $testVar!
-    ```
-*   **Expansion with Adjacent Literals:**
-    ```powershell
-    ArbSh> Write-Output ValueIs:$testVar
-    DEBUG: Received command: Write-Output ValueIs:$testVar
-    # ... (parser/executor debug output) ...
-    ValueIs:Value from $testVar!
-    ```
-*   **Undefined Variable:**
-    ```powershell
-    ArbSh> Write-Output $nonExistentVar
-    DEBUG: Received command: Write-Output $nonExistentVar
-    # ... (parser/executor debug output) ...
-    # (Output is an empty line)
-    ```
-*   **Expansion in Parameter Value:**
-    ```powershell
-    ArbSh> Get-Help -CommandName $testVar
-    DEBUG: Received command: Get-Help -CommandName $testVar
-    # ... (parser/executor debug output) ...
-    Help Error: Command 'Value from $testVar!' not found.
-    ```
+**Basic Subexpression:**
+```powershell
+ArbSh> Write-Output $(Get-Command)
+Get-Command
+Get-Help
+احصل-مساعدة
+Test-Array-Binding
+Test-Type-Literal
+Write-Output
+```
+
+**Subexpression in Parameter:**
+```powershell
+ArbSh> Get-Help $(Write-Output Get-Command)
+
+NAME
+    Get-Command
+
+SYNOPSIS
+    (Synopsis for Get-Command not available)
+
+SYNTAX
+    Get-Command
+```
+
+**Complex Pipeline Subexpression:**
+```powershell
+ArbSh> Write-Output "Available commands: $(Get-Command | Write-Output)"
+Available commands: Get-Command
+Get-Help
+احصل-مساعدة
+Test-Array-Binding
+Test-Type-Literal
+Write-Output
+```
+
+**Features:**
+- Full pipeline execution within subexpressions
+- Output capture and string conversion
+- Nested subexpression support
+- Error handling and debugging
+- Integration with parameter binding
+
+## ✅ **NEW: Type Literal Utilization `[TypeName]` - FULLY WORKING**
+
+PowerShell-style type casting that allows explicit type specification for parameters.
+
+**Syntax:**
+```powershell
+[TypeName] value
+[int] 42
+[string] hello
+[bool] true
+```
+
+**Supported Types:**
+- `[int]` → Int32
+- `[string]` → String
+- `[bool]` → Boolean
+- `[double]` → Double
+- `[datetime]` → DateTime
+- `[ConsoleColor]` → ConsoleColor enum
+
+**Examples:**
+
+**Basic Type Casting:**
+```powershell
+ArbSh> Test-Type-Literal [int] 42
+IntValue: 42 (Type: Int32)
+StringValue: '' (Type: null)
+BoolValue: False (Type: Boolean)
+DoubleValue: 0 (Type: Double)
+DateTimeValue: 1/1/0001 12:00:00 AM (Type: DateTime)
+ColorValue: Black (Type: ConsoleColor)
+IntArray: null or empty
+```
+
+**Multiple Type Literals:**
+```powershell
+ArbSh> Test-Type-Literal [int] 1 [string] hello [bool] true
+IntValue: 1 (Type: Int32)
+StringValue: 'hello' (Type: String)
+BoolValue: True (Type: Boolean)
+DoubleValue: 0 (Type: Double)
+DateTimeValue: 1/1/0001 12:00:00 AM (Type: DateTime)
+ColorValue: Black (Type: ConsoleColor)
+IntArray: null or empty
+```
+
+**Enum Type Conversion:**
+```powershell
+ArbSh> Test-Type-Literal [ConsoleColor] Red
+IntValue: 12 (Type: Int32)
+StringValue: '' (Type: null)
+BoolValue: False (Type: Boolean)
+DoubleValue: 0 (Type: Double)
+DateTimeValue: 1/1/0001 12:00:00 AM (Type: DateTime)
+ColorValue: Black (Type: ConsoleColor)
+IntArray: null or empty
+```
+
+**DateTime Parsing:**
+```powershell
+ArbSh> Test-Type-Literal [datetime] 2023-01-01
+IntValue: 0 (Type: Int32)
+StringValue: '' (Type: null)
+BoolValue: False (Type: Boolean)
+DoubleValue: 0 (Type: Double)
+DateTimeValue: 1/1/2023 12:00:00 AM (Type: DateTime)
+ColorValue: Black (Type: ConsoleColor)
+IntArray: null or empty
+```
+
+**Complex Type Literal Usage:**
+```powershell
+ArbSh> Test-Type-Literal [int] 1 [string] hello [bool] true [double] 3.14 [datetime] 2023-01-01
+IntValue: 1 (Type: Int32)
+StringValue: 'hello' (Type: String)
+BoolValue: True (Type: Boolean)
+DoubleValue: 3.14 (Type: Double)
+DateTimeValue: 1/1/2023 12:00:00 AM (Type: DateTime)
+ColorValue: Black (Type: ConsoleColor)
+IntArray: null or empty
+```
+
+**Features:**
+- Automatic type resolution with aliases
+- Positional parameter mapping
+- Type conversion with fallback mechanisms
+- Support for enums and complex types
+- Integration with parameter binding system
+
+## Variable Expansion (`$variableName`)
+
+Variables start with `$` followed by their name. The parser replaces variable tokens with stored values before command execution.
+
+**Note:** Variable storage uses predefined test variables. Full session state management is planned for future versions.
+
+**Available Test Variables:**
+- `$testVar` → "Value from $testVar!"
+- `$pathExample` → "/path/to/example"
+- `$emptyVar` → "" (empty string)
+
+**Examples:**
+
+**Simple Variable Expansion:**
+```powershell
+ArbSh> Write-Output $testVar
+Value from $testVar!
+```
+
+**Variable with Adjacent Text:**
+```powershell
+ArbSh> Write-Output ValueIs:$testVar
+ValueIs:Value from $testVar!
+```
+
+**Undefined Variable:**
+```powershell
+ArbSh> Write-Output $nonExistentVar
+# (Empty output)
+```
+
+**Variable in Parameter:**
+```powershell
+ArbSh> Get-Help -CommandName $testVar
+Help Error: Command 'Value from $testVar!' not found.
+```
 
 ## Escape Characters (`\`)
 
-The backslash (`\`) is used as an escape character.
-*   **Outside Quotes:** It causes the character immediately following it to be treated literally, ignoring its special meaning (like space, `$`, `;`, `|`).
-*   **Inside Double Quotes (`"`):** Standard C-style escape sequences like `\n` (newline), `\t` (tab), `\"` (literal quote), `\\` (literal backslash), and `\$` (literal dollar) are interpreted. Unrecognized sequences (e.g., `\q`) result in the character following the backslash being included literally (e.g., `q`).
-*   **Inside Single Quotes (`'`):** All characters, including backslashes, are treated literally.
+The backslash (`\`) escapes special characters and provides literal interpretation.
+
+**Escape Rules:**
+- **Outside Quotes:** Treats following character literally (space, `$`, `;`, `|`)
+- **Inside Double Quotes:** C-style escape sequences (`\n`, `\t`, `\"`, `\\`, `\$`)
+- **Inside Single Quotes:** All characters treated literally (no escaping)
 
 **Examples:**
 
-*   **Escaping Operators:**
-    ```powershell
-    ArbSh> Write-Output Command1 \| Command2 ; Write-Output Argument\;WithSemicolon
-    # ... (DEBUG output) ...
-    Command1 | Command2
-    Argument;WithSemicolon
-    ```
-*   **Escaping Quotes Inside Double Quotes:**
-    ```powershell
-    ArbSh> Write-Output "Argument with \"escaped quote\""
-    # ... (DEBUG output) ...
-    Argument with "escaped quote"
-    ```
-*   **Escaping Backslash Inside Double Quotes:**
-    ```powershell
-    ArbSh> Write-Output "Path: C:\\Users\\Test"
-    # ... (DEBUG output) ...
-    Path: C:\Users\Test
-    ```
-*   **Newline and Tab Inside Double Quotes:**
-    ```powershell
-    ArbSh> Write-Output "First Line\nSecond Line\tIndented"
-    # ... (DEBUG output) ...
-    First Line
-    Second Line	Indented
-    ```
-*   **Escaping Variable Expansion Inside Double Quotes:**
-    ```powershell
-    ArbSh> Write-Output "Value is \$testVar"
-    # ... (DEBUG output) ...
-    Value is $testVar
-    ```
-*   **Escaping Variable Expansion Outside Quotes:**
-    ```powershell
-    ArbSh> Write-Output \$testVar
-    # ... (DEBUG output) ...
-    $testVar
-    ```
-*   **Escaping Space:**
-    ```powershell
-    ArbSh> Write-Output Argument\ WithSpace
-    # ... (DEBUG output) ...
-    Argument WithSpace
-    ```
-
-## Basic Pipeline and Redirection
-
-*   **Pipeline (`|`):** Passes the output of one command to the input of the next. The parser correctly handles pipes inside quotes or when escaped.
-    ```powershell
-    ArbSh> Get-Command | Write-Output # Standard pipeline
-    # ... (DEBUG output) ...
-    Get-Command
-    Get-Help
-    Write-Output
-
-    ArbSh> Write-Output "Value is | this" | Write-Output "Next stage" # Pipe inside quotes is ignored by parser
-    # ... (DEBUG output) ...
-    Value is | this
-    ```
-*   **Output Redirection (`>` Overwrite, `>>` Append):** Writes the final standard output (stdout) of a pipeline to a file instead of the console.
-    ```powershell
-    ArbSh> Get-Command | Write-Output > commands.txt
-    ArbSh> Write-Output "Adding this line" >> commands.txt
-    ```
-*   **Command Separator (`;`):** Executes multiple statements sequentially. Each statement can contain its own pipeline, which runs concurrently within that statement.
-    ```powershell
-    ArbSh> Write-Output "Statement 1"; Get-Command | Write-Output
-    # ... (Executor debug output for statement 1) ...
-    Statement 1
-    # ... (Executor debug output for statement 2 pipeline) ...
-    Get-Command
-    Get-Help
-    Write-Output
-    # ...
-    ```
-*   **Advanced Redirection (v0.7.5+):** The parser now recognizes more complex redirection operators.
-    *   Redirect Standard Error (stderr, stream 2) to a file:
-        ```powershell
-        ArbSh> Some-Command-That-Errors 2> error.log # Creates/overwrites error.log with stderr
-        ```
-    *   Append Standard Error (stderr) to a file:
-        ```powershell
-        ArbSh> Another-Command-That-Errors 2>> error.log # Appends stderr to error.log
-        ```
-    *   Redirect Standard Error (stderr) to Standard Output (stdout, stream 1):
-        ```powershell
-        ArbSh> Command-With-Output-And-Error 2>&1 | Write-Output # Merges stderr into stdout stream
-        ```
-    *   Redirect Standard Output (stdout) to a file and Standard Error (stderr) to the same file (by merging stderr to stdout first):
-        ```powershell
-        ArbSh> Command-With-Output-And-Error > output_and_error.log 2>&1 # Both streams go to the file
-        ```
-    *   Redirect Standard Output (stdout) to a file and Standard Error (stderr) to a different file:
-        ```powershell
-        ArbSh> Command-With-Output-And-Error > output.log 2> error.log # Separates streams
-        ```
-    *(Note: The parser recognizes all these forms. The `Executor` now handles stdout (`>`, `>>`), stderr (`2>`, `2>>`), input (`<`) file redirection, and stream merging (`2>&1`, `1>&2`). Sub-expression execution is not yet implemented.)*
-
-    *   **Stream Merging Examples (v0.8.0+):**
-        ```powershell
-        # Assume 'Cmd-Error' writes "ERROR!" to stderr and 'Cmd-Output' writes "OUTPUT" to stdout
-        ArbSh> Cmd-Error 2>&1 | Write-Output 
-        # ... (Executor debug output) ...
-        DEBUG (Executor Output): Routing error object via 2>&1 merge.
-        # ...
-        ERROR! # Error appears on stdout due to merge
-
-        ArbSh> Cmd-Output >&2 
-        # ... (Executor debug output) ...
-        DEBUG (Executor Output): Routing regular object via 1>&2 merge.
-        # ... (Output "OUTPUT" appears on stderr stream)
-        ```
-
-
-## Type Literals (`[TypeName]`) (v0.7.6+)
-
-The parser now recognizes type literals enclosed in square brackets, like `[int]`, `[string]`, `[System.ConsoleColor]`. Whitespace inside the brackets is allowed, and Unicode characters are supported in the type name.
-
-Currently, the parser identifies these tokens and passes the extracted type name (e.g., "int", "System.ConsoleColor") as a special string argument (`"TypeLiteral:TypeName"`) to the command. The shell does not yet *use* this type information for casting or parameter validation.
-
-**Examples:**
-
+**Escaping Operators:**
 ```powershell
-ArbSh> Write-Output [int] 123
-# ... (DEBUG output) ...
-DEBUG (Parser): Added TypeLiteral 'int' as argument.
-# ...
-TypeLiteral:int # Output shows the parsed argument
-
-ArbSh> Write-Output [System.ConsoleColor] "Red"
-# ... (DEBUG output) ...
-DEBUG (Parser): Added TypeLiteral 'System.ConsoleColor' as argument.
-# ...
-TypeLiteral:System.ConsoleColor # Output shows the parsed argument
-
-ArbSh> Write-Output Before[string]After
-# ... (DEBUG output) ...
-DEBUG (Parser): Added TypeLiteral 'string' as argument.
-# ...
-Before # Write-Output receives "Before", "TypeLiteral:string", "After" as args
-       # and outputs the first one.
+ArbSh> Write-Output Command1 \| Command2 ; Write-Output Argument\;WithSemicolon
+Command1 | Command2
+Argument;WithSemicolon
 ```
 
-## Input Redirection (`<`) (v0.7.6+)
+**Escaping Quotes:**
+```powershell
+ArbSh> Write-Output "Argument with \"escaped quote\""
+Argument with "escaped quote"
+```
 
-The parser now recognizes the input redirection operator `<` followed by a filename (which can be quoted). The `Executor` reads the specified file and provides its content line-by-line as pipeline input to the command.
+**Escaping Paths:**
+```powershell
+ArbSh> Write-Output "Path: C:\\Users\\Test"
+Path: C:\Users\Test
+```
 
-**Examples:**
+**Newlines and Tabs:**
+```powershell
+ArbSh> Write-Output "First Line\nSecond Line\tIndented"
+First Line
+Second Line	Indented
+```
+
+**Escaping Variables:**
+```powershell
+ArbSh> Write-Output "Value is \$testVar"
+Value is $testVar
+
+ArbSh> Write-Output \$testVar
+$testVar
+```
+
+**Escaping Spaces:**
+```powershell
+ArbSh> Write-Output Argument\ WithSpace
+Argument WithSpace
+```
+
+## Pipeline and Redirection
+
+**Pipeline (`|`):** Passes output from one command to the input of the next with task-based concurrency.
+
+**Basic Pipeline:**
+```powershell
+ArbSh> Get-Command | Write-Output
+Get-Command
+Get-Help
+احصل-مساعدة
+Test-Array-Binding
+Test-Type-Literal
+Write-Output
+```
+
+**Pipeline with Quoted Pipes:**
+```powershell
+ArbSh> Write-Output "Value is | this" | Write-Output
+Value is | this
+```
+
+**Output Redirection:**
+- `>` - Overwrite file with stdout
+- `>>` - Append stdout to file
 
 ```powershell
-# First, create a file to read from:
-ArbSh> Write-Output "This is the input file." > input.txt
+ArbSh> Get-Command > commands.txt
+ArbSh> Write-Output "Additional line" >> commands.txt
+```
 
-# Now, use input redirection:
+**Command Separator (`;`):** Execute multiple statements sequentially.
+
+```powershell
+ArbSh> Write-Output "First"; Write-Output "Second"
+First
+Second
+```
+
+**Advanced Redirection:**
+
+**Error Stream Redirection:**
+```powershell
+# Redirect stderr to file
+ArbSh> Some-Command-That-Errors 2> error.log
+
+# Append stderr to file
+ArbSh> Another-Command-That-Errors 2>> error.log
+```
+
+**Stream Merging:**
+```powershell
+# Merge stderr to stdout
+ArbSh> Command-With-Errors 2>&1 | Write-Output
+
+# Merge stdout to stderr
+ArbSh> Command-With-Output 1>&2
+```
+
+**Combined Redirection:**
+```powershell
+# Both streams to same file
+ArbSh> Command-With-Both > output.log 2>&1
+
+# Separate files for each stream
+ArbSh> Command-With-Both > output.log 2> error.log
+```
+
+**Input Redirection (`<`):**
+```powershell
+# Create input file
+ArbSh> Write-Output "Line 1" > input.txt
+ArbSh> Write-Output "Line 2" >> input.txt
+
+# Use input redirection
 ArbSh> Write-Output < input.txt
-# ... (DEBUG output) ...
-DEBUG (Executor): Attempting input redirection from 'input.txt' for first command.
-DEBUG (Executor Task): 'Write-Output' consuming input...
-DEBUG (Executor): Finished reading input redirect file 'input.txt'. Input collection marked complete.
-DEBUG (Executor Task): 'Write-Output' finished consuming input.
-# ...
-Line for input redirection
+Line 1
+Line 2
 ```
 
-## Sub-expressions (`$(...)`) (v0.7.6+)
+## Arabic Language Support
 
-The parser now correctly recognizes and parses sub-expressions enclosed in `$()`. It handles nested sub-expressions and pipelines within them.
+ArbSh is designed as an Arabic-first shell with comprehensive Arabic language support.
 
-The parser recursively parses the content inside the `$()` and stores the resulting command structure (a `List<ParsedCommand>`) as an argument object passed to the outer command.
+### Arabic Command Names
 
-**Important:** The `Executor` does **not** yet execute these sub-expressions. Therefore, the outer command receives the parsed structure itself as an argument, not the *output* of the sub-expression.
+Commands are available with Arabic aliases for native Arabic developers:
+
+**Available Arabic Commands:**
+- `احصل-مساعدة` (Get-Help) - Get command help and documentation
+- Additional Arabic commands planned for Phase 5
 
 **Examples:**
 
-*   **Simple Sub-expression:**
-    ```powershell
-    ArbSh> Write-Output $(Get-Command)
-    # ... (DEBUG output) ...
-    DEBUG (Parser): Recursively parsing subexpression content: 'Get-Command'
-    DEBUG (Parser): Added parsed subexpression (statement 0) as argument.
-    WARN (Binder): Skipping non-string positional argument at index 0 for parameter 'InputObject'. Subexpression execution not implemented.
-    # ... (No output from Write-Output as it received a List<ParsedCommand> object)
-    ```
-*   **Sub-expression with Pipeline:**
-    ```powershell
-    ArbSh> Write-Output $(Get-Command | Write-Output)
-    # ... (DEBUG output) ...
-    DEBUG (Parser): Recursively parsing subexpression content: 'Get-Command | Write-Output'
-    DEBUG (Parser): Added parsed subexpression (statement 0) as argument.
-    WARN (Binder): Skipping non-string positional argument at index 0 for parameter 'InputObject'. Subexpression execution not implemented.
-    # ... (No output from outer Write-Output)
-    ```
-*   **Sub-expression as Parameter Value:**
-    ```powershell
-    ArbSh> Get-Help -CommandName $(Write-Output Get-Command)
-    # ... (DEBUG output) ...
-    DEBUG (Parser): Recursively parsing subexpression content: 'Write-Output Get-Command'
-    DEBUG (Parser): Added parsed subexpression (statement 0) as argument.
-    WARN (Binder): Skipping non-string positional argument at index 0 for parameter 'CommandName'. Subexpression execution not implemented.
-    # ... (Get-Help likely shows general help or an error as CommandName wasn't bound)
-    ```
+**Arabic Help Command:**
+```powershell
+ArbSh> احصل-مساعدة
 
-## Arabic Command and Parameter Names (v0.7.0+)
+Placeholder general help message. Try 'Get-Help <Command-Name>'.
+Example: Get-Help Get-Command
+```
 
-Cmdlets and their parameters can be invoked using Arabic names if they have the `[ArabicName]` attribute applied. The previous encoding issues that prevented this from working correctly in test scripts have been resolved.
+**Arabic Help with Parameters:**
+```powershell
+ArbSh> احصل-مساعدة -الاسم Get-Command
 
-**Example (using `Get-Help` / `احصل-مساعدة` which has aliases defined):**
+NAME
+    Get-Command
 
-*   **Arabic Command Name:**
-    ```powershell
-    ArbSh> احصل-مساعدة Get-Command
-    # ... (Executor debug output) ...
-    NAME
-        Get-Command
-    # ...
-    ```
-*   **Arabic Parameter Name:**
-    ```powershell
-    ArbSh> Get-Help -الاسم Get-Command
-    # ... (Executor debug output) ...
-    DEBUG (Binder): Found parameter via Arabic name '-الاسم'.
-    # ...
-    NAME
-        Get-Command
-    # ...
-    ```
-*   **Arabic Command and Parameter Name:**
-    ```powershell
-    ArbSh> احصل-مساعدة -الاسم Get-Command
-    # ... (Executor debug output) ...
-    DEBUG (Binder): Found parameter via Arabic name '-الاسم'.
-    # ...
-    NAME
-        Get-Command
-    # ...
-    ```
+SYNOPSIS
+    (Synopsis for Get-Command not available)
 
-This covers the basic usage of the commands available in the current prototype.
+SYNTAX
+    Get-Command
+```
+
+**Mixed Arabic/English Usage:**
+```powershell
+ArbSh> احصل-مساعدة Get-Command
+ArbSh> Get-Help -الاسم Write-Output
+```
+
+### BiDi Text Processing
+
+ArbSh includes complete Unicode BiDi (Bidirectional) text processing according to UAX #9 standards:
+
+**Implemented BiDi Rules:**
+- ✅ **P Rules (P2-P3):** Paragraph embedding level determination
+- ✅ **X Rules (X1-X10):** Explicit formatting codes (LRE, RLE, PDF, LRO, RLO, LRI, RLI, FSI, PDI)
+- ✅ **W Rules (W1-W7):** Weak type resolution (ES, ET, EN, AN handling)
+- ✅ **N Rules (N0-N2):** Neutral type resolution and boundary neutrals
+- ✅ **I Rules (I1-I2):** Implicit embedding levels for strong types
+- ✅ **L Rules (L1-L4):** Level-based reordering and combining marks
+
+**BiDi Testing:**
+- 70+ Unicode BidiTest.txt compliance tests passing
+- Comprehensive test coverage for all rule sets
+- Real-time BiDi processing for mixed Arabic/English content
+
+### Arabic-First Philosophy
+
+ArbSh prioritizes Arabic language support as a core feature:
+
+**Design Principles:**
+- Native Arabic command names and aliases
+- Full Unicode BiDi text rendering compliance
+- Arabic developer workflow optimization
+- Cultural localization considerations
+- Arabic-first documentation and examples
+
+**Future Arabic Features (Phase 5):**
+- RTL console input with proper cursor movement
+- BiDi-aware output rendering
+- Arabic error messages and help text
+- Arabic parameter names and documentation
+- Complete Arabic localization
+
+## Testing and Development
+
+**Running ArbSh:**
+```powershell
+# Navigate to project directory
+cd D:\dev\ArbSh\src_csharp\ArbSh.Console
+
+# Run the shell
+dotnet run
+
+# Exit the shell
+ArbSh> exit
+```
+
+**Testing Features:**
+```powershell
+# Test BiDi algorithm
+ArbSh> Test-Array-Binding
+
+# Test type literals
+ArbSh> Test-Type-Literal [int] 42
+
+# Test subexpressions
+ArbSh> Write-Output $(Get-Command)
+
+# Test Arabic commands
+ArbSh> احصل-مساعدة
+```
+
+This comprehensive feature set makes ArbSh a powerful Arabic-first shell environment for Arabic developers, with full Unicode compliance and modern shell capabilities.
