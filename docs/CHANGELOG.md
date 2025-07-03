@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.8] - 2025-07-03
+
+### Enhanced
+- **BiDi P Rules (P2-P3)**: Enhanced paragraph embedding level determination with full UAX #9 compliance
+  - Added proper isolate content skipping in P2 rule implementation
+  - Added embedding initiator ignoring while processing characters within embeddings
+  - Added nested isolate handling with depth tracking
+  - Added unmatched isolate handling (skip to end of paragraph)
+  - Added comprehensive P rules design documentation (BIDI_P_RULES_DESIGN.md)
+  - Enhanced existing `DetermineParagraphLevel` method with UAX #9 compliant P2/P3 logic
+  - Added helper methods for embedding initiator detection and text-based PDI matching
+  - All 84 tests passing including existing P rules auto-detection scenarios
+
+### Technical Details
+- P2 rule now properly skips characters between isolate initiators (LRI, RLI, FSI) and matching PDI
+- P2 rule correctly ignores embedding initiators (LRE, RLE, LRO, RLO) but processes characters within embeddings
+- P3 rule maintains correct paragraph level assignment (0 for L, 1 for AL/R, 0 default)
+- Enhanced Unicode handling with proper surrogate pair support
+- Maintains backward compatibility with existing explicit level specification
+
 ## [0.7.7.7] - 2025-07-03
 
 ### Added
