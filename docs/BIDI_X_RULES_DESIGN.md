@@ -72,49 +72,68 @@ private enum DirectionalOverrideStatus
 - ✅ Character type and level initialization
 - ✅ Level-to-runs conversion
 
-### Phase 2: Basic Explicit Formatting (Next Task)
-Implement X1-X4, X6-X8 rules:
+### Phase 2: Basic Explicit Formatting ✅ COMPLETED
+Implemented X1-X4, X6-X8 rules:
 
-#### X1: Main Processing Loop
+#### X1: Main Processing Loop ✅
 - Process each character in the text
 - Apply appropriate X2-X8 rules based on character type
 - Maintain directional status stack
 
-#### X2: RLE (Right-to-Left Embedding)
+#### X2: RLE (Right-to-Left Embedding) ✅
 - Push current state to stack
 - Increment embedding level to next odd value
 - Handle stack overflow (max depth 125)
 
-#### X3: LRE (Left-to-Right Embedding)  
+#### X3: LRE (Left-to-Right Embedding) ✅
 - Push current state to stack
 - Increment embedding level to next even value
 - Handle stack overflow
 
-#### X4: RLO (Right-to-Left Override)
+#### X4: RLO (Right-to-Left Override) ✅
 - Push current state to stack
 - Set override status to RightToLeft
 - Increment embedding level to next odd value
 
-#### X5: LRO (Left-to-Right Override)
-- Push current state to stack  
+#### X5: LRO (Left-to-Right Override) ✅
+- Push current state to stack
 - Set override status to LeftToRight
 - Increment embedding level to next even value
 
-#### X6: For all other character types
+#### X6: For all other character types ✅
 - Set embedding level based on current stack state
 - Apply override if active
 
-#### X7: PDF (Pop Directional Formatting)
+#### X7: PDF (Pop Directional Formatting) ✅
 - Pop from stack if not empty
 - Restore previous embedding level and override status
 
-#### X8: End of paragraph
+#### X8: End of paragraph ✅
 - Reset stack and levels
 
-### Phase 3: Isolates Support (X5a-X5c, X6a)
-- Implement LRI, RLI, FSI processing
-- Implement PDI matching and processing
-- Handle isolate pairing logic
+### Phase 3: Isolates Support ✅ COMPLETED
+Implemented X5a-X5c, X6a rules:
+
+#### X5a: LRI (Left-to-Right Isolate) ✅
+- Push isolate state to stack with even embedding level
+- Set isolate status flag to true
+- Handle stack overflow protection
+
+#### X5b: RLI (Right-to-Left Isolate) ✅
+- Push isolate state to stack with odd embedding level
+- Set isolate status flag to true
+- Handle stack overflow protection
+
+#### X5c: FSI (First Strong Isolate) ✅
+- Scan forward to find first strong character (L, AL, R)
+- Respect nested isolate boundaries during scanning
+- Create LTR isolate if first strong is L, RTL if AL/R
+- Default to LTR if no strong character found
+
+#### X6a: PDI (Pop Directional Isolate) ✅
+- Pop from stack only if current entry is an isolate
+- Restore previous embedding level and status
+- Handle unmatched PDI gracefully
 
 ## Implementation Strategy
 

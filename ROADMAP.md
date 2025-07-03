@@ -67,21 +67,21 @@ To create a powerful, extensible shell environment built on .NET that:
 - **BiDi Algorithm UAX #9 Compliance - `ProcessRuns` and `ReorderRunsForDisplay` (Next Major BiDi Focus):**
   - The initial port provided foundational BiDi logic. This sub-phase focuses on enhancing it significantly to align more closely with the Unicode Bidirectional Algorithm (UAX #9) standard.
   - *`ProcessRuns` and `ReorderRunsForDisplay` currently use placeholder logic. The following tasks detail their full implementation.*
-  - **Sub-Task 2.1 (Study & Design - X Rules):**
-    - [ ] Thoroughly study UAX #9 rules X1-X10 (Explicit Levels and Directions).
-    - [ ] Design the data structure for the "directional status stack" (needs to hold embedding level, override status, and isolate status).
-    - **Discussion Point:** How will we represent override (LRO/RLO -> L/R) and isolate (LRI/RLI/FSI -> L/R with isolation) states on the stack?
-  - **Sub-Task 2.2 (Implement Basic Explicit Formatting - X1-X4, X6-X8, simplified X10 for LRE/RLE/LRO/RLO/PDF):**
-    - [ ] Implement logic for LRE, RLE, PDF (X1, X2, X3, X7, X8).
-    - [ ] Implement logic for LRO, RLO (X4, X5, X7, X8).
-    - [ ] Ensure correct level calculation (e.g., `(current_level + 2) & ~1` for next even, `(current_level + 1) | 1` for next odd).
-    - [ ] Implement initial handling for stack overflow (X9).
-    - [ ] Implement removal of these explicit formatting codes from consideration for level assignment (part of X10, though full BN removal is later).
-  - **Sub-Task 2.3 (Implement Isolates - X5a-X5c, X6a, remaining X10):**
-    - [ ] Implement logic for LRI, RLI, FSI, PDI.
-    - [ ] Correctly handle pairing of isolates (e.g., finding matching PDI or end of paragraph/higher isolate).
-    - [ ] Correctly resolve levels within and of isolated sequences.
-    - **Discussion Point:** FSI requires determining the direction of the first strong type within its scope. How will this pre-scan be handled?
+  - **Sub-Task 2.1 (Study & Design - X Rules):** ✅ COMPLETED
+    - [✅] Thoroughly study UAX #9 rules X1-X10 (Explicit Levels and Directions).
+    - [✅] Design the data structure for the "directional status stack" (needs to hold embedding level, override status, and isolate status).
+    - **RESOLVED:** Implemented `DirectionalStatusStackEntry` struct with `EmbeddingLevel`, `OverrideStatus` (enum: Neutral/LeftToRight/RightToLeft), and `IsolateStatus` (bool) fields.
+  - **Sub-Task 2.2 (Implement Basic Explicit Formatting - X1-X4, X6-X8, simplified X10 for LRE/RLE/LRO/RLO/PDF):** ✅ COMPLETED
+    - [✅] Implement logic for LRE, RLE, PDF (X1, X2, X3, X7, X8).
+    - [✅] Implement logic for LRO, RLO (X4, X5, X7, X8).
+    - [✅] Ensure correct level calculation (e.g., `(current_level + 2) & ~1` for next even, `(current_level + 1) | 1` for next odd).
+    - [✅] Implement initial handling for stack overflow (X9).
+    - [✅] Implement removal of these explicit formatting codes from consideration for level assignment (part of X10, though full BN removal is later).
+  - **Sub-Task 2.3 (Implement Isolates - X5a-X5c, X6a, remaining X10):** ✅ COMPLETED
+    - [✅] Implement logic for LRI, RLI, FSI, PDI.
+    - [✅] Correctly handle pairing of isolates (e.g., finding matching PDI or end of paragraph/higher isolate).
+    - [✅] Correctly resolve levels within and of isolated sequences.
+    - **RESOLVED:** FSI direction detection implemented via `DetermineFirstStrongDirection` method with nested isolate boundary respect and first-strong character scanning (L=LTR, AL/R=RTL, default=LTR).
   - **Sub-Task 2.4 (Study & Design - W Rules):**
     - [ ] Thoroughly study UAX #9 rules W1-W7 (Resolving Weak Types).
   - **Sub-Task 2.5 (Implement W Rules):**

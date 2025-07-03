@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.2] - 2025-07-03
+
+### Added
+
+- **BiDi Algorithm Enhancement (UAX #9 X Rules - Complete Implementation):**
+  - **Basic Explicit Formatting (X1-X4, X6-X8):** Implemented complete UAX #9 X rules for explicit directional formatting characters:
+    - X1: Main processing loop with character-by-character rule application
+    - X2: RLE (Right-to-Left Embedding) with odd level calculation and stack management
+    - X3: LRE (Left-to-Right Embedding) with even level calculation and stack management
+    - X4: RLO (Right-to-Left Override) with type forcing to R and override status tracking
+    - X5: LRO (Left-to-Right Override) with type forcing to L and override status tracking
+    - X6: General character processing with directional override application
+    - X7: PDF (Pop Directional Formatting) with proper stack management and level restoration
+    - X8: End of paragraph processing with stack reset
+  - **Isolates Support (X5a-X5c, X6a):** Implemented complete isolate processing with proper pairing:
+    - X5a: LRI (Left-to-Right Isolate) with even level calculation and isolate flag
+    - X5b: RLI (Right-to-Left Isolate) with odd level calculation and isolate flag
+    - X5c: FSI (First Strong Isolate) with automatic direction detection via first-strong character scanning
+    - X6a: PDI (Pop Directional Isolate) with isolate-aware stack popping and proper matching
+  - **Stack Overflow Protection:** Implemented UAX #9 compliant maximum embedding depth limit of 125 levels
+  - **Directional Status Stack:** Added `DirectionalStatusStackEntry` struct with embedding level, override status, and isolate status tracking
+  - **First Strong Detection:** Implemented sophisticated first-strong character scanning for FSI with nested isolate boundary respect
+
+### Changed
+
+- **BiDi Algorithm Core:** Completely rewrote `BidiAlgorithm.ProcessRuns` method from placeholder logic to full UAX #9 X rules compliance
+- **Data Structures:** Enhanced directional processing with new `DirectionalOverrideStatus` enum (Neutral, LeftToRight, RightToLeft)
+- **Unit Testing:** Expanded test suite from 40 to 46 comprehensive unit tests covering all X rules scenarios:
+  - Basic embedding tests (RLE, LRE with proper level calculation)
+  - Override tests (RLO, LRO with type forcing verification)
+  - Isolate tests (LRI, RLI, FSI with direction detection)
+  - Edge cases (unmatched PDF/PDI, nested structures, stack overflow protection)
+  - All tests passing with 100% success rate
+
+### Documentation
+
+- **Design Documentation:** Created comprehensive `docs/BIDI_X_RULES_DESIGN.md` documenting:
+  - Complete UAX #9 X rules research and analysis
+  - Implementation strategy and architectural decisions
+  - Data structure design rationale
+  - Phase-by-phase implementation plan
+- **Technical Specifications:** Documented all X rules (X1-X8) with implementation details and Unicode compliance notes
+
 ## [0.7.7.1] - 2025-05-22
 
 ### Added
