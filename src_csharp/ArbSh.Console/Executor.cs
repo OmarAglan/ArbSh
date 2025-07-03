@@ -513,6 +513,137 @@ namespace ArbSh.Console
         }
 
         /// <summary>
+        /// Represents type conversion context for arguments influenced by type literals.
+        /// </summary>
+        private class TypeLiteralContext
+        {
+            /// <summary>
+            /// Maps argument index to the Type that should be used for conversion.
+            /// </summary>
+            public Dictionary<int, Type> ArgumentTypeOverrides { get; } = new Dictionary<int, Type>();
+        }
+
+        /// <summary>
+        /// Pre-processes type literals in the argument list to create type conversion context.
+        /// Type literals like [int], [string] influence the conversion of subsequent arguments.
+        /// </summary>
+        /// <param name="arguments">The list of arguments from the parsed command</param>
+        /// <param name="usedPositionalArgs">Array to mark which arguments have been processed</param>
+        /// <returns>Type literal context for argument conversion</returns>
+        private static TypeLiteralContext ProcessTypeLiterals(List<object> arguments, bool[] usedPositionalArgs)
+        {
+            var context = new TypeLiteralContext();
+
+            // Build a mapping from positional parameter index to argument index, excluding type literals
+            var positionalToArgumentIndex = new List<int>();
+            for (int i = 0; i < arguments.Count; i++)
+            {
+                if (!(arguments[i] is string arg && arg.StartsWith("TypeLiteral:")))
+                {
+                    positionalToArgumentIndex.Add(i);
+                }
+            }
+
+            int currentPositionalIndex = 0;
+
+            for (int i = 0; i < arguments.Count; i++)
+            {
+                if (arguments[i] is string arg && arg.StartsWith("TypeLiteral:"))
+                {
+                    string typeName = arg.Substring("TypeLiteral:".Length);
+
+                    try
+                    {
+                        // Resolve the type name to an actual Type
+                        Type? targetType = ResolveTypeName(typeName);
+                        if (targetType != null)
+                        {
+                            // Apply this type to the next positional argument (not the next argument index)
+                            if (currentPositionalIndex < positionalToArgumentIndex.Count)
+                            {
+                                int targetArgumentIndex = positionalToArgumentIndex[currentPositionalIndex];
+                                context.ArgumentTypeOverrides[targetArgumentIndex] = targetType;
+                                System.Console.WriteLine($"DEBUG (TypeLiteral): Type literal '[{typeName}]' will convert positional argument {currentPositionalIndex} (at argument index {targetArgumentIndex}) to {targetType.Name}");
+                                currentPositionalIndex++; // Move to next positional argument for subsequent type literals
+                            }
+                            else
+                            {
+                                System.Console.WriteLine($"WARN (TypeLiteral): Type literal '[{typeName}]' at index {i} has no corresponding positional argument");
+                            }
+                        }
+                        else
+                        {
+                            System.Console.WriteLine($"WARN (TypeLiteral): Could not resolve type name '{typeName}' from type literal at index {i}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Console.WriteLine($"ERROR (TypeLiteral): Failed to process type literal '{typeName}' at index {i}: {ex.Message}");
+                    }
+
+                    // Mark the type literal as used so it doesn't get processed as a regular argument
+                    usedPositionalArgs[i] = true;
+                }
+            }
+
+            return context;
+        }
+
+        /// <summary>
+        /// Resolves a type name string to an actual Type object.
+        /// Supports both simple names (int, string) and fully qualified names (System.ConsoleColor).
+        /// </summary>
+        /// <param name="typeName">The type name to resolve</param>
+        /// <returns>The resolved Type, or null if not found</returns>
+        private static Type? ResolveTypeName(string typeName)
+        {
+            // Handle common type aliases
+            var typeAliases = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "int", typeof(int) },
+                { "string", typeof(string) },
+                { "bool", typeof(bool) },
+                { "double", typeof(double) },
+                { "float", typeof(float) },
+                { "decimal", typeof(decimal) },
+                { "long", typeof(long) },
+                { "short", typeof(short) },
+                { "byte", typeof(byte) },
+                { "char", typeof(char) },
+                { "object", typeof(object) },
+                { "datetime", typeof(DateTime) },
+                { "timespan", typeof(TimeSpan) },
+                { "guid", typeof(Guid) }
+            };
+
+            if (typeAliases.TryGetValue(typeName, out Type? aliasType))
+            {
+                return aliasType;
+            }
+
+            // Try to resolve as a fully qualified type name
+            try
+            {
+                // First try the current assembly and mscorlib
+                Type? type = Type.GetType(typeName);
+                if (type != null) return type;
+
+                // Try with System namespace prefix for common types
+                if (!typeName.Contains('.'))
+                {
+                    type = Type.GetType($"System.{typeName}");
+                    if (type != null) return type;
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Binds parameters from the parsed command to the cmdlet instance using reflection.
         /// This is called within the context of the specific cmdlet's execution task.
         /// </summary>
@@ -526,6 +657,9 @@ namespace ArbSh.Console
 
             // Keep track of used positional arguments
             var usedPositionalArgs = new bool[command.Arguments.Count];
+
+            // Pre-process type literals to create type conversion context
+            var typeLiteralContext = ProcessTypeLiterals(command.Arguments, usedPositionalArgs);
 
             foreach (var prop in properties)
             {
@@ -648,15 +782,36 @@ namespace ArbSh.Console
                                     {
                                         try
                                         {
+                                            // Check if there's a type literal override for this argument
+                                            Type targetType = elementType; // Default to array element type
+                                            string conversionSource = "array element type";
+
+                                            if (typeLiteralContext.ArgumentTypeOverrides.TryGetValue(j, out Type? overrideType))
+                                            {
+                                                targetType = overrideType;
+                                                conversionSource = "type literal";
+                                                System.Console.WriteLine($"DEBUG (TypeLiteral): Using type literal override {targetType.Name} for array argument at index {j}");
+                                            }
+
                                             // Attempt conversion
-                                            TypeConverter converter = TypeDescriptor.GetConverter(elementType);
+                                            TypeConverter converter = TypeDescriptor.GetConverter(targetType);
                                             object convertedValue = converter != null && converter.CanConvertFrom(typeof(string))
                                                 ? converter.ConvertFromString(argValue)! // Assume non-null if conversion succeeds
-                                                : Convert.ChangeType(argValue, elementType)!;
+                                                : Convert.ChangeType(argValue, targetType)!;
+
+                                            // If we used a type literal override, we may need to convert again to the array element type
+                                            if (targetType != elementType)
+                                            {
+                                                TypeConverter elementConverter = TypeDescriptor.GetConverter(elementType);
+                                                convertedValue = elementConverter != null && elementConverter.CanConvertFrom(targetType)
+                                                    ? elementConverter.ConvertFrom(convertedValue)!
+                                                    : Convert.ChangeType(convertedValue, elementType)!;
+                                            }
 
                                             arrayValues.Add(convertedValue);
                                             usedPositionalArgs[j] = true; // Mark as used
                                             argsConsumed++;
+                                            System.Console.WriteLine($"DEBUG (Binder): Added array element '{argValue}' converted to {elementType.Name} (via {conversionSource})");
                                         }
                                         catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException)
                                         {
@@ -726,8 +881,19 @@ namespace ArbSh.Console
                         {
                             try
                             {
+                                // Check if there's a type literal override for this argument
+                                Type targetType = prop.PropertyType; // Default to parameter type
+                                string conversionSource = "parameter type";
+
+                                if (typeLiteralContext.ArgumentTypeOverrides.TryGetValue(paramAttr.Position, out Type? overrideType))
+                                {
+                                    targetType = overrideType;
+                                    conversionSource = "type literal";
+                                    System.Console.WriteLine($"DEBUG (TypeLiteral): Using type literal override {targetType.Name} for argument at position {paramAttr.Position}");
+                                }
+
                                 // Attempt conversion using TypeConverter first, then fallback
-                                TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
+                                TypeConverter converter = TypeDescriptor.GetConverter(targetType);
                                 if (converter != null && converter.CanConvertFrom(typeof(string)))
                                 {
                                     valueToSet = converter.ConvertFromString(positionalValue);
@@ -735,11 +901,27 @@ namespace ArbSh.Console
                                 else
                                 {
                                     // Fallback for basic types
-                                    valueToSet = Convert.ChangeType(positionalValue, prop.PropertyType);
+                                    valueToSet = Convert.ChangeType(positionalValue, targetType);
                                 }
+
+                                // If we used a type literal override, we may need to convert again to the parameter type
+                                if (targetType != prop.PropertyType && valueToSet != null)
+                                {
+                                    // Convert from type literal type to parameter type
+                                    TypeConverter paramConverter = TypeDescriptor.GetConverter(prop.PropertyType);
+                                    if (paramConverter != null && paramConverter.CanConvertFrom(targetType))
+                                    {
+                                        valueToSet = paramConverter.ConvertFrom(valueToSet);
+                                    }
+                                    else
+                                    {
+                                        valueToSet = Convert.ChangeType(valueToSet, prop.PropertyType);
+                                    }
+                                }
+
                                 found = true;
                                 usedPositionalArgs[paramAttr.Position] = true; // Mark as used
-                                System.Console.WriteLine($"DEBUG (Binder): Bound positional parameter at {paramAttr.Position} ('{positionalValue}') to property '{prop.Name}' (Type: {prop.PropertyType.Name})");
+                                System.Console.WriteLine($"DEBUG (Binder): Bound positional parameter at {paramAttr.Position} ('{positionalValue}') to property '{prop.Name}' (Type: {prop.PropertyType.Name}, converted via {conversionSource})");
                             }
                             catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
                             {
