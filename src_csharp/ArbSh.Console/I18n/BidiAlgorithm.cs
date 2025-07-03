@@ -231,7 +231,8 @@ namespace ArbSh.Console.I18n
             // Phase 3: Apply W rules for weak type resolution
             ApplyWRules(text, types, levels);
 
-            // Phase 4: TODO - Apply N rules (neutral types)
+            // Phase 4: Apply N rules for neutral type resolution
+            ApplyNRules(text, types, levels);
 
             // Phase 5: Apply I rules for final level assignment
             ApplyIRules(types, levels);
