@@ -1443,25 +1443,67 @@ namespace ArbSh.Console.I18n
 
         /// <summary>
         /// Applies UAX #9 I rules (I1-I2) for final embedding level assignment.
-        /// I1: For all characters with an even (LTR) embedding level, if the character is R or AN, change the level to the next higher odd level.
-        /// I2: For all characters with an odd (RTL) embedding level, if the character is L or EN, change the level to the next higher even level.
+        /// I1: For characters with even embedding levels:
+        ///     - R characters: level + 1 (even → odd)
+        ///     - AN/EN characters: level + 2 (even → even, higher)
+        /// I2: For characters with odd embedding levels:
+        ///     - L/EN/AN characters: level + 1 (odd → even)
         /// </summary>
         private static void ApplyIRules(BidiCharacterType[] types, int[] levels)
         {
             for (int i = 0; i < types.Length; i++)
             {
                 var type = types[i];
-                var level = levels[i];
+                var currentLevel = levels[i];
 
-                // I1: Even level + (R or AN) character -> next higher odd level
-                if (level % 2 == 0 && (type == BidiCharacterType.R || type == BidiCharacterType.AN))
+                // Skip BN characters (Boundary Neutrals) per UAX #9 specification
+                if (type == BidiCharacterType.BN)
+                    continue;
+
+                int newLevel = ResolveImplicitLevel(type, currentLevel);
+
+                // Validate against maximum depth (max_depth + 1 = 126)
+                if (newLevel <= MaxEmbeddingDepth + 1)
                 {
-                    levels[i] = level + 1;
+                    levels[i] = newLevel;
                 }
-                // I2: Odd level + (L or EN) character -> next higher even level
-                else if (level % 2 == 1 && (type == BidiCharacterType.L || type == BidiCharacterType.EN))
+                // If exceeding max depth, keep current level (overflow handling)
+            }
+        }
+
+        /// <summary>
+        /// Resolves the implicit embedding level for a character based on its type and current level.
+        /// Implements the core logic of UAX #9 I1 and I2 rules.
+        /// </summary>
+        private static int ResolveImplicitLevel(BidiCharacterType type, int currentLevel)
+        {
+            bool isEvenLevel = (currentLevel % 2 == 0);
+
+            if (isEvenLevel)
+            {
+                // I1: Even level adjustments
+                switch (type)
                 {
-                    levels[i] = level + 1;
+                    case BidiCharacterType.R:
+                        return currentLevel + 1; // Even → Odd
+                    case BidiCharacterType.AN:
+                    case BidiCharacterType.EN:
+                        return currentLevel + 2; // Even → Even (higher)
+                    default:
+                        return currentLevel; // No change
+                }
+            }
+            else
+            {
+                // I2: Odd level adjustments
+                switch (type)
+                {
+                    case BidiCharacterType.L:
+                    case BidiCharacterType.EN:
+                    case BidiCharacterType.AN:
+                        return currentLevel + 1; // Odd → Even
+                    default:
+                        return currentLevel; // No change
                 }
             }
         }

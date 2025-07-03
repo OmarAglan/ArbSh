@@ -559,12 +559,13 @@ namespace ArbSh.Test.I18n
             string text = "\u06451"; // Arabic Meem + European digit '1'
             var runs = BidiAlgorithm.ProcessRuns(text, 0);
 
-            // W2 converts EN to AN after AL, both should be RTL
-            // Arabic letter: AL -> R (W3) -> level 1 (I1: even level + R -> odd level)
-            // European number: EN -> AN (W2) -> level 1 (I1: even level + AN -> odd level)
-            // Both characters should be at RTL level 1, so single run
-            Assert.Single(runs);
-            Assert.Equal(1, runs[0].Level); // Both characters at RTL level
+            // W2 converts EN to AN after AL
+            // Arabic letter: AL -> R (W3) -> level 1 (I1: even level + R -> level + 1)
+            // European number: EN -> AN (W2) -> level 2 (I1: even level + AN -> level + 2)
+            // Different levels result in separate runs
+            Assert.Equal(2, runs.Count);
+            Assert.Equal(1, runs[0].Level); // Arabic character at level 1
+            Assert.Equal(2, runs[1].Level); // Arabic number at level 2
         }
 
         [Fact]
@@ -774,6 +775,104 @@ namespace ArbSh.Test.I18n
             Assert.Equal(0, runs[0].Start);
             Assert.Equal(1, runs[0].Length);
             Assert.Equal(0, runs[0].Level); // LTR character in LTR paragraph
+        }
+
+        // --- I Rules Tests ---
+
+        [Fact]
+        public void ProcessRuns_I1_EvenLevel_RCharacter_IncreasesLevelByOne()
+        {
+            // Even level (0) + R character should become level 1
+            string text = "\u05D0"; // Hebrew Alef (R character)
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(1, runs[0].Level); // I1: even level + R -> level + 1
+        }
+
+        [Fact]
+        public void ProcessRuns_I1_EvenLevel_ANCharacter_IncreasesLevelByTwo()
+        {
+            // Even level (0) + AN character should become level 2
+            string text = "\u0660"; // Arabic-Indic digit 0 (AN character)
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(2, runs[0].Level); // I1: even level + AN -> level + 2
+        }
+
+        [Fact]
+        public void ProcessRuns_I1_EvenLevel_ENCharacter_IncreasesLevelByTwo()
+        {
+            // Even level (0) + EN character should become level 2
+            string text = "1"; // European digit (EN character)
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(2, runs[0].Level); // I1: even level + EN -> level + 2
+        }
+
+        [Fact]
+        public void ProcessRuns_I2_OddLevel_LCharacter_IncreasesLevelByOne()
+        {
+            // Odd level (1) + L character should become level 2
+            string text = "a"; // Latin letter (L character)
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(2, runs[0].Level); // I2: odd level + L -> level + 1
+        }
+
+        [Fact]
+        public void ProcessRuns_I2_OddLevel_ENCharacter_IncreasesLevelByOne()
+        {
+            // Odd level (1) + EN character should become level 2
+            string text = "1"; // European digit (EN character)
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(2, runs[0].Level); // I2: odd level + EN -> level + 1
+        }
+
+        [Fact]
+        public void ProcessRuns_I2_OddLevel_ANCharacter_IncreasesLevelByOne()
+        {
+            // Odd level (1) + AN character should become level 2
+            string text = "\u0660"; // Arabic-Indic digit 0 (AN character)
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(2, runs[0].Level); // I2: odd level + AN -> level + 1
+        }
+
+        [Fact]
+        public void ProcessRuns_IRules_NoChange_LCharacterEvenLevel()
+        {
+            // Even level (0) + L character should remain at level 0
+            string text = "a"; // Latin letter (L character)
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(0, runs[0].Level); // No change for L at even level
+        }
+
+        [Fact]
+        public void ProcessRuns_IRules_NoChange_RCharacterOddLevel()
+        {
+            // Odd level (1) + R character should remain at level 1
+            string text = "\u05D0"; // Hebrew Alef (R character)
+            int baseLevel = 1; // RTL paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            Assert.Single(runs);
+            Assert.Equal(1, runs[0].Level); // No change for R at odd level
         }
     }
 }
