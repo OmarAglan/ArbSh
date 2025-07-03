@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.9] - 2025-07-03
+
+### Added
+- **BidiTest.txt Testing Framework**: Complete Unicode conformance testing infrastructure
+  - Downloaded and integrated official Unicode BidiTest-16.0.0.txt (490,846 test cases)
+  - Created comprehensive `BidiTestFramework.cs` with full parsing and test execution capabilities
+  - Created `BidiTestConformanceTests.cs` with multiple test methods for different test categories
+  - Implemented test case parsing for @Levels, @Reorder, and data lines with bitset encoding
+  - Added bidi class mapping from test format to internal BidiCharacterType enum
+  - Created test string generation using representative Unicode characters
+  - Implemented level verification and reorder verification logic
+  - Added robust file path resolution for test execution in different environments
+  - All conformance tests passing - BiDi algorithm demonstrates excellent UAX #9 compliance
+
+### Technical Details
+- BidiTest.txt format parsing supports @Levels, @Reorder directives and data lines
+- Paragraph level bitset encoding (1=auto-LTR, 2=LTR, 4=RTL) fully implemented
+- Level verification handles 'x' values for undefined/ignored levels correctly
+- Visual reordering verification validates L2 rule implementation
+- Representative Unicode character mapping covers all bidi classes (L, R, AL, EN, AN, etc.)
+- Test framework integrates seamlessly with existing xUnit infrastructure
+- ConvertRunsToLevels method bridges BidiRun list to levels array for verification
+- Comprehensive error reporting and test categorization for debugging
+
 ## [0.7.7.8] - 2025-07-03
 
 ### Enhanced
