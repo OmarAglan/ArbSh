@@ -245,6 +245,11 @@ namespace ArbSh.Console.I18n
 
         /// <summary>
         /// Determines the paragraph embedding level according to UAX #9 rules P2 and P3.
+        /// P2: Find the first character of type L, AL, or R while skipping over any characters
+        ///     between an isolate initiator and its matching PDI or, if it has no matching PDI,
+        ///     the end of the paragraph.
+        /// P3: If a character is found in P2 and it is of type AL or R, then set the paragraph
+        ///     embedding level to one; otherwise, set it to zero.
         /// </summary>
         private static int DetermineParagraphLevel(string text, int baseLevel)
         {
@@ -255,27 +260,96 @@ namespace ArbSh.Console.I18n
             }
 
             // Auto-detect paragraph level (P2, P3)
-            // P2: Find first strong character (L, AL, R)
-            // P3: If first strong is L, paragraph level is 0; if AL or R, paragraph level is 1
+            // P2: Find first strong character (L, AL, R) while properly skipping isolates
             for (int i = 0; i < text.Length;)
             {
                 int codepoint = char.ConvertToUtf32(text, i);
                 BidiCharacterType charType = GetCharType(codepoint);
 
+                // P2: Skip over characters between isolate initiator and its matching PDI
+                if (IsIsolateInitiator(charType))
+                {
+                    // Skip to matching PDI or end of paragraph
+                    int matchingPDI = FindMatchingPDI(text, i);
+                    if (matchingPDI != -1)
+                    {
+                        i = matchingPDI + (char.IsSurrogatePair(text, matchingPDI) ? 2 : 1);
+                        continue;
+                    }
+                    else
+                    {
+                        // No matching PDI, skip to end of paragraph
+                        break;
+                    }
+                }
+
+                // P2: Ignore embedding initiators (but not characters within the embedding)
+                if (IsEmbeddingInitiator(charType))
+                {
+                    i += char.IsSurrogatePair(text, i) ? 2 : 1;
+                    continue;
+                }
+
+                // P2: Check for strong characters (L, AL, R)
                 if (charType == BidiCharacterType.L)
                 {
-                    return 0; // LTR paragraph
+                    return 0; // P3: LTR paragraph
                 }
                 if (charType == BidiCharacterType.AL || charType == BidiCharacterType.R)
                 {
-                    return 1; // RTL paragraph
+                    return 1; // P3: RTL paragraph
                 }
 
                 i += char.IsSurrogatePair(text, i) ? 2 : 1;
             }
 
-            // No strong characters found, default to LTR
+            // P3: No strong characters found, default to LTR
             return 0;
+        }
+
+        /// <summary>
+        /// Helper method to check if a character type is an embedding initiator (LRE, RLE, LRO, RLO).
+        /// </summary>
+        private static bool IsEmbeddingInitiator(BidiCharacterType charType)
+        {
+            return charType == BidiCharacterType.LRE ||
+                   charType == BidiCharacterType.RLE ||
+                   charType == BidiCharacterType.LRO ||
+                   charType == BidiCharacterType.RLO;
+        }
+
+        /// <summary>
+        /// Find the matching PDI for an isolate initiator at the given position.
+        /// Returns the position of the matching PDI, or -1 if no matching PDI is found.
+        /// This version works directly with text and character positions for P2 rule implementation.
+        /// </summary>
+        private static int FindMatchingPDI(string text, int isolateInitiatorPos)
+        {
+            int isolateDepth = 1;
+            int i = isolateInitiatorPos + (char.IsSurrogatePair(text, isolateInitiatorPos) ? 2 : 1);
+
+            while (i < text.Length)
+            {
+                int codepoint = char.ConvertToUtf32(text, i);
+                BidiCharacterType charType = GetCharType(codepoint);
+
+                if (IsIsolateInitiator(charType))
+                {
+                    isolateDepth++;
+                }
+                else if (charType == BidiCharacterType.PDI)
+                {
+                    isolateDepth--;
+                    if (isolateDepth == 0)
+                    {
+                        return i; // Found matching PDI
+                    }
+                }
+
+                i += char.IsSurrogatePair(text, i) ? 2 : 1;
+            }
+
+            return -1; // No matching PDI found
         }
 
         /// <summary>

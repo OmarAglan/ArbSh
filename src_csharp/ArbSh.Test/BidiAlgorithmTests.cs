@@ -951,5 +951,116 @@ namespace ArbSh.Test.I18n
             string result = BidiAlgorithm.ReorderRunsForDisplay(text, null!, 0);
             Assert.Equal(text, result);
         }
+
+        // --- Enhanced P Rules Tests ---
+
+        [Fact]
+        public void ProcessRuns_P2_SkipsIsolateContent_LTRFirst()
+        {
+            // Test P2: Skip characters between isolate initiator and matching PDI
+            // Text: "a\u2067\u05D0\u2069b" (a + LRI + Hebrew Alef + PDI + b)
+            // Should find 'a' as first strong character, not Hebrew Alef inside isolate
+            string text = "a\u2067\u05D0\u2069b"; // a + LRI + Hebrew Alef + PDI + b
+            int baseLevel = -1; // Auto-detect
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should detect LTR paragraph level based on 'a', not Hebrew inside isolate
+            Assert.True(runs.Any(r => r.Level == 0), "Should have LTR base level runs");
+            Assert.False(runs.All(r => r.Level >= 1), "Should not be RTL paragraph");
+        }
+
+        [Fact]
+        public void ProcessRuns_P2_SkipsIsolateContent_RTLFirst()
+        {
+            // Test P2: Skip characters between isolate initiator and matching PDI
+            // Text: "\u05D0\u2067a\u2069\u05D1" (Hebrew Alef + LRI + a + PDI + Hebrew Bet)
+            // Should find Hebrew Alef as first strong character, not 'a' inside isolate
+            string text = "\u05D0\u2067a\u2069\u05D1"; // Hebrew Alef + LRI + a + PDI + Hebrew Bet
+            int baseLevel = -1; // Auto-detect
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should detect RTL paragraph level based on Hebrew Alef, not 'a' inside isolate
+            Assert.True(runs.Any(r => r.Level >= 1), "Should have RTL level runs");
+        }
+
+        [Fact]
+        public void ProcessRuns_P2_SkipsUnmatchedIsolate()
+        {
+            // Test P2: Skip to end of paragraph if isolate has no matching PDI
+            // Text: "a\u2067\u05D0b" (a + LRI + Hebrew Alef + b, no PDI)
+            // Should find 'a' as first strong character and skip rest after unmatched LRI
+            string text = "a\u2067\u05D0b"; // a + LRI + Hebrew Alef + b (no PDI)
+            int baseLevel = -1; // Auto-detect
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should detect LTR paragraph level based on 'a'
+            Assert.True(runs.Any(r => r.Level == 0), "Should have LTR base level runs");
+        }
+
+        [Fact]
+        public void ProcessRuns_P2_IgnoresEmbeddingInitiators()
+        {
+            // Test P2: Ignore embedding initiators (but not characters within the embedding)
+            // Text: "\u202B\u05D0" (RLE + Hebrew Alef)
+            // Should ignore RLE and find Hebrew Alef as first strong character
+            string text = "\u202B\u05D0"; // RLE + Hebrew Alef
+            int baseLevel = -1; // Auto-detect
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should detect RTL paragraph level based on Hebrew Alef
+            Assert.True(runs.Any(r => r.Level >= 1), "Should have RTL level runs");
+        }
+
+        [Fact]
+        public void ProcessRuns_P2_ComplexIsolateEmbeddingMix()
+        {
+            // Test P2: Complex case with both isolates and embeddings
+            // Text: "\u202B\u2067a\u2069\u05D0" (RLE + LRI + a + PDI + Hebrew Alef)
+            // Should ignore RLE, skip LRI...PDI content, find Hebrew Alef
+            string text = "\u202B\u2067a\u2069\u05D0"; // RLE + LRI + a + PDI + Hebrew Alef
+            int baseLevel = -1; // Auto-detect
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should detect RTL paragraph level based on Hebrew Alef
+            Assert.True(runs.Any(r => r.Level >= 1), "Should have RTL level runs");
+        }
+
+        [Fact]
+        public void ProcessRuns_P2_NestedIsolates()
+        {
+            // Test P2: Nested isolates should be properly skipped
+            // Text: "a\u2067\u2067\u05D0\u2069\u2069b" (a + LRI + LRI + Hebrew Alef + PDI + PDI + b)
+            // Should find 'a' as first strong character
+            string text = "a\u2067\u2067\u05D0\u2069\u2069b"; // a + nested LRIs + Hebrew + PDIs + b
+            int baseLevel = -1; // Auto-detect
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should detect LTR paragraph level based on 'a'
+            Assert.True(runs.Any(r => r.Level == 0), "Should have LTR base level runs");
+        }
+
+        [Fact]
+        public void ProcessRuns_P3_DefaultsToLTR_OnlyNeutrals()
+        {
+            // Test P3: Default to LTR when no strong characters found
+            string text = "123 !@#"; // Only numbers and neutrals
+            int baseLevel = -1; // Auto-detect
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should default to LTR paragraph level
+            Assert.True(runs.All(r => r.Level % 2 == 0), "Should default to LTR (even levels)");
+        }
+
+        [Fact]
+        public void ProcessRuns_P3_DefaultsToLTR_OnlyIsolatedStrong()
+        {
+            // Test P3: Default to LTR when strong characters are only inside isolates
+            string text = "\u2067\u05D0\u2069 123"; // LRI + Hebrew Alef + PDI + numbers
+            int baseLevel = -1; // Auto-detect
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+
+            // Should default to LTR since Hebrew is inside isolate
+            Assert.True(runs.Any(r => r.Level == 0), "Should default to LTR base level");
+        }
     }
 }
