@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **BiDi Algorithm Enhancement (UAX #9 W Rules - Complete Implementation):**
+  - **Weak Type Resolution (W1-W7):** Implemented complete UAX #9 W rules for resolving weak character types:
+    - W1: NSM (Non-Spacing Mark) resolution based on previous character or sos
+    - W2: EN to AN conversion in Arabic Letter context with backward strong type search
+    - W3: AL to R simplification for consistent strong type handling
+    - W4: Number separator resolution (ES between EN, CS between same number types)
+    - W5: European terminator sequences adjacent to European numbers
+    - W6: Remaining separator cleanup to Other Neutral
+    - W7: EN to L conversion in Latin context with backward strong type search
+  - **Isolating Run Sequence Processing:** Implemented proper isolating run sequence construction and processing:
+    - IsolatingRunSequence class with Types, Positions, Sos, and Eos properties
+    - Maximal sequence building connected by isolate initiators and matching PDIs
+    - Start-of-sequence (sos) and end-of-sequence (eos) type determination
+    - Proper integration with existing X rules processing
+  - **Enhanced I Rules:** Extended I1-I2 rules for final embedding level assignment:
+    - I1: Even level + (R or AN) → next higher odd level
+    - I2: Odd level + (L or EN) → next higher even level
+    - Proper level assignment for Arabic Numbers (AN) as RTL characters
+  - **Helper Methods:** Added comprehensive helper methods for W rules processing:
+    - Strong type searching (backward search for L, R, AL, or sos)
+    - Character type classification (strong, number, isolate types)
+    - Isolate initiator and PDI detection and matching
+
 - **BiDi Algorithm Enhancement (UAX #9 X Rules - Complete Implementation):**
   - **Basic Explicit Formatting (X1-X4, X6-X8):** Implemented complete UAX #9 X rules for explicit directional formatting characters:
     - X1: Main processing loop with character-by-character rule application

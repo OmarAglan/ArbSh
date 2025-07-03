@@ -83,16 +83,16 @@ To create a powerful, extensible shell environment built on .NET that:
     - [✅] Correctly resolve levels within and of isolated sequences.
     - **RESOLVED:** FSI direction detection implemented via `DetermineFirstStrongDirection` method with nested isolate boundary respect and first-strong character scanning (L=LTR, AL/R=RTL, default=LTR).
   - **Sub-Task 2.4 (Study & Design - W Rules):**
-    - [ ] Thoroughly study UAX #9 rules W1-W7 (Resolving Weak Types).
+    - [✅] Thoroughly study UAX #9 rules W1-W7 (Resolving Weak Types). *(Completed: Comprehensive design document created at `docs/BIDI_W_RULES_DESIGN.md`)*.
   - **Sub-Task 2.5 (Implement W Rules):**
-    - [ ] Implement W1: Resolve ES, ET.
-    - [ ] Implement W2: Change EN to AN if preceded by AL.
-    - [ ] Implement W3: Change AL to R. (Usually AL is already R from GetCharType, this rule clarifies).
-    - [ ] Implement W4: Resolve NI (Neutrals between L/R and EN/AN).
-    - [ ] Implement W5: Resolve CS.
-    - [ ] Implement W6: Separate EN/AN from surrounding L/R.
-    - [ ] Implement W7: Change EN to L.
-    - **Discussion Point:** These rules require iterating and potentially changing character types or levels based on context. How will these changes be tracked and applied before the next stage?
+    - [✅] Implement W1: NSM resolution based on previous character or sos. *(Completed: `ApplyW1_NonspacingMarks`)*.
+    - [✅] Implement W2: Change EN to AN if preceded by AL. *(Completed: `ApplyW2_EuropeanNumberContext` with backward strong type search)*.
+    - [✅] Implement W3: Change AL to R. *(Completed: `ApplyW3_ArabicLetterSimplification`)*.
+    - [✅] Implement W4: Number separator resolution (ES between EN, CS between same types). *(Completed: `ApplyW4_NumberSeparators`)*.
+    - [✅] Implement W5: European terminator sequences adjacent to EN. *(Completed: `ApplyW5_EuropeanTerminators`)*.
+    - [✅] Implement W6: Remaining separators to Other Neutral. *(Completed: `ApplyW6_RemainingSeparators`)*.
+    - [✅] Implement W7: Change EN to L in L context. *(Completed: `ApplyW7_EuropeanNumberFinal`)*.
+    - **RESOLVED:** W rules implemented using isolating run sequence processing with proper sos/eos determination and integration with X rules. Enhanced I rules (I1-I2) added for final level assignment including AN support.
   - **Sub-Task 2.6 (Study & Design - N Rules):**
     - [ ] Thoroughly study UAX #9 rules N0-N2 (Resolving Neutral Types and BN).
   - **Sub-Task 2.7 (Implement N Rules):**
