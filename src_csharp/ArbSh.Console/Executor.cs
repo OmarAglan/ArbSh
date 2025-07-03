@@ -642,32 +642,62 @@ namespace ArbSh.Console
                             // Consume all remaining unused arguments from the specified position onwards
                             for (int j = paramAttr.Position; j < command.Arguments.Count; j++)
                             {
-                                if (!usedPositionalArgs[j] && command.Arguments[j] is string argValue) // Check if it's a string
+                                if (!usedPositionalArgs[j])
                                 {
-                                    // string argValue = command.Arguments[j]; // Already assigned via pattern matching
-                                    try
+                                    if (command.Arguments[j] is string argValue) // Handle string arguments
                                     {
-                                        // Attempt conversion
-                                        TypeConverter converter = TypeDescriptor.GetConverter(elementType);
-                                        object convertedValue = converter != null && converter.CanConvertFrom(typeof(string))
-                                            ? converter.ConvertFromString(argValue)! // Assume non-null if conversion succeeds
-                                            : Convert.ChangeType(argValue, elementType)!;
-
-                                        arrayValues.Add(convertedValue);
-                                        usedPositionalArgs[j] = true; // Mark as used
-                                        argsConsumed++;
-                                    }
-                                    catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException)
-                                    {
-                                        conversionError = true;
-                                        // Throw specific binding exception for conversion failure within the array
-                                        throw new ParameterBindingException($"Cannot process argument transformation for array parameter '{prop.Name}'. Cannot convert value \"{argValue}\" at index {j} to type \"{elementType.FullName}\".", ex)
+                                        try
                                         {
-                                            ParameterName = prop.Name
-                                        };
+                                            // Attempt conversion
+                                            TypeConverter converter = TypeDescriptor.GetConverter(elementType);
+                                            object convertedValue = converter != null && converter.CanConvertFrom(typeof(string))
+                                                ? converter.ConvertFromString(argValue)! // Assume non-null if conversion succeeds
+                                                : Convert.ChangeType(argValue, elementType)!;
+
+                                            arrayValues.Add(convertedValue);
+                                            usedPositionalArgs[j] = true; // Mark as used
+                                            argsConsumed++;
+                                        }
+                                        catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException)
+                                        {
+                                            conversionError = true;
+                                            // Throw specific binding exception for conversion failure within the array
+                                            throw new ParameterBindingException($"Cannot process argument transformation for array parameter '{prop.Name}'. Cannot convert value \"{argValue}\" at index {j} to type \"{elementType.FullName}\".", ex)
+                                            {
+                                                ParameterName = prop.Name
+                                            };
+                                        }
                                     }
+                                    else if (command.Arguments[j] is List<ParsedCommand> subCommands) // Handle subexpression arguments
+                                    {
+                                        try
+                                        {
+                                            System.Console.WriteLine($"DEBUG (Binder): Executing subexpression for array parameter '{prop.Name}' at index {j}.");
+                                            string subExpressionResult = ExecuteSubExpression(subCommands);
+
+                                            // Convert the subexpression result to the array element type
+                                            TypeConverter converter = TypeDescriptor.GetConverter(elementType);
+                                            object convertedValue = converter != null && converter.CanConvertFrom(typeof(string))
+                                                ? converter.ConvertFromString(subExpressionResult)! // Assume non-null if conversion succeeds
+                                                : Convert.ChangeType(subExpressionResult, elementType)!;
+
+                                            arrayValues.Add(convertedValue);
+                                            usedPositionalArgs[j] = true; // Mark as used
+                                            argsConsumed++;
+                                            System.Console.WriteLine($"DEBUG (Binder): Added subexpression result '{subExpressionResult}' to array parameter '{prop.Name}' (Type: {elementType.Name})");
+                                        }
+                                        catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException)
+                                        {
+                                            conversionError = true;
+                                            // Throw specific binding exception for conversion failure within the array
+                                            throw new ParameterBindingException($"Cannot process subexpression result for array parameter '{prop.Name}' at index {j} to type \"{elementType.FullName}\".", ex)
+                                            {
+                                                ParameterName = prop.Name
+                                            };
+                                        }
+                                    }
+                                    // Skip other non-string, non-subexpression arguments
                                 }
-                                // TODO: Handle non-string arguments (subexpressions) for array parameters?
                             }
 
                             if (!conversionError && argsConsumed > 0) // Only bind if we successfully consumed and converted at least one argument
@@ -690,9 +720,10 @@ namespace ArbSh.Console
                     // Handle non-array positional parameters (only if not already bound as array)
                     else if (!prop.PropertyType.IsArray && paramAttr.Position < command.Arguments.Count && !usedPositionalArgs[paramAttr.Position])
                     {
-                        if (command.Arguments[paramAttr.Position] is string positionalValue) // Check if it's a string
+                        object positionalArgument = command.Arguments[paramAttr.Position];
+
+                        if (positionalArgument is string positionalValue) // Check if it's a string
                         {
-                            // string positionalValue = command.Arguments[paramAttr.Position]; // Assigned via pattern matching
                             try
                             {
                                 // Attempt conversion using TypeConverter first, then fallback
@@ -719,13 +750,40 @@ namespace ArbSh.Console
                                 };
                             }
                         } // End of string check for positionalValue
+                        else if (positionalArgument is List<ParsedCommand> subCommands)
+                        {
+                            // Handle subexpression - execute it and use the result
+                            System.Console.WriteLine($"DEBUG (Binder): Executing subexpression for parameter '{prop.Name}' at position {paramAttr.Position}.");
+                            string subExpressionResult = ExecuteSubExpression(subCommands);
+
+                            try
+                            {
+                                // Convert the subexpression result to the parameter type
+                                TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
+                                if (converter != null && converter.CanConvertFrom(typeof(string)))
+                                {
+                                    valueToSet = converter.ConvertFromString(subExpressionResult);
+                                }
+                                else
+                                {
+                                    valueToSet = Convert.ChangeType(subExpressionResult, prop.PropertyType);
+                                }
+                                found = true;
+                                usedPositionalArgs[paramAttr.Position] = true;
+                                System.Console.WriteLine($"DEBUG (Binder): Bound subexpression result '{subExpressionResult}' to parameter '{prop.Name}' (Type: {prop.PropertyType.Name})");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Console.WriteLine($"ERROR (Binder): Failed to convert subexpression result '{subExpressionResult}' to type {prop.PropertyType.Name} for parameter '{prop.Name}': {ex.Message}");
+                                throw new ParameterBindingException($"Cannot convert subexpression result to parameter '{prop.Name}' of type {prop.PropertyType.Name}.", ex) { ParameterName = prop.Name };
+                            }
+                        }
                         else
                         {
-                            // Handle non-string positional argument (e.g., subexpression) - skip binding for now
-                            System.Console.WriteLine($"WARN (Binder): Skipping non-string positional argument at index {paramAttr.Position} for parameter '{prop.Name}'. Subexpression execution not implemented.");
-                            // Mark as 'used' to prevent array binder from trying it again? Or leave unused? Leave unused for now.
+                            // Handle other non-string positional arguments
+                            System.Console.WriteLine($"WARN (Binder): Skipping non-string positional argument of type {positionalArgument?.GetType().Name ?? "null"} at index {paramAttr.Position} for parameter '{prop.Name}'. Type not supported for parameter binding.");
                         }
-                    } 
+                    }
                 } 
 
                 // 3. Set the property value if bound (either by name or position) and value is ready
@@ -781,9 +839,16 @@ namespace ArbSh.Console
                              // throw new ParameterBindingException($"Unexpected positional argument: {unusedStringArg}");
                         }
                     }
-                    else // It's likely a parsed subexpression List<ParsedCommand> or other object
+                    else if (command.Arguments[i] is List<ParsedCommand> subCommands)
                     {
-                        System.Console.WriteLine($"WARN (Binder): Unused positional argument of type {command.Arguments[i]?.GetType().Name ?? "null"} detected at index {i}. Subexpression execution not implemented.");
+                        // Execute unused subexpression (this might be needed for side effects)
+                        System.Console.WriteLine($"DEBUG (Binder): Executing unused subexpression at index {i} for potential side effects.");
+                        string subExpressionResult = ExecuteSubExpression(subCommands);
+                        System.Console.WriteLine($"DEBUG (Binder): Unused subexpression executed, result: '{subExpressionResult}'");
+                    }
+                    else // Other object types
+                    {
+                        System.Console.WriteLine($"WARN (Binder): Unused positional argument of type {command.Arguments[i]?.GetType().Name ?? "null"} detected at index {i}. Type not supported.");
                     }
                 }
             }
@@ -795,22 +860,131 @@ namespace ArbSh.Console
         /// </summary>
         private static string ExecuteSubExpression(List<ParsedCommand> subCommands)
         {
-            // This needs a way to run the executor pipeline but capture the output instead of writing to console/file.
-            // For now, return a placeholder string indicating execution is needed.
-            // TODO: Implement actual sub-expression execution and output capture.
-            System.Console.WriteLine($"DEBUG (Executor): Placeholder execution for subexpression starting with '{subCommands.FirstOrDefault()?.CommandName ?? "N/A"}'.");
-            
-            // --- Placeholder Logic ---
-            // In a real implementation:
-            // 1. Create temporary input/output BlockingCollections for the sub-pipeline.
-            // 2. Call a modified version of the main Execute loop logic for the subCommands list,
-            //    directing the final output to a temporary collection instead of console/file.
-            // 3. Wait for the sub-pipeline tasks to complete.
-            // 4. Collect all PipelineObjects from the temporary output collection.
-            // 5. Convert the collected objects to a string (e.g., join with spaces or newlines).
-            // 6. Return the resulting string.
+            if (subCommands == null || subCommands.Count == 0)
+            {
+                System.Console.WriteLine($"DEBUG (Executor): Empty subexpression, returning empty string.");
+                return string.Empty;
+            }
 
-            return $"[SubExprResult:{subCommands.FirstOrDefault()?.CommandName ?? "Empty"}]"; 
+            System.Console.WriteLine($"DEBUG (Executor): Executing subexpression with {subCommands.Count} command(s), starting with '{subCommands.FirstOrDefault()?.CommandName ?? "N/A"}'.");
+
+            try
+            {
+                // Create a temporary output collection to capture the subexpression's output
+                var subExpressionOutput = new BlockingCollection<PipelineObject>();
+                var outputResults = new List<string>();
+
+                // Execute the subexpression pipeline using the same logic as the main Execute method
+                // but capture output instead of writing to console/file
+                BlockingCollection<PipelineObject>? inputForCurrentStage = null;
+                List<Task> pipelineTasks = new List<Task>();
+
+                for (int i = 0; i < subCommands.Count; i++)
+                {
+                    var currentCommand = subCommands[i];
+                    var currentInputCollection = inputForCurrentStage;
+                    var outputCollection = (i == subCommands.Count - 1) ? subExpressionOutput : new BlockingCollection<PipelineObject>();
+                    bool isLastStage = (i == subCommands.Count - 1);
+
+                    inputForCurrentStage = outputCollection;
+
+                    System.Console.WriteLine($"DEBUG (Executor SubExpr): Preparing stage {i}: '{currentCommand.CommandName}'...");
+
+                    // Cmdlet Discovery
+                    Type? cmdletType = CommandDiscovery.Find(currentCommand.CommandName);
+
+                    if (cmdletType != null)
+                    {
+                        var pipelineTask = Task.Run(() =>
+                        {
+                            CmdletBase? cmdletInstance = null;
+                            System.Console.WriteLine($"DEBUG (Executor SubExpr Task): Starting task for '{currentCommand.CommandName}'...");
+                            try
+                            {
+                                // Instantiate Cmdlet
+                                cmdletInstance = Activator.CreateInstance(cmdletType) as CmdletBase;
+                                if (cmdletInstance == null)
+                                {
+                                    throw new InvalidOperationException($"Failed to activate cmdlet type {cmdletType.FullName}");
+                                }
+
+                                // Parameter Binding
+                                BindParameters(cmdletInstance, currentCommand);
+
+                                // Assign output collection
+                                cmdletInstance.OutputCollection = outputCollection;
+
+                                // Cmdlet Execution Lifecycle
+                                cmdletInstance.BeginProcessing();
+
+                                // Process pipeline input if any
+                                if (currentInputCollection != null)
+                                {
+                                    System.Console.WriteLine($"DEBUG (Executor SubExpr Task): '{currentCommand.CommandName}' consuming input...");
+                                    foreach (var inputObject in currentInputCollection.GetConsumingEnumerable())
+                                    {
+                                        cmdletInstance.BindPipelineParameters(inputObject);
+                                        cmdletInstance.ProcessRecord(inputObject);
+                                    }
+                                    System.Console.WriteLine($"DEBUG (Executor SubExpr Task): '{currentCommand.CommandName}' finished consuming input.");
+                                }
+                                else
+                                {
+                                    // No pipeline input, just call ProcessRecord once
+                                    cmdletInstance.ProcessRecord(null);
+                                }
+
+                                cmdletInstance.EndProcessing();
+                                System.Console.WriteLine($"DEBUG (Executor SubExpr Task): '{currentCommand.CommandName}' completed successfully.");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Console.WriteLine($"ERROR (Executor SubExpr Task): '{currentCommand.CommandName}' failed: {ex.Message}");
+                                // Add error to output collection
+                                outputCollection.Add(new PipelineObject($"[ERROR: {ex.Message}]", true));
+                            }
+                            finally
+                            {
+                                // Mark this stage's output as complete
+                                outputCollection.CompleteAdding();
+                                System.Console.WriteLine($"DEBUG (Executor SubExpr Task): '{currentCommand.CommandName}' output collection marked complete.");
+                            }
+                        });
+
+                        pipelineTasks.Add(pipelineTask);
+                    }
+                    else
+                    {
+                        System.Console.WriteLine($"ERROR (Executor SubExpr): Command '{currentCommand.CommandName}' not found in subexpression.");
+                        outputCollection.Add(new PipelineObject($"[ERROR: Command '{currentCommand.CommandName}' not found]", true));
+                        outputCollection.CompleteAdding();
+                    }
+                }
+
+                // Wait for all pipeline tasks to complete
+                System.Console.WriteLine($"DEBUG (Executor SubExpr): Waiting for {pipelineTasks.Count} task(s) in the subexpression pipeline to complete...");
+                Task.WaitAll(pipelineTasks.ToArray());
+                System.Console.WriteLine($"DEBUG (Executor SubExpr): All subexpression pipeline tasks completed.");
+
+                // Collect all output from the final stage
+                foreach (var outputObject in subExpressionOutput.GetConsumingEnumerable())
+                {
+                    if (outputObject?.Value != null)
+                    {
+                        outputResults.Add(outputObject.Value.ToString() ?? string.Empty);
+                    }
+                }
+
+                // Convert collected output to a single string
+                string result = string.Join(Environment.NewLine, outputResults);
+                System.Console.WriteLine($"DEBUG (Executor SubExpr): Subexpression completed, returning: '{result}'");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"ERROR (Executor SubExpr): Subexpression execution failed: {ex.Message}");
+                return $"[ERROR: {ex.Message}]";
+            }
         }
 
     }

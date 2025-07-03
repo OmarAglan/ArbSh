@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.10] - 2025-07-03
+
+### Added
+- **Subexpression Execution Logic**: Complete implementation of PowerShell-style `$(...)` command substitution
+  - Implemented `ExecuteSubExpression` method with full pipeline execution for subcommands
+  - Added subexpression support in parameter binding for positional parameters
+  - Added subexpression support in array parameter binding
+  - Added subexpression execution for unused arguments (for side effects)
+  - Subexpressions now execute in isolated pipeline with proper output capture
+  - Results are converted to strings and integrated into parent command parameter binding
+  - Full error handling and debugging output for subexpression execution
+  - Successfully tested with various cmdlets including `Get-Command`, `Get-Help`, `Write-Output`, and `Test-Array-Binding`
+
+### Technical Details
+- Subexpression execution uses temporary `BlockingCollection<PipelineObject>` for output capture
+- Maintains same task-based concurrent execution model as main pipeline
+- Proper cmdlet lifecycle management (BeginProcessing, ProcessRecord, EndProcessing)
+- Type conversion support for subexpression results to target parameter types
+- Comprehensive debug logging for subexpression execution flow
+- Parameter binding logic updated to handle `List<ParsedCommand>` objects representing parsed subexpressions
+- Array parameter binding enhanced to process subexpressions alongside string arguments
+
+### Known Limitations
+- Named parameter values containing subexpressions not yet supported (parser limitation)
+- Nested subexpressions not fully tested but architecture supports them
+
 ## [0.7.7.9] - 2025-07-03
 
 ### Added
