@@ -105,7 +105,13 @@ namespace ArbSh.Console.I18n
 
                 // Validate and sanitize the input
                 result = ValidateAndSanitizeInput(result);
-                
+
+                // Process input for parsing (keep in logical order)
+                if (result != null)
+                {
+                    result = BiDiTextProcessor.ProcessInputForParsing(result);
+                }
+
                 return result;
             }
             catch (Exception ex)

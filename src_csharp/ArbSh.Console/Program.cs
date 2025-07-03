@@ -72,7 +72,9 @@ namespace ArbSh.Console
                     try
                     {
                         // --- Placeholder for Parsing and Execution ---
-                        System.Console.WriteLine($"DEBUG: Received command: {inputLine}");
+                        string debugMessage = $"DEBUG: Received command: {inputLine}";
+                        string processedDebugMessage = BiDiTextProcessor.ProcessOutputForDisplay(debugMessage);
+                        System.Console.WriteLine(processedDebugMessage);
 
                         // 1. Parse the inputLine into commands/cmdlets and arguments
                         //    - TODO: Implement real parsing in Parser.cs
@@ -91,7 +93,9 @@ namespace ArbSh.Console
                     {
                          // Catch specific exceptions for features not yet implemented
                         System.Console.ForegroundColor = ConsoleColor.Yellow;
-                        System.Console.WriteLine($"Feature not implemented: {nie.Message}");
+                        string warningMessage = $"Feature not implemented: {nie.Message}";
+                        string processedWarning = BiDiTextProcessor.ProcessOutputForDisplay(warningMessage);
+                        System.Console.WriteLine(processedWarning);
                         System.Console.ResetColor();
                     }
                     catch (Exception ex)
@@ -99,7 +103,9 @@ namespace ArbSh.Console
                         // Generic error handling
                         // TODO: Implement richer error records like PowerShell
                         System.Console.ForegroundColor = ConsoleColor.Red;
-                        System.Console.WriteLine($"ERROR: {ex.Message}");
+                        string errorMessage = $"ERROR: {ex.Message}";
+                        string processedError = BiDiTextProcessor.ProcessOutputForDisplay(errorMessage);
+                        System.Console.WriteLine(processedError);
                         // System.Console.WriteLine(ex.StackTrace); // Optional: for debugging
                         System.Console.ResetColor();
                     }
