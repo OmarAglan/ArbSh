@@ -13,8 +13,8 @@ namespace ArbSh.Console
             // Optionally set output encoding too, though UTF-8 is often the default
             System.Console.OutputEncoding = System.Text.Encoding.UTF8; // Ensure output is also UTF-8
 
-            System.Console.WriteLine("Welcome to ArbSh (C# Prototype)!");
-            System.Console.WriteLine("Type 'exit' to quit.");
+            System.Console.WriteLine("مرحباً بكم في أربش (النموذج الأولي)!");
+            System.Console.WriteLine("اكتب 'exit' للخروج.");
 
             // Initialize Arabic-aware console input system
             ArabicConsoleInput.Initialize(ArabicConsoleInput.InputStrategy.Auto);
@@ -32,10 +32,11 @@ namespace ArbSh.Console
             {
                 while (true)
                 {
-                    // Display RTL-aware prompt for interactive mode
+                    // Display Arabic RTL prompt for interactive mode
                     if (!System.Console.IsInputRedirected)
                     {
-                        ConsoleRTLDisplay.DisplayRTLPrompt("ArbSh> ", forceRTL: true);
+                        // Use Arabic prompt "أربش>" for proper RTL display
+                        ConsoleRTLDisplay.DisplayRTLPrompt("أربش> ");
                     }
 
                     // Use Arabic-aware console input instead of StreamReader

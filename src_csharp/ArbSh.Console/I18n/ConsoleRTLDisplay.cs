@@ -36,7 +36,7 @@ namespace ArbSh.Console.I18n
         
         /// <summary>
         /// Formats and displays the shell prompt with proper RTL positioning.
-        /// For Arabic context, the prompt should appear on the right side.
+        /// For Arabic context, we need to balance RTL appearance with console input behavior.
         /// </summary>
         /// <param name="promptText">The prompt text (e.g., "ArbSh>")</param>
         /// <param name="forceRTL">Force RTL positioning even for non-Arabic prompts</param>
@@ -49,10 +49,10 @@ namespace ArbSh.Console.I18n
 
             // Check if we should use RTL positioning
             bool useRTL = forceRTL || BiDiTextProcessor.ContainsArabicText(promptText);
-            
+
             if (useRTL)
             {
-                DisplayRightAlignedPrompt(promptText);
+                DisplayRTLAwarePrompt(promptText);
             }
             else
             {
@@ -62,33 +62,51 @@ namespace ArbSh.Console.I18n
         }
 
         /// <summary>
-        /// Displays a right-aligned prompt for RTL languages.
+        /// Displays an RTL-aware prompt that works properly with console input behavior.
+        /// For Arabic prompts, we want RTL display but cursor positioning that works with console input.
         /// </summary>
         /// <param name="promptText">The prompt text to display</param>
-        private static void DisplayRightAlignedPrompt(string promptText)
+        private static void DisplayRTLAwarePrompt(string promptText)
         {
             try
             {
-                // Calculate positioning for right alignment
-                int promptLength = GetDisplayLength(promptText);
-                int consoleWidth = ConsoleWidth;
-                
-                if (promptLength < consoleWidth)
+                // For Arabic prompts, we need a hybrid approach:
+                // 1. Process the Arabic text for proper display
+                // 2. Position it appropriately for RTL context
+                // 3. Ensure cursor ends up in the right place for input
+
+                if (BiDiTextProcessor.ContainsArabicText(promptText))
                 {
-                    // Add padding to right-align the prompt
-                    int padding = consoleWidth - promptLength;
-                    string paddedPrompt = new string(' ', padding) + promptText;
-                    System.Console.Write(paddedPrompt);
+                    // Process Arabic prompt for RTL display
+                    string processedPrompt = ProcessTextForRTLDisplay(promptText);
+
+                    // For Arabic prompts, add some right-alignment but not full width
+                    // This creates a more natural RTL feel while keeping cursor behavior
+                    int consoleWidth = ConsoleWidth;
+                    int promptLength = GetDisplayLength(processedPrompt);
+
+                    if (consoleWidth > 40 && promptLength < 20)
+                    {
+                        // Add moderate right padding for RTL feel
+                        int padding = Math.Max(0, consoleWidth - promptLength - 20);
+                        string paddedPrompt = new string(' ', padding) + processedPrompt;
+                        System.Console.Write(paddedPrompt);
+                    }
+                    else
+                    {
+                        // Just display the processed prompt normally
+                        System.Console.Write(processedPrompt);
+                    }
                 }
                 else
                 {
-                    // Prompt is too long, display normally
+                    // Non-Arabic prompt, display normally
                     System.Console.Write(promptText);
                 }
             }
             catch (Exception ex)
             {
-                System.Console.WriteLine($"DEBUG (RTL): Prompt positioning failed: {ex.Message}");
+                System.Console.WriteLine($"DEBUG (RTL): RTL prompt display failed: {ex.Message}");
                 // Fallback to normal prompt display
                 System.Console.Write(promptText);
             }
