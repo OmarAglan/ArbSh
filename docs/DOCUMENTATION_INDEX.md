@@ -1,65 +1,135 @@
-# ArbSh Documentation Index (C# Refactoring)
+# ArbSh Documentation Index
 
-**Note:** The ArbSh project is currently undergoing a major refactoring to C#/.NET. This index reflects the documentation relevant to this new direction. Some documents listed below describe the original C implementation and are preserved primarily as **reference material** for the porting effort.
+**Current Version:** 0.7.7.11
+**Status:** Phase 4 Complete - Full BiDi Algorithm UAX #9 Compliance
+**Next Phase:** Phase 5 - Console I/O with BiDi Rendering
 
-## Core Documentation
+This index provides comprehensive access to all ArbSh project documentation, organized by category and current relevance.
 
-| Document | Description | Status / Target Audience |
-|----------|-------------|-----------------|
-| [README.md](../README.md) | **(Updated)** Project overview, C# refactoring status, goals. | All users |
-| [ROADMAP.md](../ROADMAP.md) | **(Updated)** Detailed C#/.NET development roadmap (located in project root). | Developers, Project Managers |
-| [PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md) | **(Updated)** Describes the new C# project structure and the role of legacy C code. | Developers, Project Managers |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Guidelines for contributing (Needs update for C# focus). | Contributors |
-| [CHANGELOG.md](CHANGELOG.md) | History of changes (Needs update for C# refactoring start). | All users |
-| [PROJECT_STATUS.md](PROJECT_STATUS.md) | **(Outdated)** Describes status of the *original C* implementation. | Historical Reference |
-| [DEVELOPMENT_TASKS.md](DEVELOPMENT_TASKS.md) | **(Outdated)** Tasks related to the *original C* implementation. See [ROADMAP.md](ROADMAP.md) for C# tasks. | Historical Reference |
+## 📋 Core Project Documentation
 
-## Historical / Reference Documentation (Original C Implementation)
+| Document | Description | Status | Audience |
+|----------|-------------|--------|----------|
+| [README.md](../README.md) | Project overview, Arabic-first philosophy, current status | ✅ Current | All Users |
+| [ROADMAP.md](../ROADMAP.md) | Development phases, completed features, upcoming work | ✅ Current | Developers, PM |
+| [PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md) | Project structure, architecture, implementation status | ✅ Current | Developers |
+| [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) | Comprehensive feature guide with working examples | ✅ Current | Users, Developers |
+| [CHANGELOG.md](../CHANGELOG.md) | Version history and technical implementation details | ✅ Current | All Users |
 
-These documents describe the original C implementation and its specific features or plans. They have been moved to `old_c_code/docs/` and are preserved for historical context and as reference material for porting logic (especially Arabic support) to the new C# version.
+## 🔬 Technical Implementation Documentation
 
-| Document (in `old_c_code/docs/`) | Description | Status / Relevance |
-|-----------------------------------|-------------|-----------------|
-| `ARABIC_SUPPORT_GUIDE.md`         | **(Reference)** Technical details of the *original C* Arabic language support implementation (BiDi, UTF-8). Crucial reference for porting to C#. | C# Developers (Porting) |
-| `TESTING_FRAMEWORK.md`            | **(Reference)** Describes the testing strategy for the *original C* implementation. C# tests need a new framework (xUnit/NUnit). | Historical Reference |
-| `CMAKE_CONFIGURATION.md`          | **(Deprecated)** Details the CMake build system used for the *original C* code. C# uses `.NET CLI`. | Historical Reference |
-| `BAA_INTEGRATION.md`              | **(Outdated/Reference)** Describes integration plans for the *original C* shell with Baa. Integration for C# version is a future goal. | Historical Reference |
-| `DEVELOPMENT_TASKS.md`            | **(Outdated)** Tasks related to the *original C* implementation. | Historical Reference |
-| `IMPLEMENTATION_STATUS.md`        | **(Outdated)** Describes status of the *original C* implementation. | Historical Reference |
-| `PROJECT_STATUS.md`               | **(Outdated)** Describes status of the *original C* implementation. | Historical Reference |
-| `ROADMAP_CONSOLE_GUI_IMPROVEMENT.md` | **(Outdated)** Specific roadmap for the *original C* GUI/Console. | Historical Reference |
-| `TERMINAL_EMULATION_ROADMAP.md`   | **(Outdated)** Specific roadmap for terminal emulation in the *original C* GUI. | Historical Reference |
-| `ROADMAP.md`                      | **(Outdated)** Original high-level roadmap for the C implementation. | Historical Reference |
+### BiDi Algorithm Design Documents
 
+Comprehensive technical documentation for the Unicode BiDi Algorithm (UAX #9) implementation:
 
-## Documentation Highlights (Current C# Project)
+| Document | Description | Status | Coverage |
+|----------|-------------|--------|----------|
+| [BIDI_X_RULES_DESIGN.md](BIDI_X_RULES_DESIGN.md) | X Rules (X1-X10) - Explicit formatting codes | ✅ Complete | LRE, RLE, PDF, LRO, RLO, LRI, RLI, FSI, PDI |
+| [BIDI_W_RULES_DESIGN.md](BIDI_W_RULES_DESIGN.md) | W Rules (W1-W7) - Weak type resolution | ✅ Complete | ES, ET, EN, AN handling |
+| [BIDI_N_RULES_DESIGN.md](BIDI_N_RULES_DESIGN.md) | N Rules (N0-N2) - Neutral type resolution | ✅ Complete | Boundary neutrals, bracket pairs |
+| [BIDI_I_RULES_DESIGN.md](BIDI_I_RULES_DESIGN.md) | I Rules (I1-I2) - Implicit embedding levels | ✅ Complete | Strong type level assignment |
+| [BIDI_L_RULES_DESIGN.md](BIDI_L_RULES_DESIGN.md) | L Rules (L1-L4) - Level-based reordering | ✅ Complete | Combining marks, mirroring |
 
-### For Understanding the New Direction
+### Architecture Documentation
 
-1.  **[README.md](../README.md)** - Get the overview of the C# refactoring goals.
-2.  **[ROADMAP.md](../ROADMAP.md)** - Understand the development plan for the C# shell (located in project root).
-3.  **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - See the new C# project structure.
+| Document | Description | Status | Focus |
+|----------|-------------|--------|-------|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development guidelines and contribution process | 🔄 Needs Update | Contributors |
+| Task Management Files | Detailed implementation task tracking | ✅ Active | Project Planning |
 
-### For C# Developers (Porting Focus)
+## 📚 User Documentation
 
-1.  Review `old_c_code/docs/ARABIC_SUPPORT_GUIDE.md` - **Essential reading** to understand the C i18n logic being ported.
-2.  Review the original C code in `old_c_code/src/i18n/` and `old_c_code/src/utils/`.
-3.  Review the C# placeholder code in `src_csharp/`.
-4.  Follow the tasks outlined in [ROADMAP.md](ROADMAP.md).
+### Getting Started
 
-## Documentation Maintenance
+| Document | Description | Status | Audience |
+|----------|-------------|--------|----------|
+| [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) | Complete feature guide with examples | ✅ Current | End Users |
+| Installation Guide | Setup and installation instructions | 📋 Planned | New Users |
+| Quick Start Guide | Essential commands and workflows | 📋 Planned | New Users |
 
--   Documentation should reflect the current state of the **C# refactoring effort**.
--   Documents describing the original C implementation should be clearly marked as reference/historical.
--   New C# features require corresponding updates or new documentation files.
+### Feature Documentation
 
-## Future C# Documentation (Planned)
+| Feature Area | Documentation | Status | Description |
+|--------------|---------------|--------|-------------|
+| **Subexpression Execution** | [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md#subexpression-execution) | ✅ Complete | `$(...)` command substitution |
+| **Type Literal Utilization** | [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md#type-literal-utilization) | ✅ Complete | `[TypeName]` type casting |
+| **Arabic Language Support** | [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md#arabic-language-support) | ✅ Complete | Arabic commands and BiDi |
+| **Pipeline Execution** | [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md#pipeline-and-redirection) | ✅ Complete | Task-based concurrency |
+| **Parameter Binding** | [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) | ✅ Complete | Reflection-based binding |
 
--   C# API Reference (Generated from XML comments).
--   C# Cmdlet Developer Guide.
--   C# Porting Notes (Lessons learned from porting i18n logic).
--   C# User Guide (Once basic functionality exists).
+## 🏛️ Historical Documentation (Original C Implementation)
 
-## Conclusion
+Preserved for reference and historical context:
 
-This documentation index guides users and developers through the resources available during the C# refactoring of ArbSh. Priority is given to understanding the new architecture and leveraging the original C implementation's i18n logic as a reference for porting.
+| Document Location | Description | Relevance |
+|-------------------|-------------|-----------|
+| `old_c_code/docs/ARABIC_SUPPORT_GUIDE.md` | Original C Arabic implementation | 📚 Reference |
+| `old_c_code/docs/TESTING_FRAMEWORK.md` | Original C testing strategy | 📚 Reference |
+| `old_c_code/docs/CMAKE_CONFIGURATION.md` | Original C build system | 📚 Historical |
+| `old_c_code/docs/BAA_INTEGRATION.md` | Original integration plans | 📚 Historical |
+
+## 🎯 Documentation Roadmaps
+
+### For New Users
+1. **[README.md](../README.md)** - Project overview and Arabic-first philosophy
+2. **[USAGE_EXAMPLES.md](USAGE_EXAMPLES.md)** - Complete feature guide with examples
+3. **[ROADMAP.md](../ROADMAP.md)** - Understanding project direction and phases
+
+### For Developers
+1. **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - Architecture and project structure
+2. **BiDi Design Documents** - Technical implementation details for Unicode compliance
+3. **[CHANGELOG.md](../CHANGELOG.md)** - Technical implementation history
+4. **Task Management Files** - Current development planning and progress
+
+### For Contributors
+1. **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development guidelines (needs update)
+2. **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - Understanding codebase structure
+3. **BiDi Design Documents** - Technical specifications for algorithm implementation
+
+## 📋 Planned Documentation (Phase 5+)
+
+### User Documentation
+- **Installation Guide** - Setup instructions for different platforms
+- **Quick Start Tutorial** - Essential workflows for new users
+- **Arabic Developer Guide** - Arabic-specific features and workflows
+- **Command Reference** - Comprehensive cmdlet documentation
+
+### Technical Documentation
+- **API Reference** - Generated from XML comments
+- **Cmdlet Developer Guide** - Creating custom cmdlets
+- **BiDi Rendering Guide** - Console I/O with BiDi support
+- **Testing Guide** - Framework and testing strategies
+
+### Localization Documentation
+- **Arabic Localization Guide** - Complete Arabic language support
+- **RTL Console Implementation** - Technical details for RTL input/output
+- **Cultural Adaptation Guide** - Arabic developer workflow optimization
+
+## 📝 Documentation Maintenance
+
+**Current Standards:**
+- All documentation reflects version 0.7.7.11 status
+- Technical accuracy verified against working implementation
+- Examples tested with actual ArbSh shell
+- Arabic-first philosophy consistently represented
+
+**Update Process:**
+- Version increments require documentation review
+- New features require corresponding documentation updates
+- BiDi algorithm changes require design document updates
+- User-facing changes require usage example updates
+
+## 🔍 Quick Reference
+
+**Most Important Documents:**
+1. **[README.md](../README.md)** - Start here for project overview
+2. **[USAGE_EXAMPLES.md](USAGE_EXAMPLES.md)** - Complete working examples
+3. **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - Technical architecture
+4. **[ROADMAP.md](../ROADMAP.md)** - Development phases and progress
+
+**For Immediate Development:**
+- Task management files for current work planning
+- BiDi design documents for algorithm implementation
+- CHANGELOG.md for technical implementation history
+
+This comprehensive documentation index supports ArbSh's mission as an Arabic-first shell with full Unicode BiDi compliance and modern shell capabilities.
