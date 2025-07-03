@@ -466,27 +466,31 @@ namespace ArbSh.Test.I18n
         }
 
         [Fact]
-        public void ProcessRuns_MixedTextLtrFirst_AutoBase_ReturnsSingleLtrRun_Placeholder()
+        public void ProcessRuns_MixedTextLtrFirst_AutoBase_CreatesCorrectRuns()
         {
-            string text = "Hello مرحبا";
+            string text = "Hello مرحبا"; // "Hello" + Arabic "welcome"
             int baseLevel = -1; // Auto-detect
             List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
-            Assert.Single(runs); // Placeholder only creates one run
-            Assert.Equal(0, runs[0].Start);
-            Assert.Equal(text.Length, runs[0].Length);
-            Assert.Equal(0, runs[0].Level); // Auto-detected LTR based on "H"
+
+            // Should auto-detect LTR paragraph level based on first strong character "H"
+            // "Hello " should be LTR level 0, Arabic should be RTL level 1
+            Assert.Equal(2, runs.Count);
+            Assert.Equal(0, runs[0].Level); // LTR run for "Hello "
+            Assert.Equal(1, runs[1].Level); // RTL run for Arabic text
         }
 
         [Fact]
-        public void ProcessRuns_MixedTextRtlFirst_AutoBase_ReturnsSingleRtlRun_Placeholder()
+        public void ProcessRuns_MixedTextRtlFirst_AutoBase_CreatesCorrectRuns()
         {
-            string text = "مرحبا Hello";
+            string text = "مرحبا Hello"; // Arabic "welcome" + "Hello"
             int baseLevel = -1; // Auto-detect
             List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
-            Assert.Single(runs); // Placeholder only creates one run
-            Assert.Equal(0, runs[0].Start);
-            Assert.Equal(text.Length, runs[0].Length);
-            Assert.Equal(1, runs[0].Level); // Auto-detected RTL based on "م"
+
+            // Should auto-detect RTL paragraph level based on first strong character "م"
+            // Arabic should be RTL level 1, "Hello" should be LTR level 2 (next higher even level)
+            Assert.Equal(2, runs.Count);
+            Assert.Equal(1, runs[0].Level); // RTL run for Arabic text
+            Assert.Equal(2, runs[1].Level); // LTR run for "Hello" (I2: odd level + L -> next higher even level)
         }
 
         [Fact]
@@ -531,5 +535,93 @@ namespace ArbSh.Test.I18n
 
         // ... other commented out ProcessRuns tests for LRE/RLE/PDF/Nested etc. ...
         */
+
+        // --- W Rules Tests ---
+
+        [Fact]
+        public void ProcessRuns_W1_NSMAfterArabicLetter_TakesArabicType()
+        {
+            // Test W1: NSM after Arabic letter should take AL type (then converted to R by W3)
+            string text = "\u0645\u064E"; // Arabic Meem + Arabic Fatha (NSM)
+            var runs = BidiAlgorithm.ProcessRuns(text, 0);
+
+            // Both characters should be at the same RTL level
+            Assert.Single(runs);
+            Assert.Equal(1, runs[0].Level); // RTL level
+        }
+
+        [Fact]
+        public void ProcessRuns_W2_EuropeanNumberAfterArabic_BecomesArabicNumber()
+        {
+            // Test W2: EN after AL should become AN
+            string text = "\u06451"; // Arabic Meem + European digit '1'
+            var runs = BidiAlgorithm.ProcessRuns(text, 0);
+
+            // W2 converts EN to AN after AL, both should be RTL
+            // Arabic letter: AL -> R (W3) -> level 1 (I1: even level + R -> odd level)
+            // European number: EN -> AN (W2) -> level 1 (I1: even level + AN -> odd level)
+            // Both characters should be at RTL level 1, so single run
+            Assert.Single(runs);
+            Assert.Equal(1, runs[0].Level); // Both characters at RTL level
+        }
+
+        [Fact]
+        public void ProcessRuns_W3_ArabicLetterBecomesRTL()
+        {
+            // Test W3: AL should become R
+            string text = "\u0645"; // Arabic Meem
+            var runs = BidiAlgorithm.ProcessRuns(text, 0);
+
+            Assert.Single(runs);
+            Assert.Equal(1, runs[0].Level); // RTL level (odd)
+        }
+
+        [Fact]
+        public void ProcessRuns_W4_EuropeanSeparatorBetweenNumbers_BecomesNumber()
+        {
+            // Test W4: ES between two EN should become EN
+            string text = "1+2"; // European numbers with plus sign
+            var runs = BidiAlgorithm.ProcessRuns(text, 0);
+
+            // All should be at LTR level
+            Assert.Single(runs);
+            Assert.Equal(0, runs[0].Level); // LTR level
+        }
+
+        [Fact]
+        public void ProcessRuns_W5_EuropeanTerminatorAdjacentToNumber_BecomesNumber()
+        {
+            // Test W5: ET adjacent to EN should become EN
+            string text = "1$"; // European number with currency symbol (ET)
+            var runs = BidiAlgorithm.ProcessRuns(text, 0);
+
+            // Both should be at LTR level
+            Assert.Single(runs);
+            Assert.Equal(0, runs[0].Level); // LTR level
+        }
+
+        [Fact]
+        public void ProcessRuns_W7_EuropeanNumberAfterLatin_BecomesLatin()
+        {
+            // Test W7: EN after L should become L
+            string text = "a1"; // Latin letter + European digit
+            var runs = BidiAlgorithm.ProcessRuns(text, 0);
+
+            // Both should be at LTR level
+            Assert.Single(runs);
+            Assert.Equal(0, runs[0].Level); // LTR level
+        }
+
+        [Fact]
+        public void ProcessRuns_W6_RemainingSeparators_BecomeNeutral()
+        {
+            // Test W6: Remaining ES/ET/CS should become ON
+            string text = "a+b"; // Latin + ES + Latin (ES not between numbers)
+            var runs = BidiAlgorithm.ProcessRuns(text, 0);
+
+            // All should be at LTR level (L + ON + L)
+            Assert.Single(runs);
+            Assert.Equal(0, runs[0].Level); // LTR level
+        }
     }
 }

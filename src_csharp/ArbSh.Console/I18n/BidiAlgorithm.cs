@@ -132,6 +132,30 @@ namespace ArbSh.Console.I18n
             public override string ToString() => $"Run(Start:{Start}, Len:{Length}, Lvl:{Level})";
         }
 
+        /// <summary>
+        /// Represents an isolating run sequence for UAX #9 W and N rules processing.
+        /// An isolating run sequence is a maximal sequence of level runs such that for all level runs
+        /// except the last one in the sequence, the last character of the run is an isolate initiator
+        /// whose matching PDI is the first character of the next level run in the sequence.
+        /// </summary>
+        public class IsolatingRunSequence
+        {
+            public List<BidiCharacterType> Types { get; set; }
+            public List<int> Positions { get; set; }  // Original text positions
+            public BidiCharacterType Sos { get; set; }  // Start-of-sequence type
+            public BidiCharacterType Eos { get; set; }  // End-of-sequence type
+            public int EmbeddingLevel { get; set; }
+
+            public IsolatingRunSequence()
+            {
+                Types = new List<BidiCharacterType>();
+                Positions = new List<int>();
+            }
+
+            public override string ToString() =>
+                $"IRS(Level:{EmbeddingLevel}, Count:{Types.Count}, Sos:{Sos}, Eos:{Eos})";
+        }
+
 
         /// <summary>
         /// Represents an entry on the directional status stack used in UAX #9 X rules.
@@ -204,7 +228,13 @@ namespace ArbSh.Console.I18n
             // Apply X1-X8 rules for explicit formatting characters
             ApplyXRules(text, types, levels, paragraphLevel);
 
-            // Phase 3-5: TODO - Apply W, N, I rules
+            // Phase 3: Apply W rules for weak type resolution
+            ApplyWRules(text, types, levels);
+
+            // Phase 4: TODO - Apply N rules (neutral types)
+
+            // Phase 5: Apply I rules for final level assignment
+            ApplyIRules(types, levels);
 
             // Convert levels array to runs
             runs = ConvertLevelsToRuns(levels);
@@ -588,6 +618,434 @@ namespace ArbSh.Console.I18n
 
             // No strong character found, default to LTR
             return false;
+        }
+
+        /// <summary>
+        /// Applies UAX #9 W rules (W1-W7) for resolving weak character types.
+        /// This processes each isolating run sequence to resolve weak types like EN, AN, ES, ET, CS, NSM.
+        /// </summary>
+        private static void ApplyWRules(string text, BidiCharacterType[] types, int[] levels)
+        {
+            // Build isolating run sequences from level runs
+            var isolatingRunSequences = BuildIsolatingRunSequences(text, types, levels);
+
+            // Apply W rules to each isolating run sequence
+            foreach (var sequence in isolatingRunSequences)
+            {
+                ApplyWRulesToSequence(sequence);
+
+                // Copy resolved types back to the main types array
+                for (int i = 0; i < sequence.Types.Count; i++)
+                {
+                    int textPosition = sequence.Positions[i];
+                    types[textPosition] = sequence.Types[i];
+                }
+            }
+        }
+
+        /// <summary>
+        /// Builds isolating run sequences from the current embedding levels and character types.
+        /// An isolating run sequence is a maximal sequence of level runs connected by isolate initiators and their matching PDIs.
+        /// </summary>
+        private static List<IsolatingRunSequence> BuildIsolatingRunSequences(string text, BidiCharacterType[] types, int[] levels)
+        {
+            var sequences = new List<IsolatingRunSequence>();
+            var processed = new bool[text.Length];
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (processed[i]) continue;
+
+                // Start a new isolating run sequence
+                var sequence = new IsolatingRunSequence();
+                sequence.EmbeddingLevel = levels[i];
+
+                // Determine sos (start-of-sequence) type
+                sequence.Sos = DetermineSosType(levels, i);
+
+                // Build the sequence by following level runs and isolate connections
+                BuildSequenceFromPosition(text, types, levels, processed, sequence, i);
+
+                // Determine eos (end-of-sequence) type
+                sequence.Eos = DetermineEosType(levels, sequence.Positions.Count > 0 ? sequence.Positions[sequence.Positions.Count - 1] : i);
+
+                sequences.Add(sequence);
+            }
+
+            return sequences;
+        }
+
+        /// <summary>
+        /// Builds an isolating run sequence starting from the given position.
+        /// </summary>
+        private static void BuildSequenceFromPosition(string text, BidiCharacterType[] types, int[] levels,
+            bool[] processed, IsolatingRunSequence sequence, int startPos)
+        {
+            int currentLevel = levels[startPos];
+            int pos = startPos;
+
+            // Add all characters at the same level to the sequence
+            while (pos < text.Length && levels[pos] == currentLevel && !processed[pos])
+            {
+                sequence.Types.Add(types[pos]);
+                sequence.Positions.Add(pos);
+                processed[pos] = true;
+
+                // Check if this character is an isolate initiator with a matching PDI
+                if (IsIsolateInitiator(types[pos]))
+                {
+                    int matchingPDI = FindMatchingPDI(text, types, pos);
+                    if (matchingPDI != -1 && levels[matchingPDI] == currentLevel)
+                    {
+                        // Jump to the matching PDI and continue the sequence
+                        pos = matchingPDI;
+                        continue;
+                    }
+                }
+
+                pos++;
+            }
+        }
+
+        /// <summary>
+        /// Determines the start-of-sequence (sos) type for an isolating run sequence.
+        /// </summary>
+        private static BidiCharacterType DetermineSosType(int[] levels, int startPos)
+        {
+            // Look at the level before this sequence
+            int prevLevel = startPos > 0 ? levels[startPos - 1] : levels[startPos];
+            int currentLevel = levels[startPos];
+
+            // Use the higher of the two levels to determine direction
+            int sosLevel = Math.Max(prevLevel, currentLevel);
+            return (sosLevel % 2 == 0) ? BidiCharacterType.L : BidiCharacterType.R;
+        }
+
+        /// <summary>
+        /// Determines the end-of-sequence (eos) type for an isolating run sequence.
+        /// </summary>
+        private static BidiCharacterType DetermineEosType(int[] levels, int endPos)
+        {
+            // Look at the level after this sequence
+            int nextLevel = endPos < levels.Length - 1 ? levels[endPos + 1] : levels[endPos];
+            int currentLevel = levels[endPos];
+
+            // Use the higher of the two levels to determine direction
+            int eosLevel = Math.Max(nextLevel, currentLevel);
+            return (eosLevel % 2 == 0) ? BidiCharacterType.L : BidiCharacterType.R;
+        }
+
+        /// <summary>
+        /// Finds the matching PDI for an isolate initiator at the given position.
+        /// Returns -1 if no matching PDI is found.
+        /// </summary>
+        private static int FindMatchingPDI(string text, BidiCharacterType[] types, int isolatePos)
+        {
+            int depth = 1;
+
+            for (int i = isolatePos + 1; i < text.Length; i++)
+            {
+                if (IsIsolateInitiator(types[i]))
+                {
+                    depth++;
+                }
+                else if (types[i] == BidiCharacterType.PDI)
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            return -1; // No matching PDI found
+        }
+
+        /// <summary>
+        /// Checks if the given character type is an isolate initiator (LRI, RLI, FSI).
+        /// </summary>
+        private static bool IsIsolateInitiator(BidiCharacterType type)
+        {
+            return type == BidiCharacterType.LRI ||
+                   type == BidiCharacterType.RLI ||
+                   type == BidiCharacterType.FSI;
+        }
+
+        /// <summary>
+        /// Checks if the given character type is an isolate initiator or PDI.
+        /// </summary>
+        private static bool IsIsolateInitiatorOrPDI(BidiCharacterType type)
+        {
+            return IsIsolateInitiator(type) || type == BidiCharacterType.PDI;
+        }
+
+        /// <summary>
+        /// Applies all W rules (W1-W7) to a single isolating run sequence.
+        /// </summary>
+        private static void ApplyWRulesToSequence(IsolatingRunSequence sequence)
+        {
+            ApplyW1_NonspacingMarks(sequence);
+            ApplyW2_EuropeanNumberContext(sequence);
+            ApplyW3_ArabicLetterSimplification(sequence);
+            ApplyW4_NumberSeparators(sequence);
+            ApplyW5_EuropeanTerminators(sequence);
+            ApplyW6_RemainingSeparators(sequence);
+            ApplyW7_EuropeanNumberFinal(sequence);
+        }
+
+        /// <summary>
+        /// W1: Examine each nonspacing mark (NSM) in the isolating run sequence, and change the type of the NSM
+        /// to Other Neutral if the previous character is an isolate initiator or PDI, and to the type of the
+        /// previous character otherwise. If the NSM is at the start of the isolating run sequence, it will get the type of sos.
+        /// </summary>
+        private static void ApplyW1_NonspacingMarks(IsolatingRunSequence sequence)
+        {
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                if (sequence.Types[i] == BidiCharacterType.NSM)
+                {
+                    if (i == 0)
+                    {
+                        // NSM at start of sequence gets sos type
+                        sequence.Types[i] = sequence.Sos;
+                    }
+                    else
+                    {
+                        var prevType = sequence.Types[i - 1];
+                        if (IsIsolateInitiatorOrPDI(prevType))
+                        {
+                            // NSM after isolate initiator or PDI becomes ON
+                            sequence.Types[i] = BidiCharacterType.ON;
+                        }
+                        else
+                        {
+                            // NSM takes the type of the previous character
+                            sequence.Types[i] = prevType;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// W2: Search backward from each instance of a European number until the first strong type (R, L, AL, or sos) is found.
+        /// If an AL is found, change the type of the European number to Arabic number.
+        /// </summary>
+        private static void ApplyW2_EuropeanNumberContext(IsolatingRunSequence sequence)
+        {
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                if (sequence.Types[i] == BidiCharacterType.EN)
+                {
+                    var strongType = SearchBackwardForStrongType(sequence, i);
+                    if (strongType == BidiCharacterType.AL)
+                    {
+                        sequence.Types[i] = BidiCharacterType.AN;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// W3: Change all ALs to R.
+        /// </summary>
+        private static void ApplyW3_ArabicLetterSimplification(IsolatingRunSequence sequence)
+        {
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                if (sequence.Types[i] == BidiCharacterType.AL)
+                {
+                    sequence.Types[i] = BidiCharacterType.R;
+                }
+            }
+        }
+
+        /// <summary>
+        /// W4: A single European separator between two European numbers changes to a European number.
+        /// A single common separator between two numbers of the same type changes to that type.
+        /// </summary>
+        private static void ApplyW4_NumberSeparators(IsolatingRunSequence sequence)
+        {
+            for (int i = 1; i < sequence.Types.Count - 1; i++)
+            {
+                var current = sequence.Types[i];
+                var prev = sequence.Types[i - 1];
+                var next = sequence.Types[i + 1];
+
+                // Single ES between two EN
+                if (current == BidiCharacterType.ES &&
+                    prev == BidiCharacterType.EN &&
+                    next == BidiCharacterType.EN)
+                {
+                    sequence.Types[i] = BidiCharacterType.EN;
+                }
+                // Single CS between two numbers of same type
+                else if (current == BidiCharacterType.CS &&
+                         IsNumberType(prev) && prev == next)
+                {
+                    sequence.Types[i] = prev;
+                }
+            }
+        }
+
+        /// <summary>
+        /// W5: A sequence of European terminators adjacent to European numbers changes to all European numbers.
+        /// </summary>
+        private static void ApplyW5_EuropeanTerminators(IsolatingRunSequence sequence)
+        {
+            // Process ET sequences before EN
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                if (sequence.Types[i] == BidiCharacterType.ET)
+                {
+                    // Find the extent of the ET sequence
+                    int start = i;
+                    while (i < sequence.Types.Count && sequence.Types[i] == BidiCharacterType.ET)
+                    {
+                        i++;
+                    }
+                    int end = i - 1;
+
+                    // Check if this ET sequence is adjacent to EN
+                    bool adjacentToEN = false;
+
+                    // Check before the sequence
+                    if (start > 0 && sequence.Types[start - 1] == BidiCharacterType.EN)
+                    {
+                        adjacentToEN = true;
+                    }
+                    // Check after the sequence
+                    if (end < sequence.Types.Count - 1 && sequence.Types[end + 1] == BidiCharacterType.EN)
+                    {
+                        adjacentToEN = true;
+                    }
+
+                    // If adjacent to EN, change all ET to EN
+                    if (adjacentToEN)
+                    {
+                        for (int j = start; j <= end; j++)
+                        {
+                            sequence.Types[j] = BidiCharacterType.EN;
+                        }
+                    }
+
+                    i = end; // Continue from end of sequence
+                }
+            }
+        }
+
+        /// <summary>
+        /// W6: All remaining separators and terminators (after the application of W4 and W5) change to Other Neutral.
+        /// </summary>
+        private static void ApplyW6_RemainingSeparators(IsolatingRunSequence sequence)
+        {
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                var type = sequence.Types[i];
+                if (type == BidiCharacterType.ES ||
+                    type == BidiCharacterType.ET ||
+                    type == BidiCharacterType.CS)
+                {
+                    sequence.Types[i] = BidiCharacterType.ON;
+                }
+            }
+        }
+
+        /// <summary>
+        /// W7: Search backward from each instance of a European number until the first strong type (R, L, or sos) is found.
+        /// If an L is found, then change the type of the European number to L.
+        /// </summary>
+        private static void ApplyW7_EuropeanNumberFinal(IsolatingRunSequence sequence)
+        {
+            for (int i = 0; i < sequence.Types.Count; i++)
+            {
+                if (sequence.Types[i] == BidiCharacterType.EN)
+                {
+                    var strongType = SearchBackwardForStrongTypeW7(sequence, i);
+                    if (strongType == BidiCharacterType.L)
+                    {
+                        sequence.Types[i] = BidiCharacterType.L;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Searches backward from the given position for the first strong type (R, L, AL, or sos).
+        /// Used by W2 rule.
+        /// </summary>
+        private static BidiCharacterType SearchBackwardForStrongType(IsolatingRunSequence sequence, int startIndex)
+        {
+            for (int i = startIndex - 1; i >= 0; i--)
+            {
+                var type = sequence.Types[i];
+                if (IsStrongType(type))
+                {
+                    return type;
+                }
+            }
+            return sequence.Sos;
+        }
+
+        /// <summary>
+        /// Searches backward from the given position for the first strong type (R, L, or sos).
+        /// Used by W7 rule (note: AL is not included as it was converted to R in W3).
+        /// </summary>
+        private static BidiCharacterType SearchBackwardForStrongTypeW7(IsolatingRunSequence sequence, int startIndex)
+        {
+            for (int i = startIndex - 1; i >= 0; i--)
+            {
+                var type = sequence.Types[i];
+                if (type == BidiCharacterType.L || type == BidiCharacterType.R)
+                {
+                    return type;
+                }
+            }
+            return sequence.Sos;
+        }
+
+        /// <summary>
+        /// Checks if the given character type is a strong type (L, R, AL).
+        /// </summary>
+        private static bool IsStrongType(BidiCharacterType type)
+        {
+            return type == BidiCharacterType.L ||
+                   type == BidiCharacterType.R ||
+                   type == BidiCharacterType.AL;
+        }
+
+        /// <summary>
+        /// Checks if the given character type is a number type (EN, AN).
+        /// </summary>
+        private static bool IsNumberType(BidiCharacterType type)
+        {
+            return type == BidiCharacterType.EN || type == BidiCharacterType.AN;
+        }
+
+        /// <summary>
+        /// Applies UAX #9 I rules (I1-I2) for final embedding level assignment.
+        /// I1: For all characters with an even (LTR) embedding level, if the character is R or AN, change the level to the next higher odd level.
+        /// I2: For all characters with an odd (RTL) embedding level, if the character is L or EN, change the level to the next higher even level.
+        /// </summary>
+        private static void ApplyIRules(BidiCharacterType[] types, int[] levels)
+        {
+            for (int i = 0; i < types.Length; i++)
+            {
+                var type = types[i];
+                var level = levels[i];
+
+                // I1: Even level + (R or AN) character -> next higher odd level
+                if (level % 2 == 0 && (type == BidiCharacterType.R || type == BidiCharacterType.AN))
+                {
+                    levels[i] = level + 1;
+                }
+                // I2: Odd level + (L or EN) character -> next higher even level
+                else if (level % 2 == 1 && (type == BidiCharacterType.L || type == BidiCharacterType.EN))
+                {
+                    levels[i] = level + 1;
+                }
+            }
         }
 
         /// <summary>
