@@ -1,8 +1,21 @@
-# ArbSh (C# Prototype) - Basic Usage Examples
+# ArbSh - Usage Examples and Feature Guide
 
-This document provides examples for the currently implemented commands in the ArbSh C# prototype.
+This document provides comprehensive examples for all implemented features in ArbSh - the Arabic-first shell.
 
-**Note:** The shell is in early development (v0.8.0). Features like advanced parsing, robust error handling, and Arabic language support are still under development. Pipeline execution is concurrent. Parsing for type literals and sub-expressions is implemented, but execution logic for these is pending. Input redirection and stream merging are now parsed and executed.
+**Current Version:** 0.7.7.11
+**Status:** Phase 4 Complete - Full BiDi Algorithm UAX #9 Compliance
+**Next Phase:** Phase 5 - Console I/O with BiDi Rendering
+
+## ✅ **Fully Implemented Features**
+- Complete BiDi Algorithm (UAX #9) with all rule sets (P, X, W, N, I, L)
+- Pipeline execution with task-based concurrency
+- Parameter binding with reflection and type conversion
+- Subexpression execution `$(...)` - **WORKING**
+- Type literal utilization `[TypeName]` - **WORKING**
+- Variable expansion `$variableName`
+- Input/output redirection and stream merging
+- Arabic command names and aliases
+- Command discovery and caching
 
 ## Running ArbSh
 
@@ -17,111 +30,100 @@ This document provides examples for the currently implemented commands in the Ar
 Lists all commands discovered by the shell.
 
 **Syntax:**
-
 ```powershell
 Get-Command
 ```
 
 **Example:**
-
 ```powershell
 ArbSh> Get-Command
-DEBUG (Executor): Executing 1 statement(s)...
-DEBUG (Executor): --- Executing Statement (1 command(s)) ---
-DEBUG (Executor Pipeline): Preparing stage 0: 'Get-Command'...
-DEBUG (Executor): Waiting for 1 task(s) in the pipeline to complete...
-DEBUG (Executor Task): Starting task for 'Get-Command'...
-DEBUG (Binder): Binding parameters for GetCommandCmdlet...
-DEBUG (Executor Task): 'Get-Command' has no pipeline input, calling ProcessRecord once.
-DEBUG (Executor Task): 'Get-Command' finished processing.
-DEBUG (Executor Task): Stage 'Get-Command' completed adding output.
-DEBUG (Executor): All pipeline tasks for the statement completed.
-DEBUG (Executor Pipeline): Final pipeline output to Console:
 Get-Command
 Get-Help
+احصل-مساعدة
+Test-Array-Binding
+Test-Type-Literal
 Write-Output
-DEBUG (Executor): --- Statement execution finished ---
-DEBUG (Executor): All statements executed.
-
 ```
-*(Note: The output objects are now `ArbSh.Console.Models.CommandInfo`, although their default string representation is the command name.)*
 
-### 2. Get-Help
+**Features:**
+- Automatic cmdlet discovery via reflection
+- Caching for performance
+- Includes Arabic aliases in output
 
-Displays help information for commands.
+### 2. Get-Help / احصل-مساعدة
+
+Displays help information for commands. Available in both English and Arabic.
 
 **Syntax:**
-
 ```powershell
 Get-Help [[-CommandName] <string>] [-Full]
+احصل-مساعدة [[-الاسم] <string>] [-كامل]
 ```
 
 **Parameters:**
-
-*   `-CommandName <string>` (Positional 0): The name of the command to get help for. If omitted, general help is shown.
-*   `-Full`: Displays detailed parameter information, including pipeline input acceptance.
+- `-CommandName <string>` / `-الاسم <string>` (Position 0): Command name to get help for
+- `-Full` / `-كامل`: Show detailed parameter information
 
 **Examples:**
 
-*   **General Help:**
-    ```powershell
-    ArbSh> Get-Help
-    # ... (Executor debug output similar to Get-Command example) ...
-    Placeholder general help message. Try 'Get-Help <Command-Name>'.
-    Example: Get-Help Get-Command
-    # ... (Executor debug output) ...
-    ```
-*   **Help for a specific command:**
-    ```powershell
-    ArbSh> Get-Help Get-Command
-    ArbSh> Get-Help Get-Command
-    # ... (Executor debug output) ...
-    DEBUG (Binder): Bound positional parameter at 0 ('Get-Command') to property 'CommandName' (Type: String)
+**General Help:**
+```powershell
+ArbSh> Get-Help
+Placeholder general help message. Try 'Get-Help <Command-Name>'.
+Example: Get-Help Get-Command
+```
 
-    NAME
-        Get-Command
+**Help for Specific Command:**
+```powershell
+ArbSh> Get-Help Get-Command
 
-    SYNOPSIS
-        (Synopsis for Get-Command not available)
+NAME
+    Get-Command
 
-    SYNTAX
-        Get-Command
+SYNOPSIS
+    (Synopsis for Get-Command not available)
 
-    DEBUG (Executor): Pipeline execution finished.
-    ```
-*   **Full help for a specific command:**
-    ```powershell
-    ArbSh> Get-Help -CommandName Write-Output -Full
-    ArbSh> Get-Help -CommandName Write-Output -Full
-    # ... (Executor debug output) ...
-    DEBUG (Binder): Bound named parameter '-CommandName' to value 'Write-Output' (Type: String)
-    DEBUG (Binder): Bound switch parameter '-Full' to true (no value provided).
+SYNTAX
+    Get-Command
+```
 
-    NAME
-        Write-Output
+**Arabic Command Usage:**
+```powershell
+ArbSh> احصل-مساعدة -الاسم Get-Command
 
-    SYNOPSIS
-        (Synopsis for Write-Output not available)
+NAME
+    Get-Command
 
-    SYNTAX
-        Write-Output [-InputObject <Object>]
+SYNOPSIS
+    (Synopsis for Get-Command not available)
 
-    PARAMETERS
-        -InputObject <Object>
-            The object(s) to write to the output stream.
-            Required?                    False
-            Position?                    0
-            Accepts pipeline input?      True (By Value)
+SYNTAX
+    Get-Command
+```
 
-    # ... (Executor debug output) ...
-    ```
+**Full Help with Parameters:**
+```powershell
+ArbSh> Get-Help Write-Output -Full
+
+NAME
+    Write-Output
+
+SYNTAX
+    Write-Output [-InputObject <Object>]
+
+PARAMETERS
+    -InputObject <Object>
+        The object(s) to write to the output stream.
+        Required?                    False
+        Position?                    0
+        Accepts pipeline input?      True (By Value)
+```
 
 ### 3. Write-Output
 
-Writes objects or strings to the output (console or redirected file). It accepts pipeline input or direct arguments via its `-InputObject` parameter.
+Writes objects or strings to the output stream. Accepts pipeline input and direct arguments.
 
 **Syntax:**
-
 ```powershell
 Write-Output [-InputObject <Object>]
 <PipelineInput> | Write-Output
@@ -129,35 +131,33 @@ Write-Output [-InputObject <Object>]
 
 **Examples:**
 
-*   **Writing arguments directly (positional binding to -InputObject):**
-    ```powershell
-    ArbSh> Write-Output "Hello ArbSh User!"
-    # ... (Executor debug output) ...
-    DEBUG (Binder): Bound positional parameter at 0 ('Hello ArbSh User!') to property 'InputObject' (Type: Object)
-    # ...
-    Hello ArbSh User!
-    # ...
-    ```
-*   **Using in a pipeline (Get-Command output objects piped to Write-Output):**
-    ```powershell
-    ArbSh> Get-Command | Write-Output
-    # ... (Executor debug output showing concurrent tasks) ...
-    DEBUG (Executor Task): 'Write-Output' consuming input...
-    DEBUG (Executor Task): 'Write-Output' finished consuming input.
-    # ...
-    Get-Command
-    Get-Help
-    Write-Output
-    # ...
-    ```
-*   **Binding multiple positional arguments to an array parameter (Example - if a cmdlet had `[Parameter(Position=0)] public string[] Paths { get; set; }`):**
-    ```powershell
-    ArbSh> Some-Cmdlet file1.txt file2.log path/to/dir
-    # ... (Executor debug output) ...
-    DEBUG (Binder): Bound 3 remaining positional argument(s) starting at 0 to array parameter 'Paths' (Type: String[])
-    # ...
-    ```
-    *(Note: This array binding currently works for positional parameters.)*
+**Direct Output:**
+```powershell
+ArbSh> Write-Output "Hello ArbSh User!"
+Hello ArbSh User!
+```
+
+**Pipeline Usage:**
+```powershell
+ArbSh> Get-Command | Write-Output
+Get-Command
+Get-Help
+احصل-مساعدة
+Test-Array-Binding
+Test-Type-Literal
+Write-Output
+```
+
+**Multiple Arguments:**
+```powershell
+ArbSh> Write-Output "First" "Second" "Third"
+First
+```
+
+**Features:**
+- Accepts pipeline input by value
+- Positional parameter binding
+- Object-to-string conversion
 
 ## Variable Expansion (`$variableName`)
 
