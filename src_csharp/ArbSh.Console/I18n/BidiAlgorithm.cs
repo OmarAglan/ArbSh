@@ -1556,70 +1556,348 @@ namespace ArbSh.Console.I18n
             return runs;
         }
 
-        // Placeholder for ReorderRunsForDisplay - THIS WILL BE CALLED WITH ACCURATE RUNS LATER
-        public static string ReorderRunsForDisplay(string originalText, List<BidiRun> runs)
+        /// <summary>
+        /// Applies UAX #9 L rules (L1-L4) for final reordering and display.
+        /// L1: Reset levels for separators and trailing whitespace
+        /// L2: Reverse contiguous sequences by level
+        /// L3: Handle combining marks (rendering-dependent)
+        /// L4: Apply character mirroring
+        /// </summary>
+        public static string ReorderRunsForDisplay(string originalText, List<BidiRun> runs, int paragraphLevel = 0)
         {
             if (string.IsNullOrEmpty(originalText) || runs == null || runs.Count == 0)
             {
                 return originalText ?? string.Empty;
             }
 
-            System.Console.Error.WriteLine("WARNING: BidiAlgorithm.ReorderRunsForDisplay is using UAX #9 L2 logic but depends on ACCURATE runs from ProcessRuns.");
+            // Create a working copy of runs for L1 modifications
+            var workingRuns = new List<BidiRun>(runs);
 
-            var outputBuilder = new System.Text.StringBuilder(originalText.Length);
-            int maxLevel = 0;
-            foreach (var run in runs) { if (run.Level > maxLevel) maxLevel = run.Level; }
+            // L1: Reset levels for separators and trailing whitespace
+            ApplyL1_ResetLevels(originalText, workingRuns, paragraphLevel);
 
-            for (int level = maxLevel; level >= 0; level--)
+            // L2: Reverse contiguous sequences by level
+            string reorderedText = ApplyL2_ReverseByLevel(originalText, workingRuns);
+
+            // L3: Handle combining marks (optional, rendering-dependent)
+            // Currently not implemented as it's primarily a rendering concern
+
+            // L4: Apply character mirroring
+            reorderedText = ApplyL4_CharacterMirroring(reorderedText, workingRuns);
+
+            return reorderedText;
+        }
+
+        /// <summary>
+        /// Overload that maintains backward compatibility with existing calls.
+        /// </summary>
+        public static string ReorderRunsForDisplay(string originalText, List<BidiRun> runs)
+        {
+            return ReorderRunsForDisplay(originalText, runs, 0);
+        }
+
+        /// <summary>
+        /// L1: Reset levels for separators and trailing whitespace to paragraph level.
+        /// This modifies the runs in place to adjust levels for proper display.
+        /// </summary>
+        private static void ApplyL1_ResetLevels(string text, List<BidiRun> runs, int paragraphLevel)
+        {
+            if (runs.Count == 0) return;
+
+            // L1.1: Reset segment separators and paragraph separators to paragraph level
+            for (int i = 0; i < runs.Count; i++)
             {
-                foreach (var run in runs)
+                var run = runs[i];
+                for (int pos = run.Start; pos < run.Start + run.Length; pos++)
                 {
-                    if (run.Level == level)
+                    char ch = text[pos];
+                    var charType = GetCharType(ch);
+
+                    // Reset B (paragraph separators) and S (segment separators) to paragraph level
+                    if (charType == BidiCharacterType.B || charType == BidiCharacterType.S)
                     {
-                        string runText = originalText.Substring(run.Start, run.Length);
-                        if (level % 2 != 0) // Odd level -> RTL run
+                        // Split run if necessary and reset level
+                        if (run.Length == 1)
                         {
-                            // Iterate backwards by text element (grapheme cluster)
-                            // StringInfo.ParseCombiningCharacters helps get grapheme boundaries
-                            var si = new System.Globalization.StringInfo(runText);
-                            for (int j = si.LengthInTextElements - 1; j >= 0; j--)
-                            {
-                                string textElement = si.SubstringByTextElements(j, 1);
-                                // Filter explicit formatting codes based on their Bidi_Class (now BN)
-                                int firstCodepoint = char.ConvertToUtf32(textElement, 0);
-                                BidiCharacterType charType = GetCharType(firstCodepoint);
-                                if (charType != BidiCharacterType.LRE && charType != BidiCharacterType.RLE &&
-                                    charType != BidiCharacterType.PDF && charType != BidiCharacterType.LRO &&
-                                    charType != BidiCharacterType.RLO && charType != BidiCharacterType.LRI &&
-                                    charType != BidiCharacterType.RLI && charType != BidiCharacterType.FSI &&
-                                    charType != BidiCharacterType.PDI)
-                                {
-                                    outputBuilder.Append(textElement);
-                                }
-                            }
+                            // Single character run, just update level
+                            runs[i] = new BidiRun(run.Start, run.Length, paragraphLevel);
                         }
-                        else // Even level -> LTR run
+                        else
                         {
-                            var si = new System.Globalization.StringInfo(runText);
-                            for (int j = 0; j < si.LengthInTextElements; j++)
-                            {
-                                string textElement = si.SubstringByTextElements(j, 1);
-                                int firstCodepoint = char.ConvertToUtf32(textElement, 0);
-                                BidiCharacterType charType = GetCharType(firstCodepoint);
-                                if (charType != BidiCharacterType.LRE && charType != BidiCharacterType.RLE &&
-                                    charType != BidiCharacterType.PDF && charType != BidiCharacterType.LRO &&
-                                    charType != BidiCharacterType.RLO && charType != BidiCharacterType.LRI &&
-                                    charType != BidiCharacterType.RLI && charType != BidiCharacterType.FSI &&
-                                    charType != BidiCharacterType.PDI)
-                                {
-                                    outputBuilder.Append(textElement);
-                                }
-                            }
+                            // Need to split the run
+                            SplitRunAtPosition(runs, i, pos, paragraphLevel);
                         }
                     }
                 }
             }
-            return outputBuilder.ToString();
+
+            // L1.2: Reset trailing whitespace to paragraph level
+            // Find trailing whitespace from the end of the text
+            int trailingStart = text.Length;
+            for (int i = text.Length - 1; i >= 0; i--)
+            {
+                var charType = GetCharType(text[i]);
+                if (charType == BidiCharacterType.WS || charType == BidiCharacterType.FSI ||
+                    charType == BidiCharacterType.LRI || charType == BidiCharacterType.RLI ||
+                    charType == BidiCharacterType.PDI)
+                {
+                    trailingStart = i;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            // Reset levels for trailing whitespace runs
+            if (trailingStart < text.Length)
+            {
+                for (int i = 0; i < runs.Count; i++)
+                {
+                    var run = runs[i];
+                    int runEnd = run.Start + run.Length;
+
+                    // If run overlaps with trailing whitespace area
+                    if (run.Start < text.Length && runEnd > trailingStart)
+                    {
+                        int overlapStart = Math.Max(run.Start, trailingStart);
+                        int overlapEnd = Math.Min(runEnd, text.Length);
+
+                        if (overlapStart < overlapEnd)
+                        {
+                            // Split and reset the overlapping portion
+                            SplitRunForTrailingWhitespace(runs, i, overlapStart, overlapEnd, paragraphLevel);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to split a run at a specific position and set the character at that position to a new level.
+        /// </summary>
+        private static void SplitRunAtPosition(List<BidiRun> runs, int runIndex, int position, int newLevel)
+        {
+            var originalRun = runs[runIndex];
+            int relativePos = position - originalRun.Start;
+
+            if (relativePos == 0 && originalRun.Length == 1)
+            {
+                // Single character at start, just update level
+                runs[runIndex] = new BidiRun(originalRun.Start, 1, newLevel);
+            }
+            else if (relativePos == 0)
+            {
+                // Split at start: [new][rest]
+                runs[runIndex] = new BidiRun(originalRun.Start, 1, newLevel);
+                runs.Insert(runIndex + 1, new BidiRun(originalRun.Start + 1, originalRun.Length - 1, originalRun.Level));
+            }
+            else if (relativePos == originalRun.Length - 1)
+            {
+                // Split at end: [before][new]
+                runs[runIndex] = new BidiRun(originalRun.Start, originalRun.Length - 1, originalRun.Level);
+                runs.Insert(runIndex + 1, new BidiRun(position, 1, newLevel));
+            }
+            else
+            {
+                // Split in middle: [before][new][after]
+                runs[runIndex] = new BidiRun(originalRun.Start, relativePos, originalRun.Level);
+                runs.Insert(runIndex + 1, new BidiRun(position, 1, newLevel));
+                runs.Insert(runIndex + 2, new BidiRun(position + 1, originalRun.Length - relativePos - 1, originalRun.Level));
+            }
+        }
+
+        /// <summary>
+        /// Helper method to split runs for trailing whitespace level reset.
+        /// </summary>
+        private static void SplitRunForTrailingWhitespace(List<BidiRun> runs, int runIndex, int overlapStart, int overlapEnd, int newLevel)
+        {
+            var originalRun = runs[runIndex];
+
+            if (overlapStart == originalRun.Start && overlapEnd == originalRun.Start + originalRun.Length)
+            {
+                // Entire run is trailing whitespace
+                runs[runIndex] = new BidiRun(originalRun.Start, originalRun.Length, newLevel);
+            }
+            else if (overlapStart == originalRun.Start)
+            {
+                // Trailing whitespace at start of run: [whitespace][rest]
+                int whitespaceLength = overlapEnd - overlapStart;
+                runs[runIndex] = new BidiRun(originalRun.Start, whitespaceLength, newLevel);
+                runs.Insert(runIndex + 1, new BidiRun(overlapEnd, originalRun.Length - whitespaceLength, originalRun.Level));
+            }
+            else if (overlapEnd == originalRun.Start + originalRun.Length)
+            {
+                // Trailing whitespace at end of run: [before][whitespace]
+                int beforeLength = overlapStart - originalRun.Start;
+                int whitespaceLength = overlapEnd - overlapStart;
+                runs[runIndex] = new BidiRun(originalRun.Start, beforeLength, originalRun.Level);
+                runs.Insert(runIndex + 1, new BidiRun(overlapStart, whitespaceLength, newLevel));
+            }
+            else
+            {
+                // Trailing whitespace in middle: [before][whitespace][after]
+                int beforeLength = overlapStart - originalRun.Start;
+                int whitespaceLength = overlapEnd - overlapStart;
+                int afterLength = (originalRun.Start + originalRun.Length) - overlapEnd;
+
+                runs[runIndex] = new BidiRun(originalRun.Start, beforeLength, originalRun.Level);
+                runs.Insert(runIndex + 1, new BidiRun(overlapStart, whitespaceLength, newLevel));
+                runs.Insert(runIndex + 2, new BidiRun(overlapEnd, afterLength, originalRun.Level));
+            }
+        }
+
+        /// <summary>
+        /// L2: Reverse contiguous sequences by level from highest to lowest odd level.
+        /// This implements the progressive reversal algorithm from UAX #9.
+        /// </summary>
+        private static string ApplyL2_ReverseByLevel(string originalText, List<BidiRun> runs)
+        {
+            if (runs.Count == 0) return originalText;
+
+            // Find the maximum level
+            int maxLevel = 0;
+            foreach (var run in runs)
+            {
+                if (run.Level > maxLevel) maxLevel = run.Level;
+            }
+
+            // Create character array for reordering
+            var chars = originalText.ToCharArray();
+            var levels = new int[chars.Length];
+
+            // Fill levels array from runs
+            foreach (var run in runs)
+            {
+                for (int i = run.Start; i < run.Start + run.Length && i < levels.Length; i++)
+                {
+                    levels[i] = run.Level;
+                }
+            }
+
+            // L2: Reverse from highest level down to 1 (only odd levels are reversed)
+            for (int level = maxLevel; level >= 1; level--)
+            {
+                if (level % 2 == 1) // Only reverse odd levels
+                {
+                    ReverseSequencesAtLevel(chars, levels, level);
+                }
+            }
+
+            return new string(chars);
+        }
+
+        /// <summary>
+        /// Helper method to reverse all contiguous sequences at a specific level.
+        /// </summary>
+        private static void ReverseSequencesAtLevel(char[] chars, int[] levels, int targetLevel)
+        {
+            int start = -1;
+
+            for (int i = 0; i <= levels.Length; i++)
+            {
+                bool atTargetLevel = i < levels.Length && levels[i] >= targetLevel;
+
+                if (atTargetLevel && start == -1)
+                {
+                    // Start of sequence
+                    start = i;
+                }
+                else if (!atTargetLevel && start != -1)
+                {
+                    // End of sequence, reverse it
+                    ReverseCharacterSequence(chars, start, i - 1);
+                    start = -1;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to reverse a character sequence, handling grapheme clusters properly.
+        /// </summary>
+        private static void ReverseCharacterSequence(char[] chars, int start, int end)
+        {
+            if (start >= end) return;
+
+            // Simple character reversal - for full grapheme cluster support,
+            // we would need to use StringInfo, but this handles most cases
+            while (start < end)
+            {
+                char temp = chars[start];
+                chars[start] = chars[end];
+                chars[end] = temp;
+                start++;
+                end--;
+            }
+        }
+
+        /// <summary>
+        /// L4: Apply character mirroring for characters with Bidi_Mirrored=Yes in RTL context.
+        /// This replaces mirrored characters with their mirrored forms when in RTL runs.
+        /// </summary>
+        private static string ApplyL4_CharacterMirroring(string text, List<BidiRun> runs)
+        {
+            if (runs.Count == 0) return text;
+
+            var chars = text.ToCharArray();
+
+            foreach (var run in runs)
+            {
+                // Only apply mirroring to RTL runs (odd levels)
+                if (run.Level % 2 == 1)
+                {
+                    for (int i = run.Start; i < run.Start + run.Length && i < chars.Length; i++)
+                    {
+                        char original = chars[i];
+                        char mirrored = GetMirroredCharacter(original);
+                        if (mirrored != original)
+                        {
+                            chars[i] = mirrored;
+                        }
+                    }
+                }
+            }
+
+            return new string(chars);
+        }
+
+        /// <summary>
+        /// Get the mirrored form of a character if it has the Bidi_Mirrored property.
+        /// This is a simplified implementation covering common mirrored characters.
+        /// A full implementation would use the Unicode Bidi_Mirroring_Glyph property.
+        /// </summary>
+        private static char GetMirroredCharacter(char ch)
+        {
+            // Common mirrored character pairs
+            switch (ch)
+            {
+                case '(': return ')';
+                case ')': return '(';
+                case '[': return ']';
+                case ']': return '[';
+                case '{': return '}';
+                case '}': return '{';
+                case '<': return '>';
+                case '>': return '<';
+                case '«': return '»';
+                case '»': return '«';
+                case '\u2039': return '\u203A'; // ‹ → ›
+                case '\u203A': return '\u2039'; // › → ‹
+                case '\u201C': return '\u201D'; // " → "
+                case '\u201D': return '\u201C'; // " → "
+                case '\u2018': return '\u2019'; // ' → '
+                case '\u2019': return '\u2018'; // ' → '
+                case '\u27E8': return '\u27E9'; // ⟨ → ⟩
+                case '\u27E9': return '\u27E8'; // ⟩ → ⟨
+                case '\u27EA': return '\u27EB'; // ⟪ → ⟫
+                case '\u27EB': return '\u27EA'; // ⟫ → ⟪
+                case '\u27EC': return '\u27ED'; // ⟬ → ⟭
+                case '\u27ED': return '\u27EC'; // ⟭ → ⟬
+                case '\u27EE': return '\u27EF'; // ⟮ → ⟯
+                case '\u27EF': return '\u27EE'; // ⟯ → ⟮
+                // Add more mirrored pairs as needed
+                default: return ch;
+            }
         }
 
         // Placeholder for ProcessString

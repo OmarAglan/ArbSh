@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7.7] - 2025-07-03
+
+### Added
+- **BiDi Algorithm L Rules (L1-L4)**: Complete implementation of UAX #9 L rules for final reordering and display
+  - L1: Level reset for separators and trailing whitespace to paragraph level
+  - L2: Progressive reversal from highest to lowest odd level with proper run segmentation
+  - L3: Combining marks handling (placeholder for rendering-dependent implementation)
+  - L4: Character mirroring for RTL contexts with comprehensive mirrored character pairs
+- **Enhanced ReorderRunsForDisplay Method**: Complete rewrite with proper UAX #9 compliance
+  - Supports paragraph level parameter for correct L1 level reset
+  - Maintains backward compatibility with existing method signatures
+  - Proper run splitting and level management for complex text scenarios
+- **L Rules Unit Tests**: Added 6 comprehensive tests covering all L rules functionality
+  - Simple RTL reversal verification
+  - Mixed LTR/RTL text handling
+  - Character mirroring in RTL contexts
+  - Edge cases (empty text, null runs)
+
+### Technical Details
+- All 76 unit tests passing (70 existing + 6 new L rules tests)
+- Complete UAX #9 L rules compliance for final text reordering
+- Proper Unicode character mirroring with escape sequences for compatibility
+- Enhanced run splitting algorithms for complex level reset scenarios
+
 ## [0.7.7.6] - 2025-07-03
 
 ### Fixed

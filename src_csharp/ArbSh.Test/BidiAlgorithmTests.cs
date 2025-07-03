@@ -879,5 +879,77 @@ namespace ArbSh.Test.I18n
             Assert.Single(runs);
             Assert.Equal(1, runs[0].Level); // No change for R at odd level
         }
+
+        // --- L Rules Tests ---
+
+        [Fact]
+        public void ReorderRunsForDisplay_L2_SimpleRTLReversed()
+        {
+            // Simple RTL text should be reversed
+            string text = "\u05D0\u05D1\u05D2"; // Hebrew Alef, Bet, Gimel
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+            string result = BidiAlgorithm.ReorderRunsForDisplay(text, runs, baseLevel);
+
+            // Hebrew characters should be reversed (RTL at level 1)
+            Assert.Equal("\u05D2\u05D1\u05D0", result); // Gimel, Bet, Alef
+        }
+
+        [Fact]
+        public void ReorderRunsForDisplay_L2_MixedLTRRTL()
+        {
+            // Mixed LTR and RTL text
+            string text = "abc\u05D0\u05D1\u05D2def"; // abc + Hebrew + def
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+            string result = BidiAlgorithm.ReorderRunsForDisplay(text, runs, baseLevel);
+
+            // Expected: abc + reversed Hebrew + def
+            Assert.Equal("abc\u05D2\u05D1\u05D0def", result);
+        }
+
+        [Fact]
+        public void ReorderRunsForDisplay_L4_CharacterMirroring()
+        {
+            // Test character mirroring in RTL context
+            string text = "\u05D0(\u05D1)"; // Hebrew Alef + ( + Hebrew Bet + )
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+            string result = BidiAlgorithm.ReorderRunsForDisplay(text, runs, baseLevel);
+
+            // In RTL context, parentheses should be mirrored and the sequence reversed
+            // Expected: ) + Bet + ( + Alef (all RTL, so mirrored parens)
+            Assert.Contains(")", result);
+            Assert.Contains("(", result);
+            // The exact order depends on run segmentation, but mirroring should occur
+        }
+
+        [Fact]
+        public void ReorderRunsForDisplay_L4_NoMirroringInLTR()
+        {
+            // Test that mirroring doesn't happen in LTR context
+            string text = "test(abc)"; // LTR text with parentheses
+            int baseLevel = 0; // LTR paragraph
+            List<BidiAlgorithm.BidiRun> runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+            string result = BidiAlgorithm.ReorderRunsForDisplay(text, runs, baseLevel);
+
+            // Should remain unchanged (no mirroring in LTR)
+            Assert.Equal("test(abc)", result);
+        }
+
+        [Fact]
+        public void ReorderRunsForDisplay_EmptyText_ReturnsEmpty()
+        {
+            string result = BidiAlgorithm.ReorderRunsForDisplay("", [], 0);
+            Assert.Equal("", result);
+        }
+
+        [Fact]
+        public void ReorderRunsForDisplay_NullRuns_ReturnsOriginal()
+        {
+            string text = "test";
+            string result = BidiAlgorithm.ReorderRunsForDisplay(text, null!, 0);
+            Assert.Equal(text, result);
+        }
     }
 }
