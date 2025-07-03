@@ -32,12 +32,10 @@ namespace ArbSh.Console
             {
                 while (true)
                 {
-                    // TODO: Implement proper prompt handling (e.g., showing current path)
-                    // TODO: Integrate BiDi logic for prompt rendering if needed
-                    // Only write prompt if input is not redirected (interactive mode)
+                    // Display RTL-aware prompt for interactive mode
                     if (!System.Console.IsInputRedirected)
                     {
-                        System.Console.Write("ArbSh> ");
+                        ConsoleRTLDisplay.DisplayRTLPrompt("ArbSh> ", forceRTL: true);
                     }
 
                     // Use Arabic-aware console input instead of StreamReader
@@ -73,8 +71,7 @@ namespace ArbSh.Console
                     {
                         // --- Placeholder for Parsing and Execution ---
                         string debugMessage = $"DEBUG: Received command: {inputLine}";
-                        string processedDebugMessage = BiDiTextProcessor.ProcessOutputForDisplay(debugMessage);
-                        System.Console.WriteLine(processedDebugMessage);
+                        ConsoleRTLDisplay.DisplayRTLText(debugMessage, rightAlign: false);
 
                         // 1. Parse the inputLine into commands/cmdlets and arguments
                         //    - TODO: Implement real parsing in Parser.cs
