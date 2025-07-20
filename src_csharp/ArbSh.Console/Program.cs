@@ -8,6 +8,13 @@ namespace ArbSh.Console
     {
         static void Main(string[] args)
         {
+            // Check console environment and try to launch in better terminal if needed
+            if (ConsoleEnvironment.TryLaunchInBetterTerminal(args))
+            {
+                // Successfully relaunched in better terminal, exit this instance
+                return;
+            }
+
             // Ensure console input is read as UTF-8 to handle Arabic characters correctly
             System.Console.InputEncoding = System.Text.Encoding.UTF8;
             // Optionally set output encoding too, though UTF-8 is often the default
@@ -16,15 +23,27 @@ namespace ArbSh.Console
             System.Console.WriteLine("مرحباً بكم في أربش (النموذج الأولي)!");
             System.Console.WriteLine("اكتب 'exit' للخروج.");
 
-            // Initialize Arabic-aware console input system
-            ArabicConsoleInput.Initialize(ArabicConsoleInput.InputStrategy.Auto);
-
-            // Display console configuration for debugging
+            // Display console environment information
             if (args.Length > 0 && args[0] == "--debug-console")
             {
+                ConsoleEnvironment.DisplayConsoleInfo();
                 System.Console.WriteLine(ArabicConsoleInput.GetInputInfo());
                 System.Console.WriteLine();
             }
+            else
+            {
+                // Show brief console environment warning if needed
+                var consoleInfo = ConsoleEnvironment.DetectConsoleEnvironment();
+                if (consoleInfo.ArabicSupport == ConsoleEnvironment.ArabicSupportLevel.Poor)
+                {
+                    System.Console.WriteLine("⚠️  تحذير: المحطة الحالية لا تدعم النص العربي بشكل جيد");
+                    System.Console.WriteLine("💡 نصيحة: استخدم Windows Terminal للحصول على أفضل عرض للنص العربي");
+                    System.Console.WriteLine();
+                }
+            }
+
+            // Initialize Arabic-aware console input system
+            ArabicConsoleInput.Initialize(ArabicConsoleInput.InputStrategy.Auto);
 
             // TODO: Initialize core components (Parser, Executor, State)
 
@@ -32,11 +51,11 @@ namespace ArbSh.Console
             {
                 while (true)
                 {
-                    // Display Arabic RTL prompt for interactive mode
+                    // Display RTL-friendly prompt for interactive mode
                     if (!System.Console.IsInputRedirected)
                     {
-                        // Use Arabic prompt "أربش>" for proper RTL display
-                        ConsoleRTLDisplay.DisplayRTLPrompt("أربش> ");
+                        // Create RTL-friendly prompt layout
+                        DisplayRTLPrompt();
                     }
 
                     // Use Arabic-aware console input instead of StreamReader
@@ -125,6 +144,37 @@ namespace ArbSh.Console
                 {
                     System.Console.WriteLine("Exiting ArbSh.");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Displays a proper RTL prompt with right-side positioning and RTL text flow.
+        /// </summary>
+        private static void DisplayRTLPrompt()
+        {
+            try
+            {
+                // Get console width for positioning
+                int consoleWidth = System.Console.WindowWidth;
+                string promptText = "< أربش"; // Reversed prompt for RTL
+
+                // Calculate right-side positioning
+                int promptLength = promptText.Length;
+                int padding = Math.Max(0, consoleWidth - promptLength - 1);
+
+                // Position prompt on the right side
+                string rightAlignedPrompt = new string(' ', padding) + promptText;
+                System.Console.Write(rightAlignedPrompt);
+
+                // Now we need to position the cursor for RTL input
+                // Move cursor to where Arabic text should start (right side)
+                System.Console.SetCursorPosition(consoleWidth - 1, System.Console.CursorTop);
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"DEBUG: RTL prompt failed: {ex.Message}");
+                // Fallback to simple prompt
+                System.Console.Write("أربش> ");
             }
         }
     }

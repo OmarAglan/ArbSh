@@ -109,6 +109,10 @@ namespace ArbSh.Console.I18n
                 // Process input for parsing (keep in logical order)
                 if (result != null)
                 {
+                    // First apply RTL input processing
+                    result = RTLInputHandler.ProcessRTLInput(result);
+
+                    // Then process for parsing
                     result = BiDiTextProcessor.ProcessInputForParsing(result);
                 }
 
