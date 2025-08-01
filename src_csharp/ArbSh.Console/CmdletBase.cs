@@ -59,7 +59,7 @@ namespace ArbSh.Console
             {
                 // Fallback or error? If OutputCollection is null, something is wrong in Executor setup.
                 // If IsAddingCompleted, the cmdlet is trying to write after EndProcessing or after pipeline completion signal.
-                 System.Console.WriteLine($"WARN (CmdletBase): OutputCollection not available or completed. Cannot write object: {output}");
+                System.Console.WriteLine($"WARN (CmdletBase): OutputCollection not available or completed. Cannot write object: {output}");
             }
         }
 
@@ -144,7 +144,7 @@ namespace ArbSh.Console
                         }
                         catch (Exception ex)
                         {
-                             System.Console.WriteLine($"WARN (BindPipeline): Failed to convert pipeline input type '{inputType?.Name}' to parameter '{propInfo.Property.Name}' type '{propInfo.Property.PropertyType.Name}' for ByValue binding. Error: {ex.Message}");
+                            System.Console.WriteLine($"WARN (BindPipeline): Failed to convert pipeline input type '{inputType?.Name}' to parameter '{propInfo.Property.Name}' type '{propInfo.Property.PropertyType.Name}' for ByValue binding. Error: {ex.Message}");
                         }
                     }
                 }
@@ -179,14 +179,14 @@ namespace ArbSh.Console
                                 }
                                 else if (sourceValue is IConvertible)
                                 {
-                                     valueToSet = Convert.ChangeType(sourceValue, propInfo.Property.PropertyType);
-                                     bound = true;
-                                     // System.Console.WriteLine($"DEBUG (BindPipeline): ChangeType and bound '{propInfo.Property.Name}' ByPropertyName.");
+                                    valueToSet = Convert.ChangeType(sourceValue, propInfo.Property.PropertyType);
+                                    bound = true;
+                                    // System.Console.WriteLine($"DEBUG (BindPipeline): ChangeType and bound '{propInfo.Property.Name}' ByPropertyName.");
                                 }
                             }
                             catch (Exception ex)
                             {
-                                 System.Console.WriteLine($"WARN (BindPipeline): Failed to convert pipeline input property '{inputObjectProperty.Name}' type '{inputObjectProperty.PropertyType.Name}' to parameter '{propInfo.Property.Name}' type '{propInfo.Property.PropertyType.Name}' for ByPropertyName binding. Error: {ex.Message}");
+                                System.Console.WriteLine($"WARN (BindPipeline): Failed to convert pipeline input property '{inputObjectProperty.Name}' type '{inputObjectProperty.PropertyType.Name}' to parameter '{propInfo.Property.Name}' type '{propInfo.Property.PropertyType.Name}' for ByPropertyName binding. Error: {ex.Message}");
                             }
                         }
                         else if (sourceValue == null && propInfo.Property.PropertyType.IsClass || Nullable.GetUnderlyingType(propInfo.Property.PropertyType) != null)
@@ -209,7 +209,7 @@ namespace ArbSh.Console
                     catch (Exception ex)
                     {
                         // Error setting the property value
-                         System.Console.WriteLine($"ERROR (BindPipeline): Failed to set pipeline-bound property '{propInfo.Property.Name}': {ex.Message}");
+                        System.Console.WriteLine($"ERROR (BindPipeline): Failed to set pipeline-bound property '{propInfo.Property.Name}': {ex.Message}");
                     }
                 }
             }

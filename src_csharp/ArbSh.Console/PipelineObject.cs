@@ -17,6 +17,7 @@ namespace ArbSh.Console
         public PipelineObject(object? value, bool isError)
         {
             Value = value;
+            IsError = isError;
         }
 
         public override string ToString()

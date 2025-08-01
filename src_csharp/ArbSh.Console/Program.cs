@@ -108,7 +108,7 @@ namespace ArbSh.Console
                     }
                     catch (NotImplementedException nie)
                     {
-                         // Catch specific exceptions for features not yet implemented
+                        // Catch specific exceptions for features not yet implemented
                         System.Console.ForegroundColor = ConsoleColor.Yellow;
                         string warningMessage = $"Feature not implemented: {nie.Message}";
                         string processedWarning = BiDiTextProcessor.ProcessOutputForDisplay(warningMessage);
@@ -154,26 +154,15 @@ namespace ArbSh.Console
         {
             try
             {
-                // Get console width for positioning
-                int consoleWidth = System.Console.WindowWidth;
-                string promptText = "< أربش"; // Reversed prompt for RTL
-
-                // Calculate right-side positioning
-                int promptLength = promptText.Length;
-                int padding = Math.Max(0, consoleWidth - promptLength - 1);
-
-                // Position prompt on the right side
-                string rightAlignedPrompt = new string(' ', padding) + promptText;
-                System.Console.Write(rightAlignedPrompt);
-
-                // Now we need to position the cursor for RTL input
-                // Move cursor to where Arabic text should start (right side)
-                System.Console.SetCursorPosition(consoleWidth - 1, System.Console.CursorTop);
+                // Simple Arabic prompt, left-aligned to avoid cursor conflicts
+                string promptText = "أربش> ";
+                // Apply BiDi/shaping for nicer display (safe even if not Arabic)
+                string visual = ArbSh.Console.I18n.ConsoleRTLDisplay.ProcessTextForRTLDisplay(promptText);
+                System.Console.Write(visual);
             }
-            catch (Exception ex)
+            catch
             {
-                System.Console.WriteLine($"DEBUG: RTL prompt failed: {ex.Message}");
-                // Fallback to simple prompt
+                // Fallback
                 System.Console.Write("أربش> ");
             }
         }
