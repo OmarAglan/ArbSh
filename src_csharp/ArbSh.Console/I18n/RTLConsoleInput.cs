@@ -13,241 +13,147 @@ namespace ArbSh.Console.I18n
         
         /// <summary>
         /// Reads a line of input with proper RTL handling for Arabic text.
+        /// Captures keys manually to control display and cursor positioning.
         /// </summary>
         /// <returns>Input line with proper RTL processing</returns>
         public static string? ReadRTLLine()
         {
-            try
+            // Reset cursor to known state if needed, though we rely on Redraw
+            int startLeft = System.Console.CursorLeft;
+            int startTop = System.Console.CursorTop;
+            int consoleWidth = System.Console.WindowWidth;
+
+            StringBuilder buffer = new StringBuilder();
+            int logicalCursorPos = 0; // 0 means before the first char (logically)
+
+            // We need to keep track of history/navigation eventually, but for now just basic input
+            
+            while (true)
             {
-                // Get console dimensions
-                int consoleWidth = System.Console.WindowWidth;
-                int startTop = System.Console.CursorTop;
-                
-                // Initialize input buffer
-                var inputBuffer = new StringBuilder();
-                int cursorPosition = 0; // Position within the input text
-                
-                while (true)
+                // Redraw the line first
+                RedrawLine(buffer.ToString(), logicalCursorPos, startTop, consoleWidth);
+
+                ConsoleKeyInfo keyInfo = System.Console.ReadKey(true); // Intercept key
+
+                // Handle Enter
+                if (keyInfo.Key == ConsoleKey.Enter)
                 {
-                    // Read a key
-                    ConsoleKeyInfo keyInfo = System.Console.ReadKey(true);
-                    
-                    if (keyInfo.Key == ConsoleKey.Enter)
-                    {
-                        // Enter pressed - finish input
-                        System.Console.WriteLine(); // Move to next line
-                        break;
-                    }
-                    else if (keyInfo.Key == ConsoleKey.Backspace)
-                    {
-                        // Handle backspace
-                        if (inputBuffer.Length > 0 && cursorPosition > 0)
-                        {
-                            inputBuffer.Remove(cursorPosition - 1, 1);
-                            cursorPosition--;
-                            RedrawRTLInput(inputBuffer.ToString(), cursorPosition, consoleWidth, startTop);
-                        }
-                    }
-                    else if (keyInfo.Key == ConsoleKey.Delete)
-                    {
-                        // Handle delete
-                        if (cursorPosition < inputBuffer.Length)
-                        {
-                            inputBuffer.Remove(cursorPosition, 1);
-                            RedrawRTLInput(inputBuffer.ToString(), cursorPosition, consoleWidth, startTop);
-                        }
-                    }
-                    else if (keyInfo.Key == ConsoleKey.LeftArrow)
-                    {
-                        // Move cursor left (in RTL context, this is forward in text)
-                        if (cursorPosition < inputBuffer.Length)
-                        {
-                            cursorPosition++;
-                            RedrawRTLInput(inputBuffer.ToString(), cursorPosition, consoleWidth, startTop);
-                        }
-                    }
-                    else if (keyInfo.Key == ConsoleKey.RightArrow)
-                    {
-                        // Move cursor right (in RTL context, this is backward in text)
-                        if (cursorPosition > 0)
-                        {
-                            cursorPosition--;
-                            RedrawRTLInput(inputBuffer.ToString(), cursorPosition, consoleWidth, startTop);
-                        }
-                    }
-                    else if (keyInfo.Key == ConsoleKey.Home)
-                    {
-                        // Move to beginning of input (rightmost position in RTL)
-                        cursorPosition = 0;
-                        RedrawRTLInput(inputBuffer.ToString(), cursorPosition, consoleWidth, startTop);
-                    }
-                    else if (keyInfo.Key == ConsoleKey.End)
-                    {
-                        // Move to end of input (leftmost position in RTL)
-                        cursorPosition = inputBuffer.Length;
-                        RedrawRTLInput(inputBuffer.ToString(), cursorPosition, consoleWidth, startTop);
-                    }
-                    else if (!char.IsControl(keyInfo.KeyChar))
-                    {
-                        // Regular character input
-                        inputBuffer.Insert(cursorPosition, keyInfo.KeyChar);
-                        cursorPosition++;
-                        RedrawRTLInput(inputBuffer.ToString(), cursorPosition, consoleWidth, startTop);
-                    }
+                    System.Console.WriteLine(); // Move to next line
+                    return buffer.ToString();
                 }
                 
-                return inputBuffer.ToString();
-            }
-            catch (Exception ex)
-            {
-                System.Console.WriteLine($"ERROR: RTL input failed: {ex.Message}");
-                // Fallback to standard input
-                return System.Console.ReadLine();
+                // Handle Backspace
+                if (keyInfo.Key == ConsoleKey.Backspace)
+                {
+                    if (logicalCursorPos > 0 && buffer.Length > 0)
+                    {
+                        buffer.Remove(logicalCursorPos - 1, 1);
+                        logicalCursorPos--;
+                    }
+                    continue;
+                }
+
+                // Handle Delete
+                if (keyInfo.Key == ConsoleKey.Delete)
+                {
+                    if (logicalCursorPos < buffer.Length)
+                    {
+                        buffer.Remove(logicalCursorPos, 1);
+                    }
+                    continue;
+                }
+
+                // Handle Arrows (RTL Logic Swapped!)
+                // In RTL Visual:
+                // Left Arrow -> Moves VISUALLY Left -> Logically Forward (Next char)
+                // Right Arrow -> Moves VISUALLY Right -> Logically Backward (Prev char)
+                
+                if (keyInfo.Key == ConsoleKey.LeftArrow)
+                {
+                    if (logicalCursorPos < buffer.Length) logicalCursorPos++;
+                    continue;
+                }
+
+                if (keyInfo.Key == ConsoleKey.RightArrow)
+                {
+                    if (logicalCursorPos > 0) logicalCursorPos--;
+                    continue;
+                }
+
+                if (keyInfo.Key == ConsoleKey.Home)
+                {
+                    logicalCursorPos = 0; // Logical Start
+                    continue;
+                }
+
+                if (keyInfo.Key == ConsoleKey.End)
+                {
+                    logicalCursorPos = buffer.Length; // Logical End
+                    continue;
+                }
+                
+                // Handle Normal Characters
+                if (!char.IsControl(keyInfo.KeyChar))
+                {
+                    buffer.Insert(logicalCursorPos, keyInfo.KeyChar);
+                    logicalCursorPos++;
+                }
             }
         }
 
-        /// <summary>
-        /// Displays the RTL prompt and positions cursor correctly.
-        /// </summary>
-        public static void DisplayRTLPrompt()
-        {
-            try
-            {
-                int consoleWidth = System.Console.WindowWidth;
-                string promptText = "< أربش";
-                
-                // Calculate right-side positioning
-                int promptLength = promptText.Length;
-                int padding = Math.Max(0, consoleWidth - promptLength);
-                
-                // Clear the line and display right-aligned prompt
-                System.Console.Write(new string(' ', consoleWidth));
-                System.Console.CursorLeft = 0;
-                System.Console.Write(new string(' ', padding) + promptText);
-            }
-            catch (Exception ex)
-            {
-                System.Console.WriteLine($"ERROR: RTL prompt display failed: {ex.Message}");
-                System.Console.Write("أربش> ");
-            }
-        }
-        
         #endregion
 
         #region Private Methods
-        
-        /// <summary>
-        /// Redraws the RTL input text with proper positioning and cursor placement.
-        /// </summary>
-        /// <param name="text">Current input text</param>
-        /// <param name="cursorPos">Cursor position within the text</param>
-        /// <param name="consoleWidth">Console width</param>
-        /// <param name="startTop">Starting line position</param>
-        private static void RedrawRTLInput(string text, int cursorPos, int consoleWidth, int startTop)
-        {
-            try
-            {
-                // Save current cursor position
-                int currentTop = System.Console.CursorTop;
-                
-                // Move to the input line
-                System.Console.SetCursorPosition(0, startTop);
-                
-                // Clear the input area
-                System.Console.Write(new string(' ', consoleWidth));
-                System.Console.SetCursorPosition(0, startTop);
-                
-                // Display the prompt
-                string promptText = "< أربش";
-                int promptLength = promptText.Length;
-                
-                if (string.IsNullOrEmpty(text))
-                {
-                    // No input text, just show prompt
-                    int padding = Math.Max(0, consoleWidth - promptLength);
-                    System.Console.Write(new string(' ', padding) + promptText);
-                    
-                    // Position cursor at the end of prompt for input
-                    System.Console.SetCursorPosition(consoleWidth - 1, startTop);
-                }
-                else
-                {
-                    // Display input text in RTL order
-                    string displayText = ProcessTextForRTLDisplay(text);
-                    int totalLength = promptLength + displayText.Length + 1; // +1 for space
-                    
-                    if (totalLength <= consoleWidth)
-                    {
-                        // Text fits on one line
-                        int padding = Math.Max(0, consoleWidth - totalLength);
-                        System.Console.Write(new string(' ', padding) + displayText + " " + promptText);
-                        
-                        // Position cursor based on RTL cursor position
-                        int visualCursorPos = CalculateRTLCursorPosition(text, cursorPos, consoleWidth, totalLength);
-                        System.Console.SetCursorPosition(visualCursorPos, startTop);
-                    }
-                    else
-                    {
-                        // Text is too long, handle wrapping or truncation
-                        // For now, just display what fits
-                        string truncatedText = displayText.Substring(0, Math.Min(displayText.Length, consoleWidth - promptLength - 1));
-                        System.Console.Write(truncatedText + " " + promptText);
-                        System.Console.SetCursorPosition(consoleWidth - promptLength - 1, startTop);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Console.WriteLine($"ERROR: RTL redraw failed: {ex.Message}");
-            }
-        }
 
-        /// <summary>
-        /// Processes text for RTL display.
-        /// </summary>
-        /// <param name="text">Input text</param>
-        /// <returns>Text processed for RTL display</returns>
-        private static string ProcessTextForRTLDisplay(string text)
+        private static void RedrawLine(string logicalText, int logicalCursorPos, int startTop, int consoleWidth)
         {
-            if (string.IsNullOrEmpty(text))
-            {
-                return text;
-            }
+            // 1. Process text for Display (Shape -> Reorder)
+            // This ensures the user sees connected letters while typing!
+            string visualText = ConsoleRTLDisplay.ProcessTextForRTLDisplay(logicalText);
+            
+            // 2. Prepare Prompt
+            string prompt = "أربش> "; 
+            string processedPrompt = ConsoleRTLDisplay.ProcessTextForRTLDisplay(prompt); // >شبرأ
+            
+            // 3. Construct Full Line for Display
+            // Layout: [Padding] [VisualText] [Prompt]
+            // We want the prompt pinned to the right.
+            
+            int totalContentLength = visualText.Length + processedPrompt.Length;
+            int padding = Math.Max(0, consoleWidth - totalContentLength - 1);
 
-            // For Arabic text, we may need to apply BiDi processing
-            // For now, keep it simple and return as-is
-            return text;
-        }
+            // Clear current line
+            System.Console.SetCursorPosition(0, startTop);
+            System.Console.Write(new string(' ', consoleWidth - 1));
+            System.Console.SetCursorPosition(0, startTop);
 
-        /// <summary>
-        /// Calculates the visual cursor position for RTL text.
-        /// </summary>
-        /// <param name="text">Input text</param>
-        /// <param name="logicalPos">Logical cursor position</param>
-        /// <param name="consoleWidth">Console width</param>
-        /// <param name="totalLength">Total display length</param>
-        /// <returns>Visual cursor position</returns>
-        private static int CalculateRTLCursorPosition(string text, int logicalPos, int consoleWidth, int totalLength)
-        {
-            try
-            {
-                // In RTL, logical position 0 is at the rightmost position
-                // Visual position should be calculated from right to left
-                
-                int padding = Math.Max(0, consoleWidth - totalLength);
-                int textStartPos = padding;
-                int textLength = text.Length;
-                
-                // Convert logical position to visual position (RTL)
-                int visualPos = textStartPos + (textLength - logicalPos);
-                
-                return Math.Max(textStartPos, Math.Min(visualPos, consoleWidth - 1));
-            }
-            catch
-            {
-                // Fallback to safe position
-                return Math.Max(0, consoleWidth - 1);
-            }
+            // Write Padding + Text + Prompt
+            // Note: VisualText is already reversed (RTL). 
+            // So if logical is "ABC", Visual is "CBA".
+            // Display: "       CBA >Prompt"
+            
+            string fullLine = new string(' ', padding) + visualText + processedPrompt;
+            System.Console.Write(fullLine);
+
+            // 4. Position Cursor
+            // This is the tricky part. We need to map Logical Index -> Visual Index.
+            // Simplified approach for pure RTL text:
+            // Visual X = Padding + (Length - LogicalIndex)
+            // Example: "ABC" (len 3). Cursor at 0 (before A).
+            // Visual: "CBA". We want cursor at right of A. 
+            // X = Padding + (3 - 0) = Padding + 3. (Right of C, B, A).
+            
+            // If Mixed text, this simple math fails. 
+            // But for Phase 5 Arabic support, let's assume primary RTL flow.
+            
+            int cursorOffsetFromRight = processedPrompt.Length + (logicalText.Length - logicalCursorPos);
+            int cursorLeft = consoleWidth - cursorOffsetFromRight - 1; // -1 for index
+
+            // Clamp cursor
+            if (cursorLeft < 0) cursorLeft = 0;
+            if (cursorLeft >= consoleWidth) cursorLeft = consoleWidth - 1;
+
+            System.Console.SetCursorPosition(cursorLeft, startTop);
         }
         
         #endregion

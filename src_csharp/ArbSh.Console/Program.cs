@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Text; // Required for Encoding
-using ArbSh.Console.I18n; // For Arabic console input support
+using System.Text;
+using ArbSh.Console.I18n;
 
 namespace ArbSh.Console
 {
@@ -8,23 +8,19 @@ namespace ArbSh.Console
     {
         static void Main(string[] args)
         {
-            // Check console environment and try to launch in better terminal if needed
-            if (ConsoleEnvironment.TryLaunchInBetterTerminal(args))
-            {
-                return;
-            }
+            if (ConsoleEnvironment.TryLaunchInBetterTerminal(args)) return;
 
             System.Console.InputEncoding = System.Text.Encoding.UTF8;
             System.Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             ConsoleRTLDisplay.DisplayRTLText("مرحباً بكم في أربش (النموذج الأولي)!", rightAlign: true);
             ConsoleRTLDisplay.DisplayRTLText("اكتب 'exit' للخروج.", rightAlign: true);
+            System.Console.WriteLine();
 
-            // Display console environment information
             if (args.Length > 0 && args[0] == "--debug-console")
             {
                 ConsoleEnvironment.DisplayConsoleInfo();
-                ConsoleRTLDisplay.DisplayRTLText(ArabicConsoleInput.GetInputInfo(), rightAlign: true);
+                System.Console.WriteLine(ArabicConsoleInput.GetInputInfo());
                 System.Console.WriteLine();
             }
             else
@@ -32,8 +28,8 @@ namespace ArbSh.Console
                 var consoleInfo = ConsoleEnvironment.DetectConsoleEnvironment();
                 if (consoleInfo.ArabicSupport == ConsoleEnvironment.ArabicSupportLevel.Poor)
                 {
-                    System.Console.WriteLine("⚠️  تحذير: المحطة الحالية لا تدعم النص العربي بشكل جيد");
-                    System.Console.WriteLine("💡 نصيحة: استخدم Windows Terminal للحصول على أفضل عرض للنص العربي");
+                    ConsoleRTLDisplay.DisplayRTLText("⚠️  تحذير: المحطة الحالية لا تدعم النص العربي بشكل جيد", rightAlign: true);
+                    ConsoleRTLDisplay.DisplayRTLText("💡 نصيحة: استخدم Windows Terminal للحصول على أفضل عرض للنص العربي", rightAlign: true);
                     System.Console.WriteLine();
                 }
             }
@@ -44,19 +40,20 @@ namespace ArbSh.Console
             {
                 while (true)
                 {
+                    string? inputLine;
+
                     if (!System.Console.IsInputRedirected)
                     {
-                        // Use the shared RTL display logic for the prompt
-                        ConsoleRTLDisplay.DisplayRTLPrompt("أربش> ", forceRTL: true);
+                        // Use Custom RTL Input Loop
+                        // Note: ReadRTLLine handles the prompt display internally now to keep it synced
+                        inputLine = RTLConsoleInput.ReadRTLLine();
                     }
-
-                    string? inputLine = ArabicConsoleInput.ReadLine();
-
-                    if (inputLine == null)
+                    else
                     {
-                        if (!System.Console.IsInputRedirected) System.Console.WriteLine();
-                        break;
+                        inputLine = ArabicConsoleInput.ReadLine();
                     }
+
+                    if (inputLine == null) break;
 
                     inputLine = inputLine.Trim();
                     if (string.IsNullOrWhiteSpace(inputLine)) continue;
