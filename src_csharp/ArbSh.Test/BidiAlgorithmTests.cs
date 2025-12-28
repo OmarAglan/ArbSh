@@ -896,6 +896,39 @@ namespace ArbSh.Test.I18n
         }
 
         [Fact]
+        public void ReorderRunsForDisplay_L2_EmbeddedLTR_ShouldReadLTR()
+        {
+            // Scenario: "ARABIC english ARABIC"
+            // Logical: "مرحبا exit شكرا"
+            // Levels: 11111 2222 1111 (Simplified)
+            // Visual Expectation: "arkuS exit abahraM" (All read RTL, but 'exit' reads LTR within it)
+            // Wait, standard visual string for "RTL LTR RTL" is "RTL LTR RTL" visually reversed?
+            // Logical: A B C d e f G H I
+            // Levels:  1 1 1 2 2 2 1 1 1
+            // Max 2 (def). Reverse: A B C f e d G H I.
+            // Max 1 (All). Reverse: I H G d e f C B A.
+            // Result: "IHG def CBA"
+            // The English "def" reads Left-To-Right. The Arabic reads Right-to-Left (CBA, IHG).
+            
+            string arabic1 = "\u0645\u0631\u062d\u0628\u0627"; // Marhaba
+            string english = "exit";
+            string arabic2 = "\u0634\u0643\u0631\u0627"; // Shukran
+            string text = $"{arabic1} {english} {arabic2}";
+            
+            int baseLevel = 1; // RTL Paragraph
+            
+            var runs = BidiAlgorithm.ProcessRuns(text, baseLevel);
+            string visual = BidiAlgorithm.ReorderRunsForDisplay(text, runs, baseLevel);
+            
+            // Check that 'exit' appears as 'exit' in the visual string, NOT 'tixe'
+            Assert.Contains("exit", visual);
+            
+            // Note: Assert.Contains checks for substring. 
+            // If result is "arkuS exit abahraM", "exit" is present.
+            // If result was "arkuS tixe abahraM", "exit" would NOT be present.
+        }
+
+        [Fact]
         public void ReorderRunsForDisplay_L2_MixedLTRRTL()
         {
             // Mixed LTR and RTL text
