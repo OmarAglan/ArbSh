@@ -118,7 +118,7 @@ namespace ArbSh.Console.I18n
         
         /// <summary>
         /// Applies Arabic character shaping and connection rules for better display.
-        /// This addresses the issue where Arabic characters appear disconnected.
+        /// Uses ICU4N to convert logical characters to presentation forms.
         /// </summary>
         /// <param name="arabicText">Arabic text to shape</param>
         /// <returns>Text with improved Arabic character shaping</returns>
@@ -137,11 +137,10 @@ namespace ArbSh.Console.I18n
 
             try
             {
-                // Apply basic Arabic character shaping
-                // This is a simplified implementation - full shaping requires complex rules
-                string shaped = ApplyBasicArabicShaping(arabicText);
+                // Use the ArabicShaper wrapper to perform ICU4N shaping
+                string shaped = ArabicShaper.Shape(arabicText);
                 
-                System.Console.WriteLine($"DEBUG (RTL): Arabic shaping: '{arabicText}' → '{shaped}'");
+                // System.Console.WriteLine($"DEBUG (RTL): Arabic shaping: '{arabicText}' → '{shaped}'");
                 
                 return shaped;
             }
@@ -150,29 +149,6 @@ namespace ArbSh.Console.I18n
                 System.Console.WriteLine($"WARNING (RTL): Arabic shaping failed: {ex.Message}");
                 return arabicText;
             }
-        }
-
-        /// <summary>
-        /// Applies basic Arabic character shaping rules.
-        /// This is a simplified implementation focusing on common connection issues.
-        /// </summary>
-        /// <param name="text">Text to shape</param>
-        /// <returns>Shaped text</returns>
-        private static string ApplyBasicArabicShaping(string text)
-        {
-            // For now, we'll focus on ensuring proper Unicode normalization
-            // Full Arabic shaping requires complex contextual analysis
-            
-            // Normalize the text to ensure proper Unicode form
-            string normalized = text.Normalize(NormalizationForm.FormC);
-            
-            // TODO: Implement full Arabic shaping engine
-            // This would include:
-            // - Contextual character form selection (isolated, initial, medial, final)
-            // - Ligature formation
-            // - Diacritic positioning
-            
-            return normalized;
         }
         
         #endregion
@@ -205,7 +181,7 @@ namespace ArbSh.Console.I18n
         }
 
         /// <summary>
-        /// Processes text for RTL display with BiDi and shaping.
+        /// Processes text for RTL display with Shaping AND BiDi reordering.
         /// </summary>
         /// <param name="text">Text to process</param>
         /// <returns>Text ready for RTL display</returns>
@@ -216,13 +192,19 @@ namespace ArbSh.Console.I18n
                 return text;
             }
 
-            // Step 1: Apply BiDi processing for proper text ordering
-            string bidiProcessed = BiDiTextProcessor.ProcessOutputForDisplay(text);
+            // IMPORTANT PIPELINE ORDER:
+            // 1. Shaping (Logical -> Logical Presentation Forms)
+            // 2. BiDi Reordering (Logical -> Visual)
             
-            // Step 2: Apply Arabic character shaping
-            string shaped = ShapeArabicText(bidiProcessed);
+            // يجب تشكيل الأحرف أولاً لأن التشكيل يعتمد على الجوار المنطقي
+            // Shaping must happen BEFORE reordering because it depends on logical adjacency.
+            string shaped = ShapeArabicText(text);
+
+            // ثم نقوم بتطبيق خوارزمية الاتجاهين لعرض النص بشكل صحيح
+            // Then apply BiDi algorithm for proper display ordering
+            string visual = BiDiTextProcessor.ProcessOutputForDisplay(shaped);
             
-            return shaped;
+            return visual;
         }
 
         /// <summary>

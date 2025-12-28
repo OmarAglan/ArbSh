@@ -41,6 +41,7 @@ ArbSh/
 │       ├── BidiAlgorithm.cs           # Complete UAX #9 BiDi implementation
 │       ├── BidiTypes.cs               # BiDi character types and enums
 │       ├── BidiRun.cs                 # BiDi run data structure
+│       ├── ArabicShaper.cs            # ICU4N-based character shaper
 │       ├── BidiTestRunner.cs          # Unicode BidiTest.txt test runner
 │       └── Commands/                   # Built-in cmdlets
 │           ├── WriteOutputCmdlet.cs    # Write-Output cmdlet
@@ -68,6 +69,7 @@ The ArbSh C# codebase follows standard .NET conventions and principles with Arab
     *   **Parser.cs** - Command parsing, tokenization, and subexpression handling
     *   **Executor.cs** - Pipeline execution, parameter binding, and BiDi processing
     *   **BidiAlgorithm.cs** - Complete UAX #9 BiDi algorithm implementation
+    *   **ArabicShaper.cs** - Text shaping logic using ICU4N
     *   **CommandDiscovery.cs** - Cmdlet discovery and caching
     *   **CmdletBase.cs** - Base class for all cmdlets with parameter binding
 3.  **Arabic-First Design:**
