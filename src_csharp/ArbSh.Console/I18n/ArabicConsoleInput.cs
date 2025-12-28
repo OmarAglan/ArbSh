@@ -66,7 +66,6 @@ namespace ArbSh.Console.I18n
 
             _isInitialized = true;
             
-            System.Console.WriteLine($"DEBUG: ArabicConsoleInput initialized with strategy: {_currentStrategy}");
         }
 
         /// <summary>
@@ -120,7 +119,6 @@ namespace ArbSh.Console.I18n
             }
             catch (Exception ex)
             {
-                System.Console.WriteLine($"DEBUG: ArabicConsoleInput.ReadLine failed: {ex.Message}");
                 
                 // Fallback to standard console input
                 try
@@ -170,7 +168,6 @@ namespace ArbSh.Console.I18n
             }
             catch (Exception ex)
             {
-                System.Console.WriteLine($"DEBUG: ArabicConsoleInput.Cleanup error: {ex.Message}");
             }
         }
 

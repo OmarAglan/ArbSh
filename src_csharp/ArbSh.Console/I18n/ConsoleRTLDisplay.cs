@@ -70,39 +70,32 @@ namespace ArbSh.Console.I18n
         {
             try
             {
-                // For Arabic prompts, we need a hybrid approach:
-                // 1. Process the Arabic text for proper display
-                // 2. Position it appropriately for RTL context
-                // 3. Ensure cursor ends up in the right place for input
+                // Process text for RTL display (Shape -> BiDi)
+                string processedPrompt = ProcessTextForRTLDisplay(promptText);
+                
+                // Calculate console width
+                int consoleWidth = ConsoleWidth;
+                int promptLength = GetDisplayLength(processedPrompt);
 
-                if (BiDiTextProcessor.ContainsArabicText(promptText))
-                {
-                    // Process Arabic prompt for RTL display
-                    string processedPrompt = ProcessTextForRTLDisplay(promptText);
-
-                    // For Arabic prompts, add some right-alignment but not full width
-                    // This creates a more natural RTL feel while keeping cursor behavior
-                    int consoleWidth = ConsoleWidth;
-                    int promptLength = GetDisplayLength(processedPrompt);
-
-                    if (consoleWidth > 40 && promptLength < 20)
-                    {
-                        // Add moderate right padding for RTL feel
-                        int padding = Math.Max(0, consoleWidth - promptLength - 20);
-                        string paddedPrompt = new string(' ', padding) + processedPrompt;
-                        System.Console.Write(paddedPrompt);
-                    }
-                    else
-                    {
-                        // Just display the processed prompt normally
-                        System.Console.Write(processedPrompt);
-                    }
-                }
-                else
-                {
-                    // Non-Arabic prompt, display normally
-                    System.Console.Write(promptText);
-                }
+                // Right alignment calculation
+                // We want the prompt to end at the right edge
+                // Padded: "                                   >أربش"
+                
+                int padding = Math.Max(0, consoleWidth - promptLength - 1); // -1 for buffer/safety
+                
+                // Construct line
+                // Note: In RTL view, we print padding THEN prompt.
+                // But wait, if we print padding, the cursor ends up at the right.
+                // Standard Console.ReadLine starts wherever the cursor is.
+                // This is perfect for RTL typing!
+                
+                string paddedPrompt = new string(' ', padding) + processedPrompt;
+                
+                // Write without newline so input happens on same line
+                System.Console.Write(paddedPrompt);
+                
+                // Note: Windows Console cursor will be at the end of the line (Right side).
+                // This mimics RTL input start position.
             }
             catch (Exception ex)
             {
@@ -140,13 +133,10 @@ namespace ArbSh.Console.I18n
                 // Use the ArabicShaper wrapper to perform ICU4N shaping
                 string shaped = ArabicShaper.Shape(arabicText);
                 
-                // System.Console.WriteLine($"DEBUG (RTL): Arabic shaping: '{arabicText}' → '{shaped}'");
-                
                 return shaped;
             }
             catch (Exception ex)
             {
-                System.Console.WriteLine($"WARNING (RTL): Arabic shaping failed: {ex.Message}");
                 return arabicText;
             }
         }

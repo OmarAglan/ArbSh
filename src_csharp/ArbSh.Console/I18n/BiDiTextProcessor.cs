@@ -48,12 +48,6 @@ namespace ArbSh.Console.I18n
             // Normalize whitespace and trim
             string normalized = NormalizeWhitespace(input);
             
-            // Log the processing for debugging
-            if (ContainsArabicText(normalized))
-            {
-                System.Console.WriteLine($"DEBUG (BiDi): Processing Arabic input for parsing: '{normalized}'");
-            }
-            
             return normalized;
         }
 
@@ -79,8 +73,6 @@ namespace ArbSh.Console.I18n
                 // No Arabic content, return as-is
                 return output;
             }
-
-            System.Console.WriteLine($"DEBUG (BiDi): Processing Arabic output for display: '{output}'");
 
             // Apply full BiDi algorithm processing using BidiAlgorithm.ProcessString
             string processed = ApplyFullBiDiProcessing(output);
@@ -230,8 +222,6 @@ namespace ArbSh.Console.I18n
                 // Use auto-detection for base level (-1 means auto-detect)
                 // The BidiAlgorithm will determine if the text should be LTR or RTL
                 string processed = BidiAlgorithm.ProcessString(text, -1);
-
-                System.Console.WriteLine($"DEBUG (BiDi): Original: '{text}' → Processed: '{processed}'");
 
                 return processed;
             }
