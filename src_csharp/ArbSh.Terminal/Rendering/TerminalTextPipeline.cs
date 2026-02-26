@@ -55,21 +55,18 @@ public sealed class TerminalTextPipeline
 
     private static string ToVisual(string logicalText, bool hasArabic)
     {
-        if (!hasArabic || string.IsNullOrEmpty(logicalText))
+        if (string.IsNullOrEmpty(logicalText))
         {
             return logicalText;
         }
 
-        try
+        if (!hasArabic)
         {
-            // Keep logical text intact and perform visual conversion only at render boundary.
-            var runs = BidiAlgorithm.ProcessRuns(logicalText, -1);
-            return BidiAlgorithm.ReorderRunsForDisplay(logicalText, runs);
-        }
-        catch
-        {
-            // Rendering failure should not corrupt logical shell state.
             return logicalText;
         }
+
+        // Avalonia/Skia/HarfBuzz already applies BiDi + shaping during text layout.
+        // Reordering here would cause a second BiDi pass and broken visual output.
+        return logicalText;
     }
 }

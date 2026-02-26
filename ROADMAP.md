@@ -74,7 +74,7 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 
 #### 5.2 Native Text Rendering & Shaping
 - [x] **HarfBuzz Integration:** Leverage Avalonia's Skia/HarfBuzz backend for pixel-perfect Arabic character shaping and ligatures.
-- [x] **Visual vs. Logical Mapping:** Use the existing `BidiAlgorithm.cs` at the rendering boundary to transform logical text to visual display text.
+- [x] **Visual vs. Logical Mapping:** Keep shell state in logical order and delegate visual BiDi/shaping to Avalonia text layout at the rendering boundary.
 - [ ] **Color & Theming Engine:** Implement a modern dark theme with ANSI escape sequence parsing for colored output.
 
 #### 5.3 RTL Input & Cursor Management (The Core Blocker Solved)
