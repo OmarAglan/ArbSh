@@ -2,11 +2,14 @@
 
 This document provides comprehensive examples for all implemented features in ArbSh - the Arabic-first shell.
 
-**Current Version:** 0.7.7.11
-**Status:** Phase 4 Complete - Full BiDi Algorithm UAX #9 Compliance
-**Next Phase:** Phase 5 - Console I/O with BiDi Rendering
+**Current Version:** 0.8.0-alpha
+**Status:** Phase 5 In Progress - Core Extraction + Avalonia Terminal Bootstrap
+**Next Phase:** Phase 5.2 - Native Text Rendering & Shaping
 
 ## ✅ **Fully Implemented Features**
+- `ArbSh.Core` shared engine extraction (host-agnostic parser/executor/cmdlets/BiDi)
+- Sink-based execution boundary (`IExecutionSink`) between core logic and host rendering
+- Avalonia GUI terminal project scaffold (`ArbSh.Terminal`)
 - Complete BiDi Algorithm (UAX #9) with all rule sets (P, X, W, N, I, L)
 - Pipeline execution with task-based concurrency
 - Parameter binding with reflection and type conversion
@@ -19,9 +22,15 @@ This document provides comprehensive examples for all implemented features in Ar
 
 ## Running ArbSh
 
-1.  Navigate to the `src_csharp/ArbSh.Console` directory in your terminal.
-2.  Run the shell using the .NET CLI: `dotnet run`
-3.  You should see the `ArbSh>` prompt. Type `exit` to quit.
+### Console Host (Current Stable REPL)
+1. Navigate to the repository root.
+2. Run `dotnet run --project src_csharp/ArbSh.Console`.
+3. You should see the `ArbSh>` prompt. Type `exit` to quit.
+
+### Avalonia Terminal Host (Phase 5 Foundation)
+1. Navigate to the repository root.
+2. Run `dotnet run --project src_csharp/ArbSh.Terminal`.
+3. Verify the window opens and the custom terminal surface renders without blocking the UI thread.
 
 ## Available Commands
 
@@ -541,22 +550,24 @@ ArbSh prioritizes Arabic language support as a core feature:
 - Cultural localization considerations
 - Arabic-first documentation and examples
 
-**Future Arabic Features (Phase 5):**
-- RTL console input with proper cursor movement
-- BiDi-aware output rendering
-- Arabic error messages and help text
-- Arabic parameter names and documentation
-- Complete Arabic localization
+**Phase 5 Arabic UX Targets:**
+- RTL terminal input with correct visual cursor mapping
+- BiDi-aware render surface in the Avalonia host
+- Arabic-first prompt behavior and localization improvements
+- Scrollback virtualization and clipboard correctness for mixed RTL/LTR text
 
 ## Testing and Development
 
 **Running ArbSh:**
 ```powershell
-# Navigate to project directory
-cd D:\dev\ArbSh\src_csharp\ArbSh.Console
+# Build everything
+dotnet build src_csharp/ArbSh.sln
 
-# Run the shell
-dotnet run
+# Run Console host
+dotnet run --project src_csharp/ArbSh.Console
+
+# Run Avalonia terminal host
+dotnet run --project src_csharp/ArbSh.Terminal
 
 # Exit the shell
 ArbSh> exit

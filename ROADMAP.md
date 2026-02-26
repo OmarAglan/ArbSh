@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
-**Current Version:** 0.8.0-alpha (The Avalonia GUI Pivot)
-**Status:** Phase 4 Complete - Pivoting to Custom GUI Terminal
-**Next Phase:** Phase 5 - Custom Standalone GUI Terminal (Avalonia UI)
+**Current Version:** 0.8.0-alpha (Core Extraction + Avalonia Bootstrap)
+**Status:** Phase 5 In Progress - Core/UI Decoupling Completed
+**Next Phase:** Phase 5.2 - Native Text Rendering & Shaping
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -68,8 +68,8 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 **Abandoning legacy console limitations to build a standalone, hardware-accelerated GUI terminal using Avalonia UI.**
 
 #### 5.1 GUI Framework Architecture
-- [ ] **Avalonia UI Setup:** Create the new `ArbSh.Terminal` graphical project.
-- [ ] **Decouple Executor:** Refactor `Executor.cs` to output to a Stream/Event system instead of `System.Console.WriteLine`.
+- [x] **Avalonia UI Setup:** Create the new `ArbSh.Terminal` graphical project.
+- [x] **Decouple Executor:** Refactor `Executor.cs` to output to a Stream/Event system instead of `System.Console.WriteLine`.
 - [ ] **Typography:** Embed a high-quality Arabic coding font (e.g., Cascadia Code Arabic, Kashida) as the default terminal font.
 
 #### 5.2 Native Text Rendering & Shaping
@@ -124,10 +124,15 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 
 ## 📊 Current Status Summary
 
-### 🔄 The GUI Pivot (v0.8.0-alpha)
-**Progress:** We have successfully proven that the underlying BiDi math (`BidiAlgorithm.cs`) and parsing engines are robust. However, attempting to hack the legacy Windows Console (`cmd.exe` / `conhost.exe`) using `ReadConsoleW` reached a dead end due to intrinsic OS-level rendering bugs for RTL text. 
+### 🔄 Phase 5 Execution Status (v0.8.0-alpha)
+**Progress:** The architecture pivot is now implemented in code. `ArbSh.Core` has been extracted as a reusable engine (parser, executor, cmdlets, BiDi, models), while host-specific concerns remain in `ArbSh.Console` and the new `ArbSh.Terminal` project.
 
-**The Solution:** We are pivoting Phase 5 to build a standalone GUI Terminal using **Avalonia UI**. This gives us 100% control over HarfBuzz text shaping, cursor placement, and keyboard events, guaranteeing a flawless environment for Arabic developers and the **Baa** compiler.
+**Completed This Cycle:**
+- Extracted engine code into `src_csharp/ArbSh.Core`.
+- Introduced host-output abstractions (`IExecutionSink`, `CoreConsole`, `ShellEngine`) to preserve the logical/visual split and remove hard console coupling.
+- Added `src_csharp/ArbSh.Terminal` Avalonia bootstrap (App/MainWindow/ViewModel/custom surface) as the foundation for full GUI terminal rendering.
+
+**Next Focus:** Implement Phase 5.2 native shaping/rendering and Phase 5.3 RTL input/cursor mapping on top of the new host architecture.
 
 ## 🌟 Project Philosophy
 
