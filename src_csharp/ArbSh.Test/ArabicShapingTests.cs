@@ -1,5 +1,5 @@
-using Xunit;
-using ArbSh.Console.I18n;
+﻿using Xunit;
+using ArbSh.Core.I18n;
 
 namespace ArbSh.Test.I18n
 {
@@ -78,7 +78,7 @@ namespace ArbSh.Test.I18n
             string input = "A \u0627\u0644 B";
 
             // Act
-            string output = ConsoleRTLDisplay.ProcessTextForRTLDisplay(input);
+            string output = BiDiTextProcessor.ProcessOutputForDisplay(ArabicShaper.Shape(input));
 
             // Assert
             // 1. Check Shaping: The Alef-Lam pair should likely form a Ligature (Lam-Alef)

@@ -1,0 +1,14 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:rendering="clr-namespace:ArbSh.Terminal.Rendering"
+        x:Class="ArbSh.Terminal.MainWindow"
+        Title="أربش - ArbSh Terminal"
+        Width="1200"
+        Height="760"
+        MinWidth="900"
+        MinHeight="560"
+        Background="#0B0E14">
+  <Border Background="#10141F" Padding="16" CornerRadius="8">
+    <rendering:TerminalSurface x:Name="TerminalSurface" />
+  </Border>
+</Window>

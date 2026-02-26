@@ -1,6 +1,6 @@
 ﻿using System;
 using Xunit;
-using ArbSh.Console.I18n; // Your namespace for BidiAlgorithm and BidiCharacterType
+using ArbSh.Core.I18n; // Your namespace for BidiAlgorithm and BidiCharacterType
 using System.Collections.Generic; // For List in ProcessRuns tests
 
 namespace ArbSh.Test.I18n

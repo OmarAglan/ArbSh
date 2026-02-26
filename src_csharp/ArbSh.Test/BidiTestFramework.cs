@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using Xunit;
 using Xunit.Abstractions;
-using ArbSh.Console.I18n;
-using static ArbSh.Console.I18n.BidiAlgorithm;
+using ArbSh.Core.I18n;
+using static ArbSh.Core.I18n.BidiAlgorithm;
 
 namespace ArbSh.Test
 {
@@ -334,3 +334,4 @@ namespace ArbSh.Test
         }
     }
 }
+

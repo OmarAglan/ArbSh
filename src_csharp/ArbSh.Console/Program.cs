@@ -1,23 +1,36 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
+using ArbSh.Core;
 using ArbSh.Console.I18n;
 
 namespace ArbSh.Console
 {
-    class Program
+    internal static class Program
     {
-        static void Main(string[] args)
-        {
-            if (ConsoleEnvironment.TryLaunchInBetterTerminal(args)) return;
+        private const string ExitCommand = "exit";
 
-            System.Console.InputEncoding = System.Text.Encoding.UTF8;
-            System.Console.OutputEncoding = System.Text.Encoding.UTF8;
+        private static void Main(string[] args)
+        {
+            if (ConsoleEnvironment.TryLaunchInBetterTerminal(args))
+            {
+                return;
+            }
+
+            System.Console.InputEncoding = Encoding.UTF8;
+            System.Console.OutputEncoding = Encoding.UTF8;
+
+            var sink = new ConsoleExecutionSink();
+            var executionOptions = new ExecutionOptions
+            {
+                EmitDebug = args.Contains("--debug-console", StringComparer.OrdinalIgnoreCase)
+            };
 
             ConsoleRTLDisplay.DisplayRTLText("مرحباً بكم في أربش (النموذج الأولي)!", rightAlign: true);
             ConsoleRTLDisplay.DisplayRTLText("اكتب 'exit' للخروج.", rightAlign: true);
             System.Console.WriteLine();
 
-            if (args.Length > 0 && args[0] == "--debug-console")
+            if (executionOptions.EmitDebug)
             {
                 ConsoleEnvironment.DisplayConsoleInfo();
                 System.Console.WriteLine(ArabicConsoleInput.GetInputInfo());
@@ -44,8 +57,7 @@ namespace ArbSh.Console
 
                     if (!System.Console.IsInputRedirected)
                     {
-                        // Use Custom RTL Input Loop
-                        // Note: ReadRTLLine handles the prompt display internally now to keep it synced
+                        // Read RTL interactively while preserving logical order for parser/executor.
                         inputLine = RTLConsoleInput.ReadRTLLine();
                     }
                     else
@@ -53,44 +65,47 @@ namespace ArbSh.Console
                         inputLine = ArabicConsoleInput.ReadLine();
                     }
 
-                    if (inputLine == null) break;
+                    if (inputLine is null)
+                    {
+                        break;
+                    }
 
                     inputLine = inputLine.Trim();
-                    if (string.IsNullOrWhiteSpace(inputLine)) continue;
+                    if (string.IsNullOrWhiteSpace(inputLine))
+                    {
+                        continue;
+                    }
 
-                    if (inputLine.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
+                    if (inputLine.Equals(ExitCommand, StringComparison.OrdinalIgnoreCase))
+                    {
+                        break;
+                    }
 
                     try
                     {
-                        var commands = Parser.Parse(inputLine);
-                        Executor.Execute(commands);
+                        ShellEngine.ExecuteInput(inputLine, sink, executionOptions);
                     }
-                    catch (NotImplementedException nie)
+                    catch (NotImplementedException ex)
                     {
-                        System.Console.ForegroundColor = ConsoleColor.Yellow;
-                        string warningMessage = $"Feature not implemented: {nie.Message}";
-                        System.Console.WriteLine(BiDiTextProcessor.ProcessOutputForDisplay(warningMessage));
-                        System.Console.ResetColor();
+                        sink.WriteWarning($"Feature not implemented: {ex.Message}");
                     }
                     catch (Exception ex)
                     {
-                        System.Console.ForegroundColor = ConsoleColor.Red;
-                        string errorMessage = $"ERROR: {ex.Message}";
-                        System.Console.WriteLine(BiDiTextProcessor.ProcessOutputForDisplay(errorMessage));
-                        System.Console.ResetColor();
+                        sink.WriteError($"ERROR: {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Console.ForegroundColor = ConsoleColor.Red;
-                System.Console.WriteLine($"FATAL ERROR: {ex.Message}");
-                System.Console.ResetColor();
+                sink.WriteError($"FATAL ERROR: {ex.Message}");
             }
             finally
             {
                 ArabicConsoleInput.Cleanup();
-                if (!System.Console.IsInputRedirected) System.Console.WriteLine("Exiting ArbSh.");
+                if (!System.Console.IsInputRedirected)
+                {
+                    System.Console.WriteLine("Exiting ArbSh.");
+                }
             }
         }
     }

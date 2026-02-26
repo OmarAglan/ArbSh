@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Text;
+using ArbSh.Core.I18n;
 
 namespace ArbSh.Console.I18n
 {

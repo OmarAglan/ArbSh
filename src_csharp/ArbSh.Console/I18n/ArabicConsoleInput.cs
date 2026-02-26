@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
+using ArbSh.Core.I18n;
 
 namespace ArbSh.Console.I18n
 {
@@ -280,3 +281,4 @@ namespace ArbSh.Console.I18n
         #endregion
     }
 }
+
