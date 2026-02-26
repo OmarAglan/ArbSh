@@ -8,7 +8,7 @@ namespace ArbSh.Core.Models
     public class CommandInfo
     {
         /// <summary>
-        /// Gets the name of the command (e.g., "Get-Help").
+        /// Gets the name of the command (e.g., "مساعدة").
         /// </summary>
         public string Name { get; }
 

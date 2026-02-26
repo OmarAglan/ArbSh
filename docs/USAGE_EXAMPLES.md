@@ -25,7 +25,7 @@ This document provides comprehensive examples for all implemented features in Ar
 - Type literal utilization `[TypeName]` - **WORKING**
 - Variable expansion `$variableName`
 - Input/output redirection and stream merging
-- Arabic command names and aliases
+- Arabic command names
 - Command discovery and caching
 
 ## Running ArbSh
@@ -33,7 +33,7 @@ This document provides comprehensive examples for all implemented features in Ar
 ### Console Host (Current Stable REPL)
 1. Navigate to the repository root.
 2. Run `dotnet run --project src_csharp/ArbSh.Console`.
-3. You should see the `ArbSh>` prompt. Type `exit` to quit.
+3. You should see the `ArbSh>` prompt. Type `اخرج` to quit.
 
 ### Avalonia Terminal Host (Phase 5 Foundation)
 1. Navigate to the repository root.
@@ -69,139 +69,116 @@ This document provides comprehensive examples for all implemented features in Ar
 
 ## Available Commands
 
-### 1. Get-Command
+### 1. الأوامر
 
-Lists all commands discovered by the shell.
+يعرض قائمة الأوامر الفعّالة في أربش.
 
 **Syntax:**
 ```powershell
-Get-Command
+الأوامر
 ```
 
 **Example:**
 ```powershell
-ArbSh> Get-Command
-Get-Command
-Get-Help
-احصل-مساعدة
-Test-Array-Binding
-Test-Type-Literal
-Write-Output
+ArbSh> الأوامر
+اختبار-مصفوفة
+اختبار-نوع
+اخرج
+اطبع
+الأوامر
+مساعدة
 ```
 
-**Features:**
-- Automatic cmdlet discovery via reflection
-- Caching for performance
-- Includes Arabic aliases in output
+### 2. مساعدة
 
-### 2. Get-Help / احصل-مساعدة
-
-Displays help information for commands. Available in both English and Arabic.
+يعرض مساعدة عامة أو تفاصيل أمر محدد.
 
 **Syntax:**
 ```powershell
-Get-Help [[-CommandName] <string>] [-Full]
-احصل-مساعدة [[-الاسم] <string>] [-كامل]
+مساعدة [[-الأمر] <string>] [-كامل]
 ```
 
 **Parameters:**
-- `-CommandName <string>` / `-الاسم <string>` (Position 0): Command name to get help for
-- `-Full` / `-كامل`: Show detailed parameter information
+- `-الأمر <string>` (Position 0): اسم الأمر المطلوب عرض مساعدته
+- `-كامل`: عرض تفاصيل المعاملات
 
 **Examples:**
 
 **General Help:**
 ```powershell
-ArbSh> Get-Help
-Placeholder general help message. Try 'Get-Help <Command-Name>'.
-Example: Get-Help Get-Command
+ArbSh> مساعدة
+استخدام المساعدة:
+  مساعدة <الأمر>
+مثال:
+  مساعدة الأوامر
 ```
 
 **Help for Specific Command:**
 ```powershell
-ArbSh> Get-Help Get-Command
+ArbSh> مساعدة الأوامر
 
-NAME
-    Get-Command
+الاسم
+  الأوامر
 
-SYNOPSIS
-    (Synopsis for Get-Command not available)
-
-SYNTAX
-    Get-Command
-```
-
-**Arabic Command Usage:**
-```powershell
-ArbSh> احصل-مساعدة -الاسم Get-Command
-
-NAME
-    Get-Command
-
-SYNOPSIS
-    (Synopsis for Get-Command not available)
-
-SYNTAX
-    Get-Command
+الصيغة
+  الأوامر
 ```
 
 **Full Help with Parameters:**
 ```powershell
-ArbSh> Get-Help Write-Output -Full
+ArbSh> مساعدة اطبع -كامل
 
-NAME
-    Write-Output
+الاسم
+  اطبع
 
-SYNTAX
-    Write-Output [-InputObject <Object>]
+الصيغة
+  اطبع [-النص <Object>]
 
-PARAMETERS
-    -InputObject <Object>
-        The object(s) to write to the output stream.
-        Required?                    False
-        Position?                    0
-        Accepts pipeline input?      True (By Value)
+المعاملات
+  -النص <Object>
+    النص أو الكائن المراد طباعته.
+    إلزامي: لا
+    الموضع: 0
+    من الدفق: نعم (بالقيمة)
 ```
 
-### 3. Write-Output
+### 3. اطبع
 
-Writes objects or strings to the output stream. Accepts pipeline input and direct arguments.
+يطبع نصًا أو كائنًا إلى مجرى المخرجات، ويدعم الإدخال من الدفق.
 
 **Syntax:**
 ```powershell
-Write-Output [-InputObject <Object>]
-<PipelineInput> | Write-Output
+اطبع [-النص <Object>]
+<PipelineInput> | اطبع
 ```
 
 **Examples:**
 
 **Direct Output:**
 ```powershell
-ArbSh> Write-Output "Hello ArbSh User!"
-Hello ArbSh User!
+ArbSh> اطبع "أهلًا بك في أربش"
+أهلًا بك في أربش
 ```
 
 **Pipeline Usage:**
 ```powershell
-ArbSh> Get-Command | Write-Output
-Get-Command
-Get-Help
-احصل-مساعدة
-Test-Array-Binding
-Test-Type-Literal
-Write-Output
+ArbSh> الأوامر | اطبع
+اختبار-مصفوفة
+اختبار-نوع
+اخرج
+اطبع
+الأوامر
+مساعدة
 ```
 
-**Multiple Arguments:**
+### 4. اخرج (Host Command)
+
+أمر مضيف (ليس Cmdlet) لإنهاء جلسة أربش الحالية.
+
+**Syntax:**
 ```powershell
-ArbSh> Write-Output "First" "Second" "Third"
-First
+اخرج
 ```
-
-**Features:**
-- Accepts pipeline input by value
-- Positional parameter binding
-- Object-to-string conversion
 
 ## ✅ **NEW: Subexpression Execution `$(...)` - FULLY WORKING**
 
@@ -217,38 +194,35 @@ $(command | pipeline)
 
 **Basic Subexpression:**
 ```powershell
-ArbSh> Write-Output $(Get-Command)
-Get-Command
-Get-Help
-احصل-مساعدة
-Test-Array-Binding
-Test-Type-Literal
-Write-Output
+ArbSh> اطبع $(الأوامر)
+اختبار-مصفوفة
+اختبار-نوع
+اخرج
+اطبع
+الأوامر
+مساعدة
 ```
 
 **Subexpression in Parameter:**
 ```powershell
-ArbSh> Get-Help $(Write-Output Get-Command)
+ArbSh> مساعدة $(اطبع الأوامر)
 
-NAME
-    Get-Command
+الاسم
+    الأوامر
 
-SYNOPSIS
-    (Synopsis for Get-Command not available)
-
-SYNTAX
-    Get-Command
+الصيغة
+    الأوامر
 ```
 
 **Complex Pipeline Subexpression:**
 ```powershell
-ArbSh> Write-Output "Available commands: $(Get-Command | Write-Output)"
-Available commands: Get-Command
-Get-Help
-احصل-مساعدة
-Test-Array-Binding
-Test-Type-Literal
-Write-Output
+ArbSh> اطبع "Available commands: $(الأوامر | اطبع)"
+Available commands: اختبار-مصفوفة
+اختبار-نوع
+اخرج
+اطبع
+الأوامر
+مساعدة
 ```
 
 **Features:**
@@ -282,62 +256,62 @@ PowerShell-style type casting that allows explicit type specification for parame
 
 **Basic Type Casting:**
 ```powershell
-ArbSh> Test-Type-Literal [int] 42
-IntValue: 42 (Type: Int32)
-StringValue: '' (Type: null)
-BoolValue: False (Type: Boolean)
-DoubleValue: 0 (Type: Double)
-DateTimeValue: 1/1/0001 12:00:00 AM (Type: DateTime)
-ColorValue: Black (Type: ConsoleColor)
-IntArray: null or empty
+ArbSh> اختبار-نوع [int] 42
+عدد-صحيح: 42 (النوع: Int32)
+نص: '' (النوع: null)
+منطقي: False (النوع: Boolean)
+عشري: 0 (النوع: Double)
+تاريخ: 1/1/0001 12:00:00 AM (النوع: DateTime)
+لون: Black (النوع: ConsoleColor)
+مصفوفة-أعداد: فارغة أو null
 ```
 
 **Multiple Type Literals:**
 ```powershell
-ArbSh> Test-Type-Literal [int] 1 [string] hello [bool] true
-IntValue: 1 (Type: Int32)
-StringValue: 'hello' (Type: String)
-BoolValue: True (Type: Boolean)
-DoubleValue: 0 (Type: Double)
-DateTimeValue: 1/1/0001 12:00:00 AM (Type: DateTime)
-ColorValue: Black (Type: ConsoleColor)
-IntArray: null or empty
+ArbSh> اختبار-نوع [int] 1 [string] hello [bool] true
+عدد-صحيح: 1 (النوع: Int32)
+نص: 'hello' (النوع: String)
+منطقي: True (النوع: Boolean)
+عشري: 0 (النوع: Double)
+تاريخ: 1/1/0001 12:00:00 AM (النوع: DateTime)
+لون: Black (النوع: ConsoleColor)
+مصفوفة-أعداد: فارغة أو null
 ```
 
 **Enum Type Conversion:**
 ```powershell
-ArbSh> Test-Type-Literal [ConsoleColor] Red
-IntValue: 12 (Type: Int32)
-StringValue: '' (Type: null)
-BoolValue: False (Type: Boolean)
-DoubleValue: 0 (Type: Double)
-DateTimeValue: 1/1/0001 12:00:00 AM (Type: DateTime)
-ColorValue: Black (Type: ConsoleColor)
-IntArray: null or empty
+ArbSh> اختبار-نوع [ConsoleColor] Red
+عدد-صحيح: 12 (النوع: Int32)
+نص: '' (النوع: null)
+منطقي: False (النوع: Boolean)
+عشري: 0 (النوع: Double)
+تاريخ: 1/1/0001 12:00:00 AM (النوع: DateTime)
+لون: Black (النوع: ConsoleColor)
+مصفوفة-أعداد: فارغة أو null
 ```
 
 **DateTime Parsing:**
 ```powershell
-ArbSh> Test-Type-Literal [datetime] 2023-01-01
-IntValue: 0 (Type: Int32)
-StringValue: '' (Type: null)
-BoolValue: False (Type: Boolean)
-DoubleValue: 0 (Type: Double)
-DateTimeValue: 1/1/2023 12:00:00 AM (Type: DateTime)
-ColorValue: Black (Type: ConsoleColor)
-IntArray: null or empty
+ArbSh> اختبار-نوع [datetime] 2023-01-01
+عدد-صحيح: 0 (النوع: Int32)
+نص: '' (النوع: null)
+منطقي: False (النوع: Boolean)
+عشري: 0 (النوع: Double)
+تاريخ: 1/1/2023 12:00:00 AM (النوع: DateTime)
+لون: Black (النوع: ConsoleColor)
+مصفوفة-أعداد: فارغة أو null
 ```
 
 **Complex Type Literal Usage:**
 ```powershell
-ArbSh> Test-Type-Literal [int] 1 [string] hello [bool] true [double] 3.14 [datetime] 2023-01-01
-IntValue: 1 (Type: Int32)
-StringValue: 'hello' (Type: String)
-BoolValue: True (Type: Boolean)
-DoubleValue: 3.14 (Type: Double)
-DateTimeValue: 1/1/2023 12:00:00 AM (Type: DateTime)
-ColorValue: Black (Type: ConsoleColor)
-IntArray: null or empty
+ArbSh> اختبار-نوع [int] 1 [string] hello [bool] true [double] 3.14 [datetime] 2023-01-01
+عدد-صحيح: 1 (النوع: Int32)
+نص: 'hello' (النوع: String)
+منطقي: True (النوع: Boolean)
+عشري: 3.14 (النوع: Double)
+تاريخ: 1/1/2023 12:00:00 AM (النوع: DateTime)
+لون: Black (النوع: ConsoleColor)
+مصفوفة-أعداد: فارغة أو null
 ```
 
 **Features:**
@@ -362,26 +336,26 @@ Variables start with `$` followed by their name. The parser replaces variable to
 
 **Simple Variable Expansion:**
 ```powershell
-ArbSh> Write-Output $testVar
+ArbSh> اطبع $testVar
 Value from $testVar!
 ```
 
 **Variable with Adjacent Text:**
 ```powershell
-ArbSh> Write-Output ValueIs:$testVar
+ArbSh> اطبع ValueIs:$testVar
 ValueIs:Value from $testVar!
 ```
 
 **Undefined Variable:**
 ```powershell
-ArbSh> Write-Output $nonExistentVar
+ArbSh> اطبع $nonExistentVar
 # (Empty output)
 ```
 
 **Variable in Parameter:**
 ```powershell
-ArbSh> Get-Help -CommandName $testVar
-Help Error: Command 'Value from $testVar!' not found.
+ArbSh> مساعدة -الأمر $testVar
+تعذّر العثور على الأمر: Value from $testVar!
 ```
 
 ## Escape Characters (`\`)
@@ -397,42 +371,42 @@ The backslash (`\`) escapes special characters and provides literal interpretati
 
 **Escaping Operators:**
 ```powershell
-ArbSh> Write-Output Command1 \| Command2 ; Write-Output Argument\;WithSemicolon
+ArbSh> اطبع Command1 \| Command2 ; اطبع Argument\;WithSemicolon
 Command1 | Command2
 Argument;WithSemicolon
 ```
 
 **Escaping Quotes:**
 ```powershell
-ArbSh> Write-Output "Argument with \"escaped quote\""
+ArbSh> اطبع "Argument with \"escaped quote\""
 Argument with "escaped quote"
 ```
 
 **Escaping Paths:**
 ```powershell
-ArbSh> Write-Output "Path: C:\\Users\\Test"
+ArbSh> اطبع "Path: C:\\Users\\Test"
 Path: C:\Users\Test
 ```
 
 **Newlines and Tabs:**
 ```powershell
-ArbSh> Write-Output "First Line\nSecond Line\tIndented"
+ArbSh> اطبع "First Line\nSecond Line\tIndented"
 First Line
 Second Line	Indented
 ```
 
 **Escaping Variables:**
 ```powershell
-ArbSh> Write-Output "Value is \$testVar"
+ArbSh> اطبع "Value is \$testVar"
 Value is $testVar
 
-ArbSh> Write-Output \$testVar
+ArbSh> اطبع \$testVar
 $testVar
 ```
 
 **Escaping Spaces:**
 ```powershell
-ArbSh> Write-Output Argument\ WithSpace
+ArbSh> اطبع Argument\ WithSpace
 Argument WithSpace
 ```
 
@@ -442,18 +416,18 @@ Argument WithSpace
 
 **Basic Pipeline:**
 ```powershell
-ArbSh> Get-Command | Write-Output
-Get-Command
-Get-Help
-احصل-مساعدة
-Test-Array-Binding
-Test-Type-Literal
-Write-Output
+ArbSh> الأوامر | اطبع
+الأوامر
+مساعدة
+مساعدة
+اختبار-مصفوفة
+اختبار-نوع
+اطبع
 ```
 
 **Pipeline with Quoted Pipes:**
 ```powershell
-ArbSh> Write-Output "Value is | this" | Write-Output
+ArbSh> اطبع "Value is | this" | اطبع
 Value is | this
 ```
 
@@ -462,14 +436,14 @@ Value is | this
 - `>>` - Append stdout to file
 
 ```powershell
-ArbSh> Get-Command > commands.txt
-ArbSh> Write-Output "Additional line" >> commands.txt
+ArbSh> الأوامر > commands.txt
+ArbSh> اطبع "Additional line" >> commands.txt
 ```
 
 **Command Separator (`;`):** Execute multiple statements sequentially.
 
 ```powershell
-ArbSh> Write-Output "First"; Write-Output "Second"
+ArbSh> اطبع "First"; اطبع "Second"
 First
 Second
 ```
@@ -488,7 +462,7 @@ ArbSh> Another-Command-That-Errors 2>> error.log
 **Stream Merging:**
 ```powershell
 # Merge stderr to stdout
-ArbSh> Command-With-Errors 2>&1 | Write-Output
+ArbSh> Command-With-Errors 2>&1 | اطبع
 
 # Merge stdout to stderr
 ArbSh> Command-With-Output 1>&2
@@ -506,11 +480,11 @@ ArbSh> Command-With-Both > output.log 2> error.log
 **Input Redirection (`<`):**
 ```powershell
 # Create input file
-ArbSh> Write-Output "Line 1" > input.txt
-ArbSh> Write-Output "Line 2" >> input.txt
+ArbSh> اطبع "Line 1" > input.txt
+ArbSh> اطبع "Line 2" >> input.txt
 
 # Use input redirection
-ArbSh> Write-Output < input.txt
+ArbSh> اطبع < input.txt
 Line 1
 Line 2
 ```
@@ -521,40 +495,43 @@ ArbSh is designed as an Arabic-first shell with comprehensive Arabic language su
 
 ### Arabic Command Names
 
-Commands are available with Arabic aliases for native Arabic developers:
+Commands are exposed with Arabic-first names for native Arabic developers:
 
 **Available Arabic Commands:**
-- `احصل-مساعدة` (Get-Help) - Get command help and documentation
-- Additional Arabic commands planned for Phase 5
+- `الأوامر` - عرض قائمة الأوامر
+- `مساعدة` - عرض المساعدة العامة أو مساعدة أمر محدد
+- `اطبع` - كتابة النص/الكائن إلى المخرجات
+- `اختبار-مصفوفة` - اختبار ربط المصفوفات
+- `اختبار-نوع` - اختبار تحويلات الأنواع
+- `اخرج` - إنهاء الجلسة (أمر مضيف)
 
 **Examples:**
 
 **Arabic Help Command:**
 ```powershell
-ArbSh> احصل-مساعدة
+ArbSh> مساعدة
 
-Placeholder general help message. Try 'Get-Help <Command-Name>'.
-Example: Get-Help Get-Command
+استخدام المساعدة:
+  مساعدة <الأمر>
+مثال:
+  مساعدة الأوامر
 ```
 
 **Arabic Help with Parameters:**
 ```powershell
-ArbSh> احصل-مساعدة -الاسم Get-Command
+ArbSh> مساعدة -الأمر الأوامر
 
-NAME
-    Get-Command
+الاسم
+  الأوامر
 
-SYNOPSIS
-    (Synopsis for Get-Command not available)
-
-SYNTAX
-    Get-Command
+الصيغة
+  الأوامر
 ```
 
 **Mixed Arabic/English Usage:**
 ```powershell
-ArbSh> احصل-مساعدة Get-Command
-ArbSh> Get-Help -الاسم Write-Output
+ArbSh> اطبع "hello"
+ArbSh> اطبع "مرحبا hi"
 ```
 
 ### BiDi Text Processing
@@ -579,7 +556,7 @@ ArbSh includes complete Unicode BiDi (Bidirectional) text processing according t
 ArbSh prioritizes Arabic language support as a core feature:
 
 **Design Principles:**
-- Native Arabic command names and aliases
+- Native Arabic command names
 - Full Unicode BiDi text rendering compliance
 - Arabic developer workflow optimization
 - Cultural localization considerations
@@ -606,22 +583,22 @@ dotnet run --project src_csharp/ArbSh.Console
 dotnet run --project src_csharp/ArbSh.Terminal
 
 # Exit the shell
-ArbSh> exit
+ArbSh> اخرج
 ```
 
 **Testing Features:**
 ```powershell
 # Test BiDi algorithm
-ArbSh> Test-Array-Binding
+ArbSh> اختبار-مصفوفة
 
 # Test type literals
-ArbSh> Test-Type-Literal [int] 42
+ArbSh> اختبار-نوع [int] 42
 
 # Test subexpressions
-ArbSh> Write-Output $(Get-Command)
+ArbSh> اطبع $(الأوامر)
 
 # Test Arabic commands
-ArbSh> احصل-مساعدة
+ArbSh> مساعدة
 ```
 
 This comprehensive feature set makes ArbSh a powerful Arabic-first shell environment for Arabic developers, with full Unicode compliance and modern shell capabilities.

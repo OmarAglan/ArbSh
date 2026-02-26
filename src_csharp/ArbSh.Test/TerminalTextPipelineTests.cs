@@ -11,7 +11,7 @@ public sealed class TerminalTextPipelineTests
     public void BuildVisualRun_LatinText_PreservesVisualOrder()
     {
         var pipeline = new TerminalTextPipeline(new FakeTextMeasurer());
-        const string logical = "Get-Command";
+        const string logical = "dotnet";
 
         VisualTextRun run = pipeline.BuildVisualRun(logical, TerminalLineKind.Output, RenderConfig);
 
@@ -25,7 +25,7 @@ public sealed class TerminalTextPipelineTests
     public void BuildVisualRun_ArabicText_KeepsLogicalStateIntact()
     {
         var pipeline = new TerminalTextPipeline(new FakeTextMeasurer());
-        const string logical = "احصل-مساعدة";
+        const string logical = "مساعدة";
 
         VisualTextRun run = pipeline.BuildVisualRun(logical, TerminalLineKind.Output, RenderConfig);
 
@@ -40,9 +40,9 @@ public sealed class TerminalTextPipelineTests
     {
         var pipeline = new TerminalTextPipeline(new FakeTextMeasurer());
 
-        VisualTextRun run = pipeline.BuildPromptRun("أربش> ", "Get-Command", RenderConfig);
+        VisualTextRun run = pipeline.BuildPromptRun("أربش< ", "الأوامر", RenderConfig);
 
-        Assert.Equal("أربش> Get-Command", run.LogicalText);
+        Assert.Equal("أربش< الأوامر", run.LogicalText);
         Assert.True(run.HasArabic);
     }
 

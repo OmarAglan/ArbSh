@@ -29,7 +29,7 @@ namespace ArbSh.Core
 
         /// <summary>
         /// Gets or sets help text for the parameter.
-        /// (Placeholder for future use, e.g., by Get-Help)
+        /// (Placeholder for future use, e.g., by مساعدة)
         /// </summary>
         public string? HelpMessage { get; set; }
 

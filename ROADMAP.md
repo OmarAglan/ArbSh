@@ -34,7 +34,7 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [✅] Advanced parser with quote handling and escape sequences
 - [✅] Reflection-based parameter binding with type conversion
 - [✅] Task-based concurrent pipeline execution
-- [✅] Core cmdlets: `Write-Output`, `Get-Help`, `Get-Command`
+- [✅] Core cmdlets: `اطبع`, `مساعدة`, `الأوامر`
 - [✅] File redirection support (`>`, `>>`, `2>`, `2>>`)
 - [✅] Stream merging (`2>&1`, `1>&2`)
 - [✅] Pipeline input binding (`ValueFromPipeline`)
@@ -144,6 +144,7 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Added full ANSI SGR parsing pipeline (16-color, 256-color, and truecolor) with span-based foreground/background styling.
 - Added ArbSh navy theme/palette abstractions and applied ANSI-aware styling in output rendering without mutating logical text.
 - Added tests for ANSI parser, ANSI palette mapping, and ANSI-aware terminal text pipeline behavior.
+- Finalized Arabic-only command surface (`الأوامر`, `مساعدة`, `اطبع`, `اختبار-مصفوفة`, `اختبار-نوع`, plus host `اخرج`) and removed legacy command aliases.
 
 **Next Focus:** Begin Phase 6 by integrating external process execution (`git`, `dotnet`, `node`) into the GUI terminal stream model.
 

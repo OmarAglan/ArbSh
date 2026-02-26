@@ -3,16 +3,16 @@
 namespace ArbSh.Core.Commands
 {
     /// <summary>
-    /// Basic implementation of a cmdlet similar to PowerShell's Write-Output.
-    /// Writes objects to the pipeline/console.
+    /// يكتب النص/الكائن إلى مجرى المخرجات.
     /// </summary>
+    [ArabicName("اطبع")]
     public class WriteOutputCmdlet : CmdletBase
     {
         /// <summary>
-        /// The object(s) to write to the output stream.
-        /// Can be bound from pipeline input or direct argument.
+        /// النص (أو الكائن) المراد طباعته.
         /// </summary>
-        [Parameter(Position = 0, ValueFromPipeline = true, HelpMessage = "The object(s) to write to the output stream.")]
+        [Parameter(Position = 0, ValueFromPipeline = true, HelpMessage = "النص أو الكائن المراد طباعته.")]
+        [ArabicName("النص")]
         public object? InputObject { get; set; }
 
         private bool _processedInputObjectParam = false;

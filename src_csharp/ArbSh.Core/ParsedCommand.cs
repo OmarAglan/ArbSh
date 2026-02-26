@@ -50,7 +50,7 @@ namespace ArbSh.Core
         }
 
         /// <summary>
-        /// The name of the command (e.g., "Write-Output", "Get-Content", "احصل-محتوى").
+        /// The name of the command (e.g., "اطبع", "مساعدة", "احصل-محتوى").
         /// </summary>
         public string CommandName { get; }
 

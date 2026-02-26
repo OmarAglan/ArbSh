@@ -177,7 +177,7 @@ namespace ArbSh.Core
                                 {
                                     CoreConsole.WriteLine($"DEBUG (Executor Task): '{currentCommand.CommandName}' has no pipeline input, calling ProcessRecord once.");
                                     // Call ProcessRecord once even without pipeline input,
-                                    // allowing cmdlets like Get-Command or Write-Output with arguments to run.
+                                    // allowing cmdlets like الأوامر or اطبع with arguments to run.
                                     // TODO: Handle subexpression arguments here - execute them first?
                                     cmdletInstance.ProcessRecord(null);
                                 }
@@ -220,7 +220,7 @@ namespace ArbSh.Core
                     {
                         // If a command isn't found, stop setting up the pipeline for this statement.
                         CoreConsole.ForegroundColor = ConsoleColor.Yellow;
-                        CoreConsole.WriteLine($"Command not found: {currentCommand.CommandName}. Halting pipeline setup for this statement.");
+                        CoreConsole.WriteLine($"الأمر غير موجود: {currentCommand.CommandName}. سيتم إيقاف إعداد خط الأنابيب لهذه العبارة.");
                         CoreConsole.ResetColor();
 
                         // Clean up collections created so far for this statement to prevent deadlocks
@@ -684,8 +684,7 @@ namespace ArbSh.Core
                 var paramAttr = prop.GetCustomAttribute<ParameterAttribute>();
                 if (paramAttr == null) continue;
 
-                // Get English and potential Arabic names
-                string englishParamName = $"-{prop.Name}";
+                // Arabic-only named parameter binding.
                 var arabicNameAttr = prop.GetCustomAttribute<ArabicNameAttribute>();
                 string? arabicParamName = arabicNameAttr != null ? $"-{arabicNameAttr.Name}" : null;
 
@@ -694,20 +693,13 @@ namespace ArbSh.Core
                 string? boundName = null; // Keep track of which name was used for binding
                 string? namedValue = null; // The value found via named parameter
 
-                // 1. Try binding by parameter name (Arabic first, then English)
+                // 1. Try binding by Arabic parameter name only.
                 if (arabicParamName != null && command.Parameters.ContainsKey(arabicParamName))
                 {
                     namedValue = command.Parameters[arabicParamName];
                     boundName = arabicParamName;
                     found = true;
                     CoreConsole.WriteLine($"DEBUG (Binder): Found parameter via Arabic name '{boundName}'.");
-                }
-                else if (command.Parameters.ContainsKey(englishParamName))
-                {
-                    namedValue = command.Parameters[englishParamName];
-                    boundName = englishParamName;
-                    found = true;
-                    CoreConsole.WriteLine($"DEBUG (Binder): Found parameter via English name '{boundName}'.");
                 }
 
                 // If found by either name, process the value
@@ -775,7 +767,7 @@ namespace ArbSh.Core
                     }
                     // If found is true, but valueToSet is still null (e.g., switch param where value wasn't explicitly true/false), it's handled above.
                 }
-                // Note: 'found' now indicates if the parameter was specified by *name* (Arabic or English)
+                // Note: 'found' now indicates if the parameter was specified by Arabic name.
 
                 // 2. Try binding by position (if not found by name and attribute specifies position)
                 // Also handle array binding for positional parameters here.
@@ -944,7 +936,8 @@ namespace ArbSh.Core
                             catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException || ex is NotSupportedException /*TypeConverter might throw this*/)
                             {
                                 // Throw specific binding exception for conversion failure
-                                throw new ParameterBindingException($"Cannot process argument transformation for parameter '{englishParamName}' at position {paramAttr.Position}. Cannot convert value \"{positionalValue}\" to type \"{prop.PropertyType.FullName}\".", ex)
+                                string positionalParamName = arabicParamName ?? $"-{prop.Name}";
+                                throw new ParameterBindingException($"تعذر تحويل قيمة الوسيط \"{positionalValue}\" للمعامل '{positionalParamName}' في الموضع {paramAttr.Position}. النوع المطلوب: \"{prop.PropertyType.FullName}\".", ex)
                                 {
                                     ParameterName = prop.Name // Still use property name for identification
                                 };
@@ -1005,13 +998,8 @@ namespace ArbSh.Core
                 // 4. Check for Mandatory parameters that were not bound by name or position
                 if (!found && paramAttr.Mandatory)
                 {
-                    // Construct error message mentioning both names if applicable
-                    string missingParamMsg = $"Missing mandatory parameter '{englishParamName}'";
-                    if (arabicParamName != null)
-                    {
-                        missingParamMsg += $" (or '{arabicParamName}')";
-                    }
-                    missingParamMsg += $" for cmdlet '{cmdlet.GetType().Name}'.";
+                    string requiredName = arabicParamName ?? $"-{prop.Name}";
+                    string missingParamMsg = $"المعامل الإلزامي '{requiredName}' مفقود للأمر '{cmdlet.GetType().Name}'.";
 
                     // Throw an exception to stop execution of this cmdlet's task
                     throw new ParameterBindingException(missingParamMsg)
@@ -1155,8 +1143,8 @@ namespace ArbSh.Core
                     }
                     else
                     {
-                        CoreConsole.WriteLine($"ERROR (Executor SubExpr): Command '{currentCommand.CommandName}' not found in subexpression.");
-                        outputCollection.Add(new PipelineObject($"[ERROR: Command '{currentCommand.CommandName}' not found]", true));
+                        CoreConsole.WriteLine($"ERROR (Executor SubExpr): الأمر '{currentCommand.CommandName}' غير موجود داخل التعبير الفرعي.");
+                        outputCollection.Add(new PipelineObject($"[خطأ: الأمر '{currentCommand.CommandName}' غير موجود]", true));
                         outputCollection.CompleteAdding();
                     }
                 }

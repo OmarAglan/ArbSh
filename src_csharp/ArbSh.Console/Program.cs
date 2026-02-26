@@ -8,7 +8,7 @@ namespace ArbSh.Console
 {
     internal static class Program
     {
-        private const string ExitCommand = "exit";
+        private const string ExitCommand = "اخرج";
 
         private static void Main(string[] args)
         {
@@ -27,7 +27,7 @@ namespace ArbSh.Console
             };
 
             ConsoleRTLDisplay.DisplayRTLText("مرحباً بكم في أربش (النموذج الأولي)!", rightAlign: true);
-            ConsoleRTLDisplay.DisplayRTLText("اكتب 'exit' للخروج.", rightAlign: true);
+            ConsoleRTLDisplay.DisplayRTLText("اكتب 'اخرج' للخروج.", rightAlign: true);
             System.Console.WriteLine();
 
             if (executionOptions.EmitDebug)
@@ -76,7 +76,7 @@ namespace ArbSh.Console
                         continue;
                     }
 
-                    if (inputLine.Equals(ExitCommand, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(inputLine, ExitCommand, StringComparison.Ordinal))
                     {
                         break;
                     }
@@ -104,7 +104,7 @@ namespace ArbSh.Console
                 ArabicConsoleInput.Cleanup();
                 if (!System.Console.IsInputRedirected)
                 {
-                    System.Console.WriteLine("Exiting ArbSh.");
+                    System.Console.WriteLine("تم إغلاق أربش.");
                 }
             }
         }

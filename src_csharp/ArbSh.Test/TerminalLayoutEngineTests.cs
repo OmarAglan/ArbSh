@@ -26,7 +26,7 @@ public sealed class TerminalLayoutEngineTests
 
         IReadOnlyList<TerminalDrawInstruction> frame = engine.BuildFrame(
             lines,
-            "أربش> ",
+            "أربش< ",
             string.Empty,
             new Size(200, 120),
             config,
@@ -57,7 +57,7 @@ public sealed class TerminalLayoutEngineTests
 
         IReadOnlyList<TerminalDrawInstruction> frame = engine.BuildFrame(
             lines,
-            "أربش> ",
+            "أربش< ",
             string.Empty,
             new Size(220, 130),
             config,
@@ -84,8 +84,8 @@ public sealed class TerminalLayoutEngineTests
 
         IReadOnlyList<TerminalDrawInstruction> frame = engine.BuildFrame(
             [],
-            "أربش> ",
-            "Get-Command",
+            "أربش< ",
+            "الأوامر",
             new Size(240, 140),
             config,
             pipeline);
@@ -113,7 +113,7 @@ public sealed class TerminalLayoutEngineTests
 
         TerminalFrameLayout frame = engine.BuildFrameLayout(
             lines,
-            "أربش> ",
+            "أربش< ",
             string.Empty,
             new Size(220, 130),
             config,
@@ -148,7 +148,7 @@ public sealed class TerminalLayoutEngineTests
 
         TerminalFrameLayout frame = engine.BuildFrameLayout(
             lines,
-            "أربش> ",
+            "أربش< ",
             string.Empty,
             new Size(220, 130),
             config,

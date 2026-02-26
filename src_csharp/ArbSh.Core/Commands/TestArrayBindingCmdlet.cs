@@ -4,14 +4,23 @@ using System.Linq;
 namespace ArbSh.Core.Commands
 {
     /// <summary>
-    /// Simple cmdlet to test positional array binding.
+    /// أمر لاختبار ربط المصفوفات عبر المعاملات الموضعية.
     /// </summary>
+    [ArabicName("اختبار-مصفوفة")]
     public class TestArrayBindingCmdlet : CmdletBase
     {
-        [Parameter(Position = 0, HelpMessage = "Accepts multiple string arguments.")]
+        /// <summary>
+        /// قائمة النصوص المطلوب ربطها كمصفوفة.
+        /// </summary>
+        [Parameter(Position = 0, HelpMessage = "يستقبل عدة نصوص.")]
+        [ArabicName("نصوص")]
         public string[]? InputStrings { get; set; }
 
-        [Parameter(HelpMessage = "An optional switch.")]
+        /// <summary>
+        /// مبدل اختياري للاختبار.
+        /// </summary>
+        [Parameter(HelpMessage = "مبدل اختياري.")]
+        [ArabicName("مبدل")]
         public bool MySwitch { get; set; }
 
         public override void ProcessRecord(PipelineObject? input)
@@ -22,10 +31,10 @@ namespace ArbSh.Core.Commands
 
         public override void EndProcessing()
         {
-            WriteObject($"MySwitch value: {MySwitch}");
+            WriteObject($"قيمة المبدل: {MySwitch}");
             if (InputStrings != null && InputStrings.Any())
             {
-                WriteObject($"Received {InputStrings.Length} strings:");
+                WriteObject($"تم استلام {InputStrings.Length} عنصر/عناصر نصية:");
                 for (int i = 0; i < InputStrings.Length; i++)
                 {
                     WriteObject($"  [{i}]: '{InputStrings[i]}'");
@@ -33,7 +42,7 @@ namespace ArbSh.Core.Commands
             }
             else
             {
-                WriteObject("Received no strings.");
+                WriteObject("لم يتم استلام أي نصوص.");
             }
         }
     }

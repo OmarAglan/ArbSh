@@ -3,30 +3,58 @@
 namespace ArbSh.Core.Commands
 {
     /// <summary>
-    /// Test cmdlet for demonstrating type literal functionality.
-    /// Accepts various parameter types to test type literal conversion.
+    /// أمر لاختبار تحويلات نوع المعاملات باستخدام صيغ الأنواع.
     /// </summary>
+    [ArabicName("اختبار-نوع")]
     public class TestTypeLiteralCmdlet : CmdletBase
     {
-        [Parameter(Position = 0, HelpMessage = "An integer value.")]
+        /// <summary>
+        /// قيمة عددية صحيحة.
+        /// </summary>
+        [Parameter(Position = 0, HelpMessage = "قيمة عددية صحيحة.")]
+        [ArabicName("عدد-صحيح")]
         public int IntValue { get; set; }
 
-        [Parameter(Position = 1, HelpMessage = "A string value.")]
+        /// <summary>
+        /// قيمة نصية.
+        /// </summary>
+        [Parameter(Position = 1, HelpMessage = "قيمة نصية.")]
+        [ArabicName("نص")]
         public string? StringValue { get; set; }
 
-        [Parameter(Position = 2, HelpMessage = "A boolean value.")]
+        /// <summary>
+        /// قيمة منطقية.
+        /// </summary>
+        [Parameter(Position = 2, HelpMessage = "قيمة منطقية.")]
+        [ArabicName("منطقي")]
         public bool BoolValue { get; set; }
 
-        [Parameter(Position = 3, HelpMessage = "A double value.")]
+        /// <summary>
+        /// قيمة عشرية.
+        /// </summary>
+        [Parameter(Position = 3, HelpMessage = "قيمة عشرية.")]
+        [ArabicName("عشري")]
         public double DoubleValue { get; set; }
 
-        [Parameter(Position = 4, HelpMessage = "A DateTime value.")]
+        /// <summary>
+        /// قيمة تاريخ/وقت.
+        /// </summary>
+        [Parameter(Position = 4, HelpMessage = "قيمة تاريخ/وقت.")]
+        [ArabicName("تاريخ")]
         public DateTime DateTimeValue { get; set; }
 
-        [Parameter(HelpMessage = "An array of integers.")]
+        /// <summary>
+        /// مصفوفة من الأعداد الصحيحة.
+        /// </summary>
+        [Parameter(HelpMessage = "مصفوفة أعداد صحيحة.")]
+        [ArabicName("مصفوفة-أعداد")]
         public int[]? IntArray { get; set; }
 
-        [Parameter(HelpMessage = "A ConsoleColor value.")]
+        /// <summary>
+        /// لون من تعداد ConsoleColor.
+        /// </summary>
+        [Parameter(HelpMessage = "لون من ConsoleColor.")]
+        [ArabicName("لون")]
         public ConsoleColor ColorValue { get; set; }
 
         public override void ProcessRecord(PipelineObject? input)
@@ -37,20 +65,20 @@ namespace ArbSh.Core.Commands
 
         public override void EndProcessing()
         {
-            WriteObject($"IntValue: {IntValue} (Type: {IntValue.GetType().Name})");
-            WriteObject($"StringValue: '{StringValue}' (Type: {StringValue?.GetType().Name ?? "null"})");
-            WriteObject($"BoolValue: {BoolValue} (Type: {BoolValue.GetType().Name})");
-            WriteObject($"DoubleValue: {DoubleValue} (Type: {DoubleValue.GetType().Name})");
-            WriteObject($"DateTimeValue: {DateTimeValue} (Type: {DateTimeValue.GetType().Name})");
-            WriteObject($"ColorValue: {ColorValue} (Type: {ColorValue.GetType().Name})");
+            WriteObject($"عدد-صحيح: {IntValue} (النوع: {IntValue.GetType().Name})");
+            WriteObject($"نص: '{StringValue}' (النوع: {StringValue?.GetType().Name ?? "null"})");
+            WriteObject($"منطقي: {BoolValue} (النوع: {BoolValue.GetType().Name})");
+            WriteObject($"عشري: {DoubleValue} (النوع: {DoubleValue.GetType().Name})");
+            WriteObject($"تاريخ: {DateTimeValue} (النوع: {DateTimeValue.GetType().Name})");
+            WriteObject($"لون: {ColorValue} (النوع: {ColorValue.GetType().Name})");
 
             if (IntArray != null && IntArray.Length > 0)
             {
-                WriteObject($"IntArray: [{string.Join(", ", IntArray)}] (Type: {IntArray.GetType().Name}, Length: {IntArray.Length})");
+                WriteObject($"مصفوفة-أعداد: [{string.Join(", ", IntArray)}] (النوع: {IntArray.GetType().Name}, الطول: {IntArray.Length})");
             }
             else
             {
-                WriteObject("IntArray: null or empty");
+                WriteObject("مصفوفة-أعداد: فارغة أو null");
             }
         }
     }

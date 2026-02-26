@@ -43,7 +43,7 @@ namespace ArbSh.Core.I18n
             }
 
             // For input processing, we want to keep the logical order
-            // This ensures Arabic commands like "احصل-مساعدة" are parsed correctly
+            // This ensures Arabic commands like "مساعدة" are parsed correctly
             
             // Normalize whitespace and trim
             string normalized = NormalizeWhitespace(input);

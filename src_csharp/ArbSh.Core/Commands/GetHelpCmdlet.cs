@@ -1,136 +1,149 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq; // Needed for Where/OrderBy
-using System.Reflection; // For ParameterInfo
-using System.Text; // For StringBuilder
+using System.Reflection;
+using System.Text;
 
 namespace ArbSh.Core.Commands
 {
     /// <summary>
-    /// Placeholder implementation for a Get-Help cmdlet.
+    /// يعرض المساعدة العامة أو تفاصيل أمر عربي محدد.
     /// </summary>
-    [ArabicName("احصل-مساعدة")] // Added Arabic name attribute
+    [ArabicName("مساعدة")]
     public class GetHelpCmdlet : CmdletBase
     {
-        [Parameter(Position = 0, HelpMessage = "The name of the command to get help for.")]
-        [ArabicName("الاسم")] // Added Arabic name for the parameter
+        /// <summary>
+        /// اسم الأمر المطلوب عرض المساعدة له.
+        /// </summary>
+        [Parameter(Position = 0, HelpMessage = "اسم الأمر المطلوب.")]
+        [ArabicName("الأمر")]
         public string? CommandName { get; set; }
 
-        [Parameter(HelpMessage = "Display the full help topic.")]
-        public bool Full { get; set; } // Switch parameter, defaults to false
+        /// <summary>
+        /// عرض تفاصيل أوسع عن المعاملات.
+        /// </summary>
+        [Parameter(HelpMessage = "عرض التفاصيل الكاملة.")]
+        [ArabicName("كامل")]
+        public bool Full { get; set; }
 
-        // TODO: Add other parameters like -Category etc.
-
+        /// <inheritdoc />
         public override void EndProcessing()
         {
-            if (!string.IsNullOrEmpty(CommandName))
+            if (!string.IsNullOrWhiteSpace(CommandName))
             {
-                // Find the command type
-                Type? targetCmdletType = CommandDiscovery.Find(CommandName);
+                if (string.Equals(CommandName, "اخرج", StringComparison.Ordinal))
+                {
+                    WriteObject("\nالاسم");
+                    WriteObject("  اخرج");
+                    WriteObject("\nالوصف");
+                    WriteObject("  ينهي جلسة أربش الحالية في المضيف.");
+                    WriteObject("\nالاستخدام");
+                    WriteObject("  اخرج");
+                    return;
+                }
 
+                Type? targetCmdletType = CommandDiscovery.Find(CommandName);
                 if (targetCmdletType != null)
                 {
                     DisplayCommandHelp(targetCmdletType);
                 }
                 else
                 {
-                    // Use the new PipelineObject constructor to mark this as an error
-                    WriteObject(new PipelineObject($"Help Error: Command '{CommandName}' not found.", isError: true));
+                    WriteObject(new PipelineObject($"تعذّر العثور على الأمر: {CommandName}", isError: true));
                 }
+
+                return;
             }
-            else // General help
+
+            WriteObject("استخدام المساعدة:");
+            WriteObject("  مساعدة <الأمر>");
+            WriteObject("مثال:");
+            WriteObject("  مساعدة الأوامر");
+
+            if (!Full)
             {
-                 // TODO: Implement more comprehensive general help / list modules etc.
-                 WriteObject("Placeholder general help message. Try 'Get-Help <Command-Name>'.");
-                 WriteObject("Example: Get-Help Get-Command");
-                 // Optionally list all commands if -Full is specified?
-                 if (Full)
-                 {
-                     WriteObject("\nAvailable Commands (use Get-Command for details):");
-                     var allCommands = CommandDiscovery.GetAllCommands();
-                     foreach(var cmd in allCommands.OrderBy(kvp => kvp.Key))
-                     {
-                         WriteObject($"  {cmd.Key}");
-                     } // <-- Added missing closing brace
-                 }
+                return;
+            }
+
+            WriteObject("\nالأوامر المتاحة:");
+            IReadOnlyDictionary<string, Type> allCommands = CommandDiscovery.GetAllCommands();
+            IEnumerable<string> commandNames = allCommands.Keys
+                .Append("اخرج")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x, StringComparer.Ordinal);
+
+            foreach (string commandName in commandNames)
+            {
+                WriteObject($"  {commandName}");
             }
         }
 
         private void DisplayCommandHelp(Type cmdletType)
         {
             var helpBuilder = new StringBuilder();
+
             string commandName = CommandDiscovery.GetAllCommands()
-                                    .FirstOrDefault(kvp => kvp.Value == cmdletType).Key ?? cmdletType.Name;
+                .FirstOrDefault(kvp => kvp.Value == cmdletType).Key;
 
-            helpBuilder.AppendLine($"\nNAME");
-            helpBuilder.AppendLine($"    {commandName}");
+            if (string.IsNullOrWhiteSpace(commandName))
+            {
+                ArabicNameAttribute? nameAttr = cmdletType.GetCustomAttribute<ArabicNameAttribute>();
+                commandName = nameAttr?.Name ?? cmdletType.Name;
+            }
 
-            // TODO: Get synopsis/description from an attribute on the class?
-            helpBuilder.AppendLine($"\nSYNOPSIS");
-            helpBuilder.AppendLine($"    (Synopsis for {commandName} not available)");
+            helpBuilder.AppendLine("\nالاسم");
+            helpBuilder.AppendLine($"  {commandName}");
 
+            helpBuilder.AppendLine("\nالصيغة");
+            helpBuilder.Append($"  {commandName}");
 
-            helpBuilder.AppendLine($"\nSYNTAX");
-            // Build basic syntax line
-            helpBuilder.Append($"    {commandName}");
-            var parameters = cmdletType.GetProperties()
-                .Select(p => new { Property = p, Attr = p.GetCustomAttribute<ParameterAttribute>() })
-                .Where(p => p.Attr != null)
-                .OrderBy(p => p.Attr!.Position >= 0 ? p.Attr.Position : int.MaxValue) // Positional first
-                .ThenBy(p => p.Property.Name)
+            List<(PropertyInfo Property, ParameterAttribute Attr)> parameters = cmdletType.GetProperties()
+                .Select(p => (Property: p, Attr: p.GetCustomAttribute<ParameterAttribute>()))
+                .Where(x => x.Attr != null)
+                .Select(x => (Property: x.Property, Attr: x.Attr!))
+                .OrderBy(x => x.Attr.Position >= 0 ? x.Attr.Position : int.MaxValue)
+                .ThenBy(x => x.Property.Name)
                 .ToList();
 
-            foreach (var paramInfo in parameters)
+            foreach ((PropertyInfo property, ParameterAttribute attr) in parameters)
             {
-                string paramSyntax = $"[-{paramInfo.Property.Name}";
-                // Indicate type (basic) - PowerShell shows type like [<Type>]
-                // Handle boolean switch parameters specially in syntax
-                if (paramInfo.Property.PropertyType != typeof(bool))
+                ArabicNameAttribute? arabicNameAttr = property.GetCustomAttribute<ArabicNameAttribute>();
+                string parameterName = arabicNameAttr?.Name ?? property.Name;
+
+                string paramSyntax = $" [-{parameterName}";
+                if (property.PropertyType != typeof(bool))
                 {
-                    paramSyntax += $" <{paramInfo.Property.PropertyType.Name}>";
+                    paramSyntax += $" <{property.PropertyType.Name}>";
                 }
+
                 paramSyntax += "]";
-                // Positional indication removed for simplicity for now, focus on named
-                // if (paramInfo.Attr!.Position >= 0)
-                // {
-                //     paramSyntax += $" [[-{paramInfo.Property.Name}]]"; // Indicate positional alternative
-                // }
-                 if (!paramInfo.Attr!.Mandatory) // Wrap optional in []
-                 {
-                     // Note: This syntax representation is very basic
-                     // PowerShell syntax is more complex (parameter sets etc.)
-                     // The outer [] already indicates optionality for named params
-                 }
-                helpBuilder.Append($" {paramSyntax}");
+                helpBuilder.Append(paramSyntax);
             }
+
             helpBuilder.AppendLine();
 
-
-            // TODO: Add DESCRIPTION section
-
-            if (Full && parameters.Any())
+            if (!Full || parameters.Count == 0)
             {
-                helpBuilder.AppendLine($"\nPARAMETERS");
-                foreach (var paramInfo in parameters)
-                {
-                    helpBuilder.AppendLine($"    -{paramInfo.Property.Name} <{paramInfo.Property.PropertyType.Name}>");
-                    if (!string.IsNullOrEmpty(paramInfo.Attr!.HelpMessage))
-                    {
-                        helpBuilder.AppendLine($"        {paramInfo.Attr.HelpMessage}");
-                    }
-                    helpBuilder.AppendLine($"        Required?                    {(paramInfo.Attr.Mandatory ? "True" : "False")}");
-                    helpBuilder.AppendLine($"        Position?                    {(paramInfo.Attr.Position >= 0 ? paramInfo.Attr.Position.ToString() : "Named")}");
-                    helpBuilder.AppendLine($"        Accepts pipeline input?      {(paramInfo.Attr.ValueFromPipeline ? "True (By Value)" : (paramInfo.Attr.ValueFromPipelineByPropertyName ? "True (By Property Name)" : "False"))}");
-                    // TODO: Add Default value? Aliases?
-                    helpBuilder.AppendLine();
-                }
+                WriteObject(helpBuilder.ToString());
+                return;
             }
 
-            // TODO: Add EXAMPLES section
-            // TODO: Add RELATED LINKS section
+            helpBuilder.AppendLine("\nالمعاملات");
+            foreach ((PropertyInfo property, ParameterAttribute attr) in parameters)
+            {
+                ArabicNameAttribute? arabicNameAttr = property.GetCustomAttribute<ArabicNameAttribute>();
+                string parameterName = arabicNameAttr?.Name ?? property.Name;
+
+                helpBuilder.AppendLine($"  -{parameterName} <{property.PropertyType.Name}>");
+                if (!string.IsNullOrWhiteSpace(attr.HelpMessage))
+                {
+                    helpBuilder.AppendLine($"    {attr.HelpMessage}");
+                }
+
+                helpBuilder.AppendLine($"    إلزامي: {(attr.Mandatory ? "نعم" : "لا")}");
+                helpBuilder.AppendLine($"    الموضع: {(attr.Position >= 0 ? attr.Position.ToString() : "مسماة")}");
+                helpBuilder.AppendLine($"    من الدفق: {(attr.ValueFromPipeline ? "نعم (بالقيمة)" : (attr.ValueFromPipelineByPropertyName ? "نعم (بالاسم)" : "لا"))}");
+                helpBuilder.AppendLine();
+            }
 
             WriteObject(helpBuilder.ToString());
         }
     }
 }
-

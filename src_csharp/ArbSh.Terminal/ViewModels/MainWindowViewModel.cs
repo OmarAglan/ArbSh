@@ -7,6 +7,7 @@ namespace ArbSh.Terminal.ViewModels;
 
 public sealed class MainWindowViewModel
 {
+    private const string ExitCommand = "اخرج";
     private readonly ObservableCollection<TerminalLine> _lines = [];
     private readonly ReadOnlyObservableCollection<TerminalLine> _readonlyLines;
 
@@ -15,9 +16,11 @@ public sealed class MainWindowViewModel
         _readonlyLines = new ReadOnlyObservableCollection<TerminalLine>(_lines);
         AddLine("مرحباً بكم في أربش - الواجهة الرسومية قيد البناء.", TerminalLineKind.System);
         AddLine("اكتب أمرًا واضغط Enter للتنفيذ.", TerminalLineKind.System);
+        AddLine("للخروج من الواجهة اكتب: اخرج", TerminalLineKind.System);
     }
 
     public event EventHandler? BufferChanged;
+    public event EventHandler? ExitRequested;
 
     public ReadOnlyObservableCollection<TerminalLine> Lines => _readonlyLines;
 
@@ -31,6 +34,13 @@ public sealed class MainWindowViewModel
         }
 
         AddLine(logicalInput, TerminalLineKind.Input);
+
+        string trimmedInput = logicalInput.Trim();
+        if (string.Equals(trimmedInput, ExitCommand, StringComparison.Ordinal))
+        {
+            Dispatcher.UIThread.Post(() => ExitRequested?.Invoke(this, EventArgs.Empty));
+            return;
+        }
 
         var sink = new TerminalExecutionSink(this);
         var options = new ExecutionOptions

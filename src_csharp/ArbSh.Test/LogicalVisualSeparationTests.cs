@@ -9,7 +9,7 @@ public sealed class LogicalVisualSeparationTests
     [Fact]
     public void BuildFrame_DoesNotMutateLogicalLineStorage()
     {
-        const string logicalLine = "احصل-مساعدة";
+        const string logicalLine = "مساعدة";
         var lines = new List<TerminalLine>
         {
             new(logicalLine, TerminalLineKind.Output, DateTimeOffset.UtcNow)
@@ -26,7 +26,7 @@ public sealed class LogicalVisualSeparationTests
 
         _ = engine.BuildFrame(
             lines,
-            "أربش> ",
+            "أربش< ",
             string.Empty,
             new Size(220, 120),
             config,
@@ -38,7 +38,7 @@ public sealed class LogicalVisualSeparationTests
     [Fact]
     public void BuildVisualRun_ReturnsOriginalLogicalTextAlongsideVisual()
     {
-        const string logical = "أربش> Get-Help";
+        const string logical = "أربش< مساعدة";
         var config = new TerminalRenderConfig();
         var pipeline = new TerminalTextPipeline(new FakeTextMeasurer());
 

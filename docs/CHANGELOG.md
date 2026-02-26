@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Arabic Command Surface Tests**: Added `ArabicCommandSurfaceTests` to assert active Arabic commands resolve and legacy English/old Arabic names do not resolve.
+
+### Changed
+- **Arabic-Only Command Resolution**: Command discovery now exposes only `[ArabicName]` command names.
+- **Arabic Command Set Refresh**: Active command names are now `الأوامر`, `مساعدة`, `اطبع`, `اختبار-مصفوفة`, and `اختبار-نوع`; host exit command is `اخرج`.
+- **Named Parameters in Arabic**: Named parameter binding now prefers Arabic parameter names only for user-facing cmdlets.
+- **Documentation Command Examples**: Updated roadmap/readme/usage examples to reflect the Arabic-first command surface.
+
+### Fixed
+- **Legacy Alias Leakage**: Removed runtime discovery of legacy English and previous Arabic command aliases.
+
 ## [0.8.0-alpha] - 2026-02-26
 
 ### Added

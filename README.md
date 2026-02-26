@@ -1,18 +1,18 @@
 # ArbSh - Arabic-First Shell
 
-**Current Version:** 0.7.7.11
-**Status:** Phase 4 Complete - Full BiDi Algorithm UAX #9 Compliance
-**Next Phase:** Phase 5 - Console I/O with BiDi Rendering
+**Current Version:** 0.8.0-alpha
+**Status:** Phase 5 Complete - Custom GUI Terminal Baseline Ready
+**Next Phase:** Phase 6 - Baa Language & External Process Integration
 
 ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifically for Arabic developers and users. Inspired by PowerShell's object pipeline architecture, ArbSh provides a powerful, extensible environment with native Arabic language support and full Unicode BiDi compliance.
 
 ## 🌟 Key Features
 
 ### Arabic-First Design
-- **Native Arabic Commands:** Execute commands using Arabic script (`احصل-مساعدة` for Get-Help)
+- **Native Arabic Commands:** Execute commands using Arabic script (`الأوامر`, `مساعدة`, `اطبع`, `اخرج`)
 - **Full BiDi Support:** Complete Unicode BiDi Algorithm (UAX #9) implementation
 - **RTL Text Handling:** Proper Right-to-Left text rendering and processing
-- **Arabic Parameter Names:** Support for Arabic parameter aliases (`-الاسم`)
+- **Arabic Parameter Names:** Support for Arabic-first parameters (e.g., `-الأمر`, `-كامل`, `-النص`)
 
 ### Modern Shell Architecture
 - **Object Pipeline:** PowerShell-inspired object-based command pipeline
@@ -26,16 +26,16 @@ ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifica
 - **Unicode Compliant:** Full UTF-8 and Unicode text processing
 - **Modern C# Architecture:** Extensible cmdlet framework
 
-## 🚀 Current Status (Version 0.7.7.11)
+## 🚀 Current Status (Version 0.8.0-alpha)
 
-### ✅ Phase 4 Complete: Full BiDi Algorithm UAX #9 Compliance
+### ✅ Phase 5 Complete: Custom GUI Terminal Baseline
 
 **Completed Features:**
 - **Complete BiDi Algorithm Implementation:** All rule sets (P, X, W, N, I, L) fully implemented
 - **Subexpression Execution:** PowerShell-style `$(...)` command substitution **WORKING**
 - **Type Literal Utilization:** `[TypeName]` type casting functionality **WORKING**
 - **70+ BiDi Tests Passing:** Comprehensive Unicode BidiTest.txt compliance
-- **Arabic Command Support:** `احصل-مساعدة` (Get-Help) with Arabic parameters
+- **Arabic Command Surface:** Runtime command discovery and invocation are Arabic-only for user-facing cmdlets
 
 ### 🏗️ Core Architecture (Fully Functional)
 
@@ -54,15 +54,16 @@ ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifica
 
 **Arabic Language Integration:**
 - Arabic command names via `[ArabicName]` attributes
-- Arabic parameter aliases (e.g., `-الاسم` for `-CommandName`)
+- Arabic parameter names (e.g., `-الأمر`, `-كامل`, `-النص`)
 - Full Unicode text processing and BiDi algorithm compliance
 
-**Available Cmdlets:**
-- `Write-Output` - Output objects to pipeline or console
-- `Get-Help` / `احصل-مساعدة` - Display command help and documentation
-- `Get-Command` - List all available commands
-- `Test-Array-Binding` - Array parameter binding testing
-- `Test-Type-Literal` - Type literal functionality testing
+**Available Commands:**
+- `اطبع` - Output objects to pipeline or console
+- `مساعدة` - Display command help and documentation
+- `الأوامر` - List all available commands
+- `اختبار-مصفوفة` - Validate array parameter binding behavior
+- `اختبار-نوع` - Validate type literal conversion behavior
+- `اخرج` - Exit the current host session (host command)
 
 **BiDi Algorithm Implementation:**
 - Complete UAX #9 compliance with all rule sets (P, X, W, N, I, L)
@@ -70,14 +71,13 @@ ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifica
 - 70+ BidiTest.txt compliance tests passing
 - Real-time BiDi processing for mixed Arabic/English content
 
-## 🎯 Next Phase: Phase 5 - Console I/O with BiDi Rendering
+## 🎯 Next Phase: Phase 6 - Baa Language & External Process Integration
 
 **Upcoming Features:**
-- RTL console input with proper cursor movement
-- BiDi-aware output rendering using implemented algorithm
-- Arabic error messages and help text
-- Complete Arabic localization
-- Enhanced Arabic developer workflow
+- External process execution inside the GUI terminal (`git`, `dotnet`, `node`)
+- Baa compiler output hosting with flawless Arabic rendering
+- Stream routing for foreground/background process integration
+- Arabic path/process handling improvements
 
 ## 📁 Project Structure
 
@@ -129,11 +129,11 @@ ArbSh/
 
 4. **Try some commands:**
    ```powershell
-   ArbSh> Get-Command
-   ArbSh> احصل-مساعدة
-   ArbSh> Write-Output $(Get-Command)
-   ArbSh> Test-Type-Literal [int] 42
-   ArbSh> exit
+   ArbSh> الأوامر
+   ArbSh> مساعدة
+   ArbSh> اطبع $(الأوامر)
+   ArbSh> اختبار-نوع [int] 42
+   ArbSh> اخرج
    ```
 
 ### Building a Release
@@ -142,7 +142,7 @@ A PowerShell script (`create-release.ps1`) automates release creation:
 
 2. **Run the release script:**
    ```powershell
-   .\create-release.ps1 -Version "0.7.7.11"
+   .\create-release.ps1 -Version "0.8.0-alpha"
    ```
 
 This creates a self-contained release build and packages it into `releases/` directory.
@@ -175,10 +175,10 @@ ArbSh is designed specifically for Arabic developers and users, not as a bilingu
 
 ## 📋 Current Limitations
 
-**Planned for Phase 5:**
-- RTL console input and cursor movement
-- BiDi-aware visual text rendering
-- Arabic error messages and help text
+**Current Focus (Phase 6):**
+- External process execution in the custom terminal
+- Baa compiler integration workflow
+- Process stream interop with ArbSh pipeline
 
 **Future Phases:**
 - External process execution (Phase 6)
@@ -195,4 +195,4 @@ ArbSh aims to be the premier command-line shell for Arabic developers, providing
 - Cross-platform compatibility
 - Extensible cmdlet framework
 
-**Current Status:** Phase 4 Complete - Ready for Phase 5 Console I/O Integration
+**Current Status:** Phase 5 Complete - Ready for Phase 6 Process/Baa Integration

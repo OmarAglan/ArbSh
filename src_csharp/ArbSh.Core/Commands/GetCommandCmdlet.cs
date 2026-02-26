@@ -1,45 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using ArbSh.Core.Models; // Added to use CommandInfo
 
 namespace ArbSh.Core.Commands
 {
     /// <summary>
-    /// Basic implementation of a cmdlet similar to PowerShell's Get-Command.
-    /// Retrieves information about available commands.
+    /// يعرض قائمة الأوامر العربية المتاحة في أربش.
     /// </summary>
+    [ArabicName("الأوامر")]
     public class GetCommandCmdlet : CmdletBase
     {
-        // TODO: Add parameters like -Name, -Noun, -Verb to filter commands
-
-        /// <summary>
-        /// Called once after pipeline input processing is complete.
-        /// Retrieves and outputs command information.
-        /// </summary>
+        /// <inheritdoc />
         public override void EndProcessing()
         {
-            // Get all discovered commands (mapping name to type)
-            var allCommands = CommandDiscovery.GetAllCommands();
-
-            if (allCommands == null || !allCommands.Any())
+            IReadOnlyDictionary<string, Type> allCommands = CommandDiscovery.GetAllCommands();
+            if (allCommands.Count == 0)
             {
-                // TODO: Write Warning?
-                CoreConsole.WriteLine("No commands found.");
+                WriteObject("لا توجد أوامر متاحة.");
                 return;
             }
 
-            // Create CommandInfo objects and write them to the pipeline
-            // Order by name for consistent output
-            foreach (var kvp in allCommands.OrderBy(c => c.Key))
+            IEnumerable<string> commandNames = allCommands.Keys
+                .Append("اخرج")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x, StringComparer.Ordinal);
+
+            foreach (string commandName in commandNames)
             {
-                var commandInfo = new CommandInfo(kvp.Key, kvp.Value);
-                WriteObject(commandInfo);
+                WriteObject(commandName);
             }
         }
-
-        // No BeginProcessing or ProcessRecord needed as it generates output in EndProcessing
     }
 }
-
-

@@ -10,8 +10,8 @@ namespace ArbSh.Core.Parsing
         Unknown,        // Unrecognized character sequence
         Whitespace,     // Whitespace characters (usually ignored)
         Comment,        // A comment starting with # (usually ignored)
-        Identifier,     // Command name or general argument (e.g., Get-Command, file.txt, عربي)
-        ParameterName,  // Parameter name (e.g., -Name, -الاسم)
+        Identifier,     // Command name or general argument (e.g., الأوامر, file.txt, عربي)
+        ParameterName,  // Parameter name (e.g., -Name, -الأمر)
         Variable,       // Variable reference (e.g., $testVar, $متغير)
         StringLiteralDQ,// Double-quoted string literal ("...")
         StringLiteralSQ,// Single-quoted string literal ('...')
