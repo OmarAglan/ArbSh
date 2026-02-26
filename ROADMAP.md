@@ -1,7 +1,7 @@
 # ArbSh Development Roadmap
 
-**Current Version:** 0.8.0-alpha (Core Extraction + Avalonia Bootstrap)
-**Status:** Phase 5 Completed - Custom GUI Terminal Baseline Ready
+**Current Version:** 0.8.1-alpha (Phase 6 Kickoff)
+**Status:** Phase 6 In Progress - File Management & Installer Integration
 **Next Phase:** Phase 6 - Baa Language & External Process Integration
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
@@ -95,6 +95,8 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [ ] **Baa Interactive Mode:** Support dropping the shell into a Baa REPL session with proper state preservation.
 
 #### 6.2 General Process Management (Pseudo-TTY)
+- [x] **Filesystem Built-ins:** Added Arabic file/directory commands (`انتقل`, `المسار`, `اعرض`) with session-scoped working directory behavior.
+- [x] **Windows Installer Context Menu:** Added installer packaging scripts that register `Open in ArbSh` and pass `--working-dir` from Explorer.
 - [ ] **External Commands:** Execute system commands (`git`, `dotnet`, `node`) *inside* the custom GUI terminal.
 - [ ] **Process Pipeline:** Integrate external processes with the ArbSh object pipeline.
 - [ ] **Stream Handling:** Correctly capture and route `stdin`, `stdout`, and `stderr` for background and foreground processes.
@@ -124,8 +126,8 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 
 ## 📊 Current Status Summary
 
-### ✅ Phase 5 Execution Status (v0.8.0-alpha)
-**Progress:** The architecture pivot is now implemented in code. `ArbSh.Core` has been extracted as a reusable engine (parser, executor, cmdlets, BiDi, models), while host-specific concerns remain in `ArbSh.Console` and the new `ArbSh.Terminal` project.
+### ✅ Phase 6 Kickoff Status (v0.8.1-alpha)
+**Progress:** ArbSh entered Phase 6 with foundational file-management commands and installer integration while preserving the Phase 5 GUI baseline and logical/visual separation architecture.
 
 **Completed This Cycle:**
 - Extracted engine code into `src_csharp/ArbSh.Core`.
@@ -145,6 +147,9 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Added ArbSh navy theme/palette abstractions and applied ANSI-aware styling in output rendering without mutating logical text.
 - Added tests for ANSI parser, ANSI palette mapping, and ANSI-aware terminal text pipeline behavior.
 - Finalized Arabic-only command surface (`الأوامر`, `مساعدة`, `اطبع`, `اختبار-مصفوفة`, `اختبار-نوع`, plus host `اخرج`) and removed legacy command aliases.
+- Added session-scoped working directory state and new file commands (`انتقل`, `المسار`, `اعرض`) with Arabic path support.
+- Added terminal startup `--working-dir` handling to open ArbSh in a selected Explorer folder.
+- Added Windows installer packaging scripts (`Install-ArbSh.ps1`, `Uninstall-ArbSh.ps1`) and release automation support for context-menu registration.
 
 **Next Focus:** Begin Phase 6 by integrating external process execution (`git`, `dotnet`, `node`) into the GUI terminal stream model.
 

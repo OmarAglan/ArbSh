@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -8,16 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- (Future changes go here)
+
+## [0.8.1-alpha] - 2026-02-26
+### Added
 - **Arabic Command Surface Tests**: Added `ArabicCommandSurfaceTests` to assert active Arabic commands resolve and legacy English/old Arabic names do not resolve.
+- **File Management Cmdlets**: Added `انتقل`, `المسار`, and `اعرض` for Arabic-first directory navigation and listing.
+- **File Command Tests**: Added `FileManagementCmdletTests` for session directory switching, hidden file filtering, and Arabic path behavior.
+- **Installer Scripts**: Added `installer/Install-ArbSh.ps1` and `installer/Uninstall-ArbSh.ps1` for per-user Windows installation and cleanup.
 
 ### Changed
 - **Arabic-Only Command Resolution**: Command discovery now exposes only `[ArabicName]` command names.
-- **Arabic Command Set Refresh**: Active command names are now `الأوامر`, `مساعدة`, `اطبع`, `اختبار-مصفوفة`, and `اختبار-نوع`; host exit command is `اخرج`.
+- **Arabic Command Set Refresh**: Active command names are now `الأوامر`, `مساعدة`, `اطبع`, `انتقل`, `المسار`, `اعرض`, `اختبار-مصفوفة`, and `اختبار-نوع`; host exit command is `اخرج`.
 - **Named Parameters in Arabic**: Named parameter binding now prefers Arabic parameter names only for user-facing cmdlets.
 - **Documentation Command Examples**: Updated roadmap/readme/usage examples to reflect the Arabic-first command surface.
+- **Session Working Directory**: `ShellEngine` now supports persistent `ShellSessionState` so file commands preserve directory context across commands.
+- **Terminal Startup Directory**: `ArbSh.Terminal` now accepts `--working-dir` and initializes session directory from Explorer/context-menu launches.
+- **Release Automation**: `create-release.ps1` now supports `-CreateInstaller` to package terminal app + installer scripts.
 
 ### Fixed
 - **Legacy Alias Leakage**: Removed runtime discovery of legacy English and previous Arabic command aliases.
+- **Relative Redirection Paths**: Executor redirections now resolve relative to session working directory instead of implicit process directory.
 
 ## [0.8.0-alpha] - 2026-02-26
 

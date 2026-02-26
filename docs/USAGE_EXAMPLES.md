@@ -2,8 +2,8 @@
 
 This document provides comprehensive examples for all implemented features in ArbSh - the Arabic-first shell.
 
-**Current Version:** 0.8.0-alpha
-**Status:** Phase 5 Completed - GUI Terminal Baseline Stable
+**Current Version:** 0.8.1-alpha
+**Status:** Phase 6 In Progress - File Management & Installer Integration
 **Next Phase:** Phase 6 - Baa Language & External Process Integration
 
 ## ✅ **Fully Implemented Features**
@@ -81,10 +81,13 @@ This document provides comprehensive examples for all implemented features in Ar
 **Example:**
 ```powershell
 ArbSh> الأوامر
+انتقل
+اعرض
 اختبار-مصفوفة
 اختبار-نوع
 اخرج
 اطبع
+المسار
 الأوامر
 مساعدة
 ```
@@ -163,15 +166,66 @@ ArbSh> اطبع "أهلًا بك في أربش"
 **Pipeline Usage:**
 ```powershell
 ArbSh> الأوامر | اطبع
+انتقل
+اعرض
 اختبار-مصفوفة
 اختبار-نوع
 اخرج
 اطبع
+المسار
 الأوامر
 مساعدة
 ```
 
-### 4. اخرج (Host Command)
+### 4. انتقل
+
+يغيّر المجلد الحالي للجلسة (session).
+
+**Syntax:**
+```powershell
+انتقل [[-المسار] <string>]
+```
+
+**Examples:**
+```powershell
+ArbSh> انتقل مشروع
+ArbSh> المسار
+C:\Work\Project\مشروع
+```
+
+### 5. المسار
+
+يعرض المجلد الحالي للجلسة.
+
+**Syntax:**
+```powershell
+المسار
+```
+
+### 6. اعرض
+
+يعرض الملفات والمجلدات في المجلد الحالي أو مسار محدد.
+
+**Syntax:**
+```powershell
+اعرض [[-المسار] <string>] [-مخفي]
+```
+
+**Examples:**
+```powershell
+ArbSh> اعرض
+src/
+README.md
+```
+
+```powershell
+ArbSh> اعرض -مخفي
+src/
+.gitignore
+README.md
+```
+
+### 7. اخرج (Host Command)
 
 أمر مضيف (ليس Cmdlet) لإنهاء جلسة أربش الحالية.
 
@@ -195,10 +249,13 @@ $(command | pipeline)
 **Basic Subexpression:**
 ```powershell
 ArbSh> اطبع $(الأوامر)
+انتقل
+اعرض
 اختبار-مصفوفة
 اختبار-نوع
 اخرج
 اطبع
+المسار
 الأوامر
 مساعدة
 ```
@@ -217,10 +274,13 @@ ArbSh> مساعدة $(اطبع الأوامر)
 **Complex Pipeline Subexpression:**
 ```powershell
 ArbSh> اطبع "Available commands: $(الأوامر | اطبع)"
-Available commands: اختبار-مصفوفة
+Available commands: انتقل
+اعرض
+اختبار-مصفوفة
 اختبار-نوع
 اخرج
 اطبع
+المسار
 الأوامر
 مساعدة
 ```
@@ -417,12 +477,15 @@ Argument WithSpace
 **Basic Pipeline:**
 ```powershell
 ArbSh> الأوامر | اطبع
-الأوامر
-مساعدة
-مساعدة
+انتقل
+اعرض
 اختبار-مصفوفة
 اختبار-نوع
+اخرج
 اطبع
+المسار
+الأوامر
+مساعدة
 ```
 
 **Pipeline with Quoted Pipes:**
@@ -501,6 +564,9 @@ Commands are exposed with Arabic-first names for native Arabic developers:
 - `الأوامر` - عرض قائمة الأوامر
 - `مساعدة` - عرض المساعدة العامة أو مساعدة أمر محدد
 - `اطبع` - كتابة النص/الكائن إلى المخرجات
+- `انتقل` - تغيير المجلد الحالي للجلسة
+- `اعرض` - عرض الملفات/المجلدات في المسار الحالي أو مسار محدد
+- `المسار` - عرض المجلد الحالي للجلسة
 - `اختبار-مصفوفة` - اختبار ربط المصفوفات
 - `اختبار-نوع` - اختبار تحويلات الأنواع
 - `اخرج` - إنهاء الجلسة (أمر مضيف)
@@ -588,17 +654,34 @@ ArbSh> اخرج
 
 **Testing Features:**
 ```powershell
-# Test BiDi algorithm
+# Test array binding command
 ArbSh> اختبار-مصفوفة
 
 # Test type literals
 ArbSh> اختبار-نوع [int] 42
+
+# Test file management commands
+ArbSh> المسار
+ArbSh> اعرض
+ArbSh> انتقل ..
 
 # Test subexpressions
 ArbSh> اطبع $(الأوامر)
 
 # Test Arabic commands
 ArbSh> مساعدة
+```
+
+**Build Release + Installer Package (Windows):**
+```powershell
+# Console release zip
+.\create-release.ps1 -Version "0.8.1-alpha"
+
+# Console + installer package zip
+.\create-release.ps1 -Version "0.8.1-alpha" -CreateInstaller
+
+# Install from installer package folder
+.\Install-ArbSh.ps1
 ```
 
 This comprehensive feature set makes ArbSh a powerful Arabic-first shell environment for Arabic developers, with full Unicode compliance and modern shell capabilities.

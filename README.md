@@ -1,7 +1,7 @@
 # ArbSh - Arabic-First Shell
 
-**Current Version:** 0.8.0-alpha
-**Status:** Phase 5 Complete - Custom GUI Terminal Baseline Ready
+**Current Version:** 0.8.1-alpha
+**Status:** Phase 6 In Progress - File Management & Windows Installer Integration
 **Next Phase:** Phase 6 - Baa Language & External Process Integration
 
 ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifically for Arabic developers and users. Inspired by PowerShell's object pipeline architecture, ArbSh provides a powerful, extensible environment with native Arabic language support and full Unicode BiDi compliance.
@@ -9,7 +9,7 @@ ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifica
 ## 🌟 Key Features
 
 ### Arabic-First Design
-- **Native Arabic Commands:** Execute commands using Arabic script (`الأوامر`, `مساعدة`, `اطبع`, `اخرج`)
+- **Native Arabic Commands:** Execute commands using Arabic script (`الأوامر`, `مساعدة`, `اطبع`, `انتقل`, `اعرض`, `المسار`, `اخرج`)
 - **Full BiDi Support:** Complete Unicode BiDi Algorithm (UAX #9) implementation
 - **RTL Text Handling:** Proper Right-to-Left text rendering and processing
 - **Arabic Parameter Names:** Support for Arabic-first parameters (e.g., `-الأمر`, `-كامل`, `-النص`)
@@ -26,7 +26,7 @@ ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifica
 - **Unicode Compliant:** Full UTF-8 and Unicode text processing
 - **Modern C# Architecture:** Extensible cmdlet framework
 
-## 🚀 Current Status (Version 0.8.0-alpha)
+## 🚀 Current Status (Version 0.8.1-alpha)
 
 ### ✅ Phase 5 Complete: Custom GUI Terminal Baseline
 
@@ -36,6 +36,8 @@ ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifica
 - **Type Literal Utilization:** `[TypeName]` type casting functionality **WORKING**
 - **70+ BiDi Tests Passing:** Comprehensive Unicode BidiTest.txt compliance
 - **Arabic Command Surface:** Runtime command discovery and invocation are Arabic-only for user-facing cmdlets
+- **File Management Commands:** Added Arabic-first directory navigation/listing commands with session-scoped working directory
+- **Windows Context Menu Installer Flow:** Added installer packaging scripts that register "Open in ArbSh" Explorer entries
 
 ### 🏗️ Core Architecture (Fully Functional)
 
@@ -61,6 +63,9 @@ ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifica
 - `اطبع` - Output objects to pipeline or console
 - `مساعدة` - Display command help and documentation
 - `الأوامر` - List all available commands
+- `انتقل` - Change current session directory
+- `المسار` - Print current session directory
+- `اعرض` - List files/folders in current or target directory
 - `اختبار-مصفوفة` - Validate array parameter binding behavior
 - `اختبار-نوع` - Validate type literal conversion behavior
 - `اخرج` - Exit the current host session (host command)
@@ -130,6 +135,9 @@ ArbSh/
 4. **Try some commands:**
    ```powershell
    ArbSh> الأوامر
+   ArbSh> المسار
+   ArbSh> اعرض
+   ArbSh> انتقل مشروع
    ArbSh> مساعدة
    ArbSh> اطبع $(الأوامر)
    ArbSh> اختبار-نوع [int] 42
@@ -142,10 +150,20 @@ A PowerShell script (`create-release.ps1`) automates release creation:
 
 2. **Run the release script:**
    ```powershell
-   .\create-release.ps1 -Version "0.8.0-alpha"
+   .\create-release.ps1 -Version "0.8.1-alpha"
    ```
 
 This creates a self-contained release build and packages it into `releases/` directory.
+
+3. **Build release + installer package (Windows context menu):**
+   ```powershell
+   .\create-release.ps1 -Version "0.8.1-alpha" -CreateInstaller
+   ```
+
+This also creates `ArbSh-v<version>-<rid>-installer.zip` with:
+- `Install-ArbSh.ps1`
+- `Uninstall-ArbSh.ps1`
+- `App/` published `ArbSh.Terminal`
 
 ## 📖 Documentation
 
@@ -195,4 +213,4 @@ ArbSh aims to be the premier command-line shell for Arabic developers, providing
 - Cross-platform compatibility
 - Extensible cmdlet framework
 
-**Current Status:** Phase 5 Complete - Ready for Phase 6 Process/Baa Integration
+**Current Status:** Phase 6 In Progress - File Management/Installer Foundations Ready

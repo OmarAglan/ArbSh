@@ -8,13 +8,16 @@ namespace ArbSh.Terminal.ViewModels;
 public sealed class MainWindowViewModel
 {
     private const string ExitCommand = "اخرج";
+    private readonly ShellSessionState _session;
     private readonly ObservableCollection<TerminalLine> _lines = [];
     private readonly ReadOnlyObservableCollection<TerminalLine> _readonlyLines;
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(string? initialWorkingDirectory = null)
     {
+        _session = new ShellSessionState(initialWorkingDirectory);
         _readonlyLines = new ReadOnlyObservableCollection<TerminalLine>(_lines);
         AddLine("مرحباً بكم في أربش - الواجهة الرسومية قيد البناء.", TerminalLineKind.System);
+        AddLine($"المجلد الحالي: {_session.CurrentDirectory}", TerminalLineKind.System);
         AddLine("اكتب أمرًا واضغط Enter للتنفيذ.", TerminalLineKind.System);
         AddLine("للخروج من الواجهة اكتب: اخرج", TerminalLineKind.System);
     }
@@ -50,7 +53,7 @@ public sealed class MainWindowViewModel
 
         try
         {
-            await Task.Run(() => ShellEngine.ExecuteInput(logicalInput, sink, options), cancellationToken);
+            await Task.Run(() => ShellEngine.ExecuteInput(logicalInput, sink, options, _session), cancellationToken);
         }
         catch (Exception ex)
         {

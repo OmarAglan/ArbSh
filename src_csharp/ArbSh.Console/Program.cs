@@ -21,6 +21,7 @@ namespace ArbSh.Console
             System.Console.OutputEncoding = Encoding.UTF8;
 
             var sink = new ConsoleExecutionSink();
+            var session = new ShellSessionState(ResolveInitialWorkingDirectory(args, sink));
             var executionOptions = new ExecutionOptions
             {
                 EmitDebug = args.Contains("--debug-console", StringComparer.OrdinalIgnoreCase)
@@ -83,7 +84,7 @@ namespace ArbSh.Console
 
                     try
                     {
-                        ShellEngine.ExecuteInput(inputLine, sink, executionOptions);
+                        ShellEngine.ExecuteInput(inputLine, sink, executionOptions, session);
                     }
                     catch (NotImplementedException ex)
                     {
@@ -107,6 +108,63 @@ namespace ArbSh.Console
                     System.Console.WriteLine("تم إغلاق أربش.");
                 }
             }
+        }
+
+        private static string? ResolveInitialWorkingDirectory(string[] args, ConsoleExecutionSink sink)
+        {
+            if (!TryGetWorkingDirectoryArgument(args, out string? requestedPath))
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(requestedPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                string fullPath = System.IO.Path.GetFullPath(requestedPath);
+                if (System.IO.Directory.Exists(fullPath))
+                {
+                    return fullPath;
+                }
+
+                sink.WriteWarning($"تحذير: المجلد الابتدائي غير موجود: {requestedPath}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                sink.WriteWarning($"تحذير: تعذّر استخدام المجلد الابتدائي '{requestedPath}': {ex.Message}");
+                return null;
+            }
+        }
+
+        private static bool TryGetWorkingDirectoryArgument(string[] args, out string? path)
+        {
+            path = null;
+            if (args.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                string arg = args[i];
+                if (arg.StartsWith("--working-dir=", StringComparison.OrdinalIgnoreCase))
+                {
+                    path = arg.Substring("--working-dir=".Length).Trim();
+                    return true;
+                }
+
+                if (string.Equals(arg, "--working-dir", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    path = args[i + 1];
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

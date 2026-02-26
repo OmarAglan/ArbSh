@@ -1,127 +1,228 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Creates a release build and archive for the ArbSh C# console application.
+  Creates release artifacts for ArbSh.
 
 .DESCRIPTION
-  This script automates the process of:
-  1. Updating the CHANGELOG.md with the new version number and date.
-  2. Publishing a self-contained release build for win-x64.
-  3. Creating a zip archive of the published files.
+  This script can:
+  1) Update docs/CHANGELOG.md (optional)
+  2) Publish ArbSh.Console and create a release zip
+  3) Optionally publish ArbSh.Terminal and create an installer package zip
+     containing:
+       - App/ (published terminal files)
+       - Install-ArbSh.ps1
+       - Uninstall-ArbSh.ps1
+
+  The installer scripts register Windows Explorer context menu entries:
+    "Open in ArbSh" for folder/background/drive, passing --working-dir.
 
 .PARAMETER Version
-  The semantic version number for the new release (e.g., "0.6.0"). This is mandatory.
+  Release version string (e.g. 0.8.1-alpha).
 
-.EXAMPLE
-  .\create-release.ps1 -Version "0.6.0"
+.PARAMETER RuntimeID
+  Target runtime identifier (default: win-x64).
 
-.NOTES
-  - Assumes the script is run from the repository root.
-  - Assumes the target framework is 'net9.0'. Modify if needed.
-  - Requires PowerShell 5.1 or later.
-  - Does not automatically update ROADMAP.md.
+.PARAMETER TargetFramework
+  Target framework (default: net9.0).
+
+.PARAMETER CreateInstaller
+  When set, also builds the terminal installer package zip.
+
+.PARAMETER SkipChangelogUpdate
+  When set, skips changelog modification.
 #>
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$Version,
 
-    [string]$RuntimeID = "win-x64", # Default target runtime
-    [string]$TargetFramework = "net9.0" # Assumed target framework
+    [string]$RuntimeID = "win-x64",
+    [string]$TargetFramework = "net9.0",
+
+    [switch]$CreateInstaller,
+    [switch]$SkipChangelogUpdate
 )
 
-# --- Configuration ---
-$ProjectRoot = $PSScriptRoot # Assumes script is in the root
-$ChangelogPath = Join-Path -Path $ProjectRoot -ChildPath "docs\CHANGELOG.md"
-$ProjectFilePath = Join-Path -Path $ProjectRoot -ChildPath "src_csharp\ArbSh.Console\ArbSh.Console.csproj"
-$PublishDirRelative = Join-Path -Path "bin\Release\$TargetFramework\$RuntimeID" -ChildPath "publish"
-$PublishDirFullPath = Join-Path -Path $ProjectRoot -ChildPath "src_csharp\ArbSh.Console" | Join-Path -ChildPath $PublishDirRelative
-$ReleasesDir = Join-Path -Path $ProjectRoot -ChildPath "releases"
-$ZipFileName = "ArbSh-v$($Version)-$($RuntimeID).zip"
-$ZipFilePath = Join-Path -Path $ReleasesDir -ChildPath $ZipFileName
+$ErrorActionPreference = "Stop"
 
-Write-Host "Starting release process for version $Version..."
+# --- Paths ---
+$ProjectRoot = $PSScriptRoot
+$ReleasesDir = Join-Path $ProjectRoot "releases"
+$ChangelogPath = Join-Path $ProjectRoot "docs\CHANGELOG.md"
 
-# --- 1. Update Changelog ---
-Write-Host "Updating $ChangelogPath..."
-try {
-    $ChangelogContent = Get-Content -Path $ChangelogPath -Raw
-    $CurrentDate = Get-Date -Format "yyyy-MM-dd"
+$ConsoleProject = Join-Path $ProjectRoot "src_csharp\ArbSh.Console\ArbSh.Console.csproj"
+$TerminalProject = Join-Path $ProjectRoot "src_csharp\ArbSh.Terminal\ArbSh.Terminal.csproj"
 
-    # Check if [Unreleased] section exists
-    if ($ChangelogContent -match '(?ms)^## \[Unreleased\] - YYYY-MM-DD') {
-        # Prepare the new Unreleased section header
-        $NewUnreleasedHeader = "## [Unreleased] - YYYY-MM-DD`n`n### Added`n- (Future changes go here)`n"
-        # Replace the existing Unreleased header with the new version header and insert the new Unreleased section above it
-        $UpdatedContent = $ChangelogContent -replace '(?ms)^## \[Unreleased\] - YYYY-MM-DD', "$($NewUnreleasedHeader)`n## [$Version] - $CurrentDate"
+$ConsolePublishDir = Join-Path $ProjectRoot "src_csharp\ArbSh.Console\bin\Release\$TargetFramework\$RuntimeID\publish"
+$TerminalPublishDir = Join-Path $ProjectRoot "src_csharp\ArbSh.Terminal\bin\Release\$TargetFramework\$RuntimeID\publish"
 
-        # Write back to the file
-        Set-Content -Path $ChangelogPath -Value $UpdatedContent -Encoding UTF8 -NoNewline
-        Write-Host "Changelog updated successfully."
-    } else {
-        Write-Warning "Could not find '## [Unreleased] - YYYY-MM-DD' section in $ChangelogPath. Skipping update."
-    }
-} catch {
-    Write-Error "Failed to update changelog: $($_.Exception.Message)"
-    # Decide if script should exit or continue
-    # exit 1
+$ConsoleZipName = "ArbSh-v$Version-$RuntimeID.zip"
+$ConsoleZipPath = Join-Path $ReleasesDir $ConsoleZipName
+
+$InstallerPackageName = "ArbSh-v$Version-$RuntimeID-installer.zip"
+$InstallerPackagePath = Join-Path $ReleasesDir $InstallerPackageName
+$InstallerStageDir = Join-Path $ReleasesDir "ArbSh-v$Version-$RuntimeID-installer"
+$InstallerTemplateDir = Join-Path $ProjectRoot "installer"
+
+function Write-Step {
+    param([string]$Message)
+    Write-Host "==> $Message"
 }
 
-# --- 2. Create Releases Directory ---
-if (-not (Test-Path -Path $ReleasesDir -PathType Container)) {
-    Write-Host "Creating releases directory: $ReleasesDir"
-    try {
-        New-Item -Path $ReleasesDir -ItemType Directory -Force | Out-Null
-    } catch {
-        Write-Error "Failed to create releases directory: $($_.Exception.Message)"
-        exit 1
+function Ensure-Directory {
+    param([string]$Path)
+    if (-not (Test-Path -Path $Path -PathType Container)) {
+        New-Item -Path $Path -ItemType Directory -Force | Out-Null
     }
 }
 
-# --- 3. Publish Application ---
-Write-Host "Publishing application for $RuntimeID..."
-$PublishArgs = @(
-    "publish",
-    "`"$ProjectFilePath`"",
-    "-c", "Release",
-    "-r", $RuntimeID,
-    "--self-contained", "true" # Removed trailing comma
-    # Output path is derived automatically based on TFM/RID
-    # "-o", "`"$PublishDirFullPath`"" # Optional: Specify if needed, but default is usually correct
-)
-try {
-    # Start the process and wait for it to complete
-    $process = Start-Process dotnet -ArgumentList $PublishArgs -Wait -NoNewWindow -PassThru
-    if ($process.ExitCode -ne 0) {
-        throw "dotnet publish failed with exit code $($process.ExitCode)"
+function Update-Changelog {
+    if ($SkipChangelogUpdate) {
+        Write-Step "Skipping CHANGELOG update."
+        return
     }
-    Write-Host "Application published successfully to default location (likely under $PublishDirFullPath)."
-} catch {
-    Write-Error "Failed to publish application: $($_.Exception.Message)"
-    exit 1
+
+    if (-not (Test-Path -Path $ChangelogPath -PathType Leaf)) {
+        Write-Warning "Changelog not found at: $ChangelogPath"
+        return
+    }
+
+    Write-Step "Updating changelog header for version $Version"
+    $content = Get-Content -Path $ChangelogPath -Raw
+    $currentDate = Get-Date -Format "yyyy-MM-dd"
+    $pattern = '(?m)^## \[Unreleased\](?:\s*-\s*YYYY-MM-DD)?\s*$'
+
+    if ($content -notmatch $pattern) {
+        Write-Warning "Could not find '## [Unreleased]' section. Skipping changelog update."
+        return
+    }
+
+    if ($content -match ("(?m)^## \[" + [regex]::Escape($Version) + "\]\s*-\s*\d{4}-\d{2}-\d{2}\s*$")) {
+        Write-Warning "Version $Version already exists in changelog. Skipping update."
+        return
+    }
+
+    $replacement = @"
+## [Unreleased]
+
+### Added
+- (Future changes go here)
+
+## [$Version] - $currentDate
+"@
+
+    $updated = [regex]::Replace($content, $pattern, $replacement, 1)
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($ChangelogPath, $updated, $utf8NoBom)
 }
 
-# --- 4. Archive Published Files ---
-Write-Host "Archiving published files to $ZipFilePath..."
-# Verify the publish directory actually exists before archiving
-if (-not (Test-Path -Path $PublishDirFullPath -PathType Container)) {
-     Write-Error "Publish directory not found at expected location: $PublishDirFullPath. Cannot create archive."
-     exit 1
-}
+function Invoke-DotNetPublish {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectPath
+    )
 
-try {
-    Compress-Archive -Path "$PublishDirFullPath\*" -DestinationPath $ZipFilePath -Force
-    Write-Host "Archive created successfully: $ZipFilePath"
-} catch {
-    Write-Error "Failed to create archive: $($_.Exception.Message)"
-    # Attempting archive without wildcard if the first failed (less common issue)
-    try {
-         Write-Warning "Retrying archive creation without wildcard..."
-         Compress-Archive -Path $PublishDirFullPath -DestinationPath $ZipFilePath -Force
-         Write-Host "Archive created successfully on retry: $ZipFilePath"
-    } catch {
-         Write-Error "Failed to create archive on retry: $($_.Exception.Message)"
-         exit 1
+    if (-not (Test-Path -Path $ProjectPath -PathType Leaf)) {
+        throw "Project file not found: $ProjectPath"
+    }
+
+    Write-Step "Publishing: $ProjectPath"
+    & dotnet publish $ProjectPath -c Release -r $RuntimeID --self-contained true
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet publish failed for $ProjectPath (exit code $LASTEXITCODE)."
     }
 }
 
-Write-Host "Release process for version $Version completed."
+function Build-ConsoleReleaseZip {
+    Write-Step "Publishing ArbSh.Console"
+    Invoke-DotNetPublish -ProjectPath $ConsoleProject
+
+    if (-not (Test-Path -Path $ConsolePublishDir -PathType Container)) {
+        throw "Console publish directory not found: $ConsolePublishDir"
+    }
+
+    Write-Step "Creating console zip: $ConsoleZipPath"
+    if (Test-Path -Path $ConsoleZipPath) {
+        Remove-Item -Path $ConsoleZipPath -Force
+    }
+
+    Compress-Archive -Path (Join-Path $ConsolePublishDir '*') -DestinationPath $ConsoleZipPath -Force
+}
+
+function Build-InstallerPackage {
+    Write-Step "Publishing ArbSh.Terminal"
+    Invoke-DotNetPublish -ProjectPath $TerminalProject
+
+    if (-not (Test-Path -Path $TerminalPublishDir -PathType Container)) {
+        throw "Terminal publish directory not found: $TerminalPublishDir"
+    }
+
+    if (-not (Test-Path -Path $InstallerTemplateDir -PathType Container)) {
+        throw "Installer template directory not found: $InstallerTemplateDir"
+    }
+
+    $installScript = Join-Path $InstallerTemplateDir "Install-ArbSh.ps1"
+    $uninstallScript = Join-Path $InstallerTemplateDir "Uninstall-ArbSh.ps1"
+    if (-not (Test-Path -Path $installScript -PathType Leaf)) {
+        throw "Install script missing: $installScript"
+    }
+    if (-not (Test-Path -Path $uninstallScript -PathType Leaf)) {
+        throw "Uninstall script missing: $uninstallScript"
+    }
+
+    if (Test-Path -Path $InstallerStageDir -PathType Container) {
+        Remove-Item -Path $InstallerStageDir -Recurse -Force
+    }
+
+    $stageAppDir = Join-Path $InstallerStageDir "App"
+    Ensure-Directory -Path $stageAppDir
+
+    Write-Step "Staging installer package files"
+    Copy-Item -Path (Join-Path $TerminalPublishDir '*') -Destination $stageAppDir -Recurse -Force
+    Copy-Item -Path $installScript -Destination (Join-Path $InstallerStageDir "Install-ArbSh.ps1") -Force
+    Copy-Item -Path $uninstallScript -Destination (Join-Path $InstallerStageDir "Uninstall-ArbSh.ps1") -Force
+
+    $readmePath = Join-Path $InstallerStageDir "README.txt"
+    $readme = @"
+ArbSh Installer Package
+Version: $Version
+Runtime: $RuntimeID
+
+How to install:
+1) Open PowerShell
+2) Run: .\Install-ArbSh.ps1
+
+This installs ArbSh.Terminal for the current user and adds:
+ - Open in ArbSh (folder background)
+ - Open in ArbSh (folder)
+ - Open in ArbSh (drive)
+
+It passes the selected location through:
+  --working-dir
+"@
+    Set-Content -Path $readmePath -Value $readme -Encoding UTF8
+
+    if (Test-Path -Path $InstallerPackagePath -PathType Leaf) {
+        Remove-Item -Path $InstallerPackagePath -Force
+    }
+
+    Write-Step "Creating installer package zip: $InstallerPackagePath"
+    Compress-Archive -Path (Join-Path $InstallerStageDir '*') -DestinationPath $InstallerPackagePath -Force
+}
+
+Write-Step "Starting release process for version $Version"
+Ensure-Directory -Path $ReleasesDir
+
+Update-Changelog
+Build-ConsoleReleaseZip
+
+if ($CreateInstaller) {
+    Build-InstallerPackage
+} else {
+    Write-Step "Installer packaging skipped. Use -CreateInstaller to enable."
+}
+
+Write-Step "Release process completed."
+Write-Host "Console artifact: $ConsoleZipPath"
+if ($CreateInstaller) {
+    Write-Host "Installer package: $InstallerPackagePath"
+}

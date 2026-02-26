@@ -10,6 +10,9 @@ public sealed class ArabicCommandSurfaceTests
     [InlineData("اطبع")]
     [InlineData("اختبار-مصفوفة")]
     [InlineData("اختبار-نوع")]
+    [InlineData("انتقل")]
+    [InlineData("المسار")]
+    [InlineData("اعرض")]
     public void Find_ResolvesArabicCommandNames(string commandName)
     {
         Type? cmdletType = CommandDiscovery.Find(commandName);
@@ -39,6 +42,9 @@ public sealed class ArabicCommandSurfaceTests
         Assert.Contains("اطبع", commands.Keys);
         Assert.Contains("اختبار-مصفوفة", commands.Keys);
         Assert.Contains("اختبار-نوع", commands.Keys);
+        Assert.Contains("انتقل", commands.Keys);
+        Assert.Contains("المسار", commands.Keys);
+        Assert.Contains("اعرض", commands.Keys);
         Assert.DoesNotContain("Get-Help", commands.Keys);
         Assert.DoesNotContain("Get-Command", commands.Keys);
         Assert.DoesNotContain("Write-Output", commands.Keys);

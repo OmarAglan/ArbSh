@@ -49,7 +49,7 @@ namespace ArbSh.Core
                 // --- Handle Input Redirection for the FIRST command ---
                 if (statementCommands.Count > 0 && !string.IsNullOrEmpty(statementCommands[0].InputRedirectPath))
                 {
-                    string inputFile = statementCommands[0].InputRedirectPath!;
+                    string inputFile = ShellSessionContext.ResolvePath(statementCommands[0].InputRedirectPath!);
                     CoreConsole.WriteLine($"DEBUG (Executor): Attempting input redirection from '{inputFile}' for first command.");
                     try
                     {
@@ -331,7 +331,7 @@ namespace ArbSh.Core
                                 {
                                     if (redir.SourceStreamHandle == 1) // Stdout to File
                                     {
-                                        stdoutRedirectPath = redir.Target;
+                                        stdoutRedirectPath = ShellSessionContext.ResolvePath(redir.Target);
                                         try
                                         {
                                             var utf8NoBom = new System.Text.UTF8Encoding(false);
@@ -349,7 +349,7 @@ namespace ArbSh.Core
                                     }
                                     else if (redir.SourceStreamHandle == 2) // Stderr to File
                                     {
-                                        stderrRedirectPath = redir.Target;
+                                        stderrRedirectPath = ShellSessionContext.ResolvePath(redir.Target);
                                         try
                                         {
                                             var utf8NoBom = new System.Text.UTF8Encoding(false);
