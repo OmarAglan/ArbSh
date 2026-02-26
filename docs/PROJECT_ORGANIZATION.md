@@ -5,8 +5,8 @@
 This document defines the current architecture of **ArbSh** as an Arabic-first shell and terminal platform.
 
 **Current Version:** 0.8.0-alpha
-**Status:** Phase 5 In Progress - Avalonia GUI Terminal Foundation
-**Next Phase:** Phase 5.2 - Native Text Rendering & Shaping
+**Status:** Phase 5 In Progress - Native Rendering Pipeline Active
+**Next Phase:** Phase 5.3 - RTL Input & Cursor Mapping
 
 ArbSh now uses a host-agnostic core engine with separate presentation hosts:
 - `ArbSh.Core` contains parsing, execution, cmdlets, and BiDi/i18n logic.
@@ -44,6 +44,10 @@ ArbSh/
 │   │   └── Program.cs
 │   ├── ArbSh.Terminal/
 │   │   ├── Rendering/
+│   │   │   ├── TerminalSurface.cs
+│   │   │   ├── TerminalTextPipeline.cs
+│   │   │   ├── TerminalLayoutEngine.cs
+│   │   │   └── TerminalRenderConfig.cs
 │   │   ├── ViewModels/
 │   │   ├── Models/
 │   │   ├── App.axaml
@@ -99,9 +103,14 @@ dotnet test src_csharp/ArbSh.Test
 - Added sink-based host boundary (`IExecutionSink`, `CoreConsole`, `ShellEngine`).
 - Added Avalonia terminal bootstrap project (`ArbSh.Terminal`).
 
+### Completed in Phase 5.2 (Output + Prompt Rendering)
+- Added a terminal rendering pipeline that converts logical text to visual display text at the UI boundary only.
+- Implemented `TerminalTextPipeline` and `TerminalLayoutEngine` for line shaping/reordering and frame composition.
+- Refactored `TerminalSurface` to consume draw instructions instead of performing ad-hoc reordering logic inline.
+- Added runtime Arabic/Latin font fallback configuration for terminal text rendering.
+
 ### In Progress
-- HarfBuzz-backed shaping integration and visual/logical cursor mapping in `ArbSh.Terminal`.
-- RTL input buffer/cursor behavior and prompt anchoring.
+- Phase 5.3 logical-to-visual cursor index mapping and RTL input navigation.
 - Terminal virtualization for large scrollback.
 
 ## Notes on Documentation Locations

@@ -1,9 +1,7 @@
-﻿using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using ArbSh.Core.I18n;
 using ArbSh.Terminal.Models;
 using ArbSh.Terminal.ViewModels;
 
@@ -11,12 +9,12 @@ namespace ArbSh.Terminal.Rendering;
 
 public sealed class TerminalSurface : Control
 {
-    private static readonly IBrush BackgroundBrush = new SolidColorBrush(Color.Parse("#10141F"));
-    private static readonly FontFamily TerminalFamily = new("Cascadia Mono, Consolas, Courier New");
-    private static readonly Typeface TerminalTypeface = new(TerminalFamily, FontStyle.Normal, FontWeight.Normal);
-
     private string _inputBuffer = string.Empty;
     private MainWindowViewModel? _viewModel;
+
+    private readonly TerminalRenderConfig _renderConfig = new();
+    private readonly TerminalTextPipeline _textPipeline = new();
+    private readonly TerminalLayoutEngine _layoutEngine = new();
 
     public TerminalSurface()
     {
@@ -96,108 +94,50 @@ public sealed class TerminalSurface : Control
     {
         base.Render(context);
 
-        context.DrawRectangle(BackgroundBrush, null, new Rect(Bounds.Size));
+        context.DrawRectangle(_renderConfig.BackgroundBrush, null, new Rect(Bounds.Size));
 
         if (_viewModel is null)
         {
             return;
         }
 
-        const double horizontalPadding = 14;
-        const double verticalPadding = 10;
-        const double lineHeight = 22;
+        IReadOnlyList<TerminalLine> lineSnapshot = [.. _viewModel.Lines];
+        IReadOnlyList<TerminalDrawInstruction> instructions = _layoutEngine.BuildFrame(
+            lineSnapshot,
+            _viewModel.Prompt,
+            _inputBuffer,
+            Bounds.Size,
+            _renderConfig,
+            _textPipeline);
 
-        var lines = _viewModel.Lines;
-        int maxVisibleLines = Math.Max(1, (int)((Bounds.Height - (verticalPadding * 2) - (lineHeight * 2)) / lineHeight));
-        int start = Math.Max(0, lines.Count - maxVisibleLines);
+        TerminalDrawInstruction? promptInstruction = null;
 
-        double y = verticalPadding;
-        for (int i = start; i < lines.Count; i++)
+        foreach (TerminalDrawInstruction instruction in instructions)
         {
-            DrawLine(context, lines[i], y, horizontalPadding, Bounds.Width);
-            y += lineHeight;
+            FormattedText formatted = _renderConfig.CreateFormattedText(instruction.Run.VisualText, instruction.Brush);
+            context.DrawText(formatted, instruction.Position);
+
+            if (instruction.IsPromptLine)
+            {
+                promptInstruction = instruction;
+            }
         }
 
-        DrawPrompt(context, _viewModel.Prompt, _inputBuffer, Bounds.Height - verticalPadding - lineHeight, horizontalPadding, lineHeight);
-    }
-
-    private static void DrawLine(
-        DrawingContext context,
-        TerminalLine line,
-        double y,
-        double horizontalPadding,
-        double surfaceWidth)
-    {
-        string visualText = ToVisual(line.Text);
-        IBrush brush = ResolveBrush(line.Kind);
-
-        var formatted = CreateText(visualText, brush);
-
-        double x = horizontalPadding;
-        if (BiDiTextProcessor.ContainsArabicText(line.Text))
+        if (IsFocused && promptInstruction is not null)
         {
-            x = Math.Max(horizontalPadding, surfaceWidth - horizontalPadding - formatted.Width);
-        }
-
-        context.DrawText(formatted, new Point(x, y));
-    }
-
-    private void DrawPrompt(
-        DrawingContext context,
-        string prompt,
-        string input,
-        double y,
-        double horizontalPadding,
-        double lineHeight)
-    {
-        string logical = $"{prompt}{input}";
-        string visual = ToVisual(logical);
-
-        var formatted = CreateText(visual, Brushes.Gainsboro);
-        double x = Math.Max(horizontalPadding, Bounds.Width - horizontalPadding - formatted.Width);
-
-        context.DrawText(formatted, new Point(x, y));
-
-        if (IsFocused)
-        {
-            double cursorX = x + formatted.Width + 1;
-            var cursorRect = new Rect(cursorX, y + 2, 2, Math.Max(6, lineHeight - 6));
-            context.DrawRectangle(Brushes.Gainsboro, null, cursorRect);
+            DrawCursor(context, promptInstruction);
         }
     }
 
-    private static FormattedText CreateText(string text, IBrush brush)
+    private void DrawCursor(DrawingContext context, TerminalDrawInstruction promptInstruction)
     {
-        return new FormattedText(
-            text,
-            CultureInfo.CurrentCulture,
-            FlowDirection.LeftToRight,
-            TerminalTypeface,
-            15,
-            brush);
-    }
+        double cursorX = promptInstruction.Position.X + promptInstruction.Run.MeasuredWidth + 1;
+        double maxCursorX = Math.Max(_renderConfig.Padding.Left, Bounds.Width - _renderConfig.Padding.Right);
+        cursorX = Math.Min(maxCursorX, cursorX);
 
-    private static string ToVisual(string logical)
-    {
-        if (!BiDiTextProcessor.ContainsArabicText(logical))
-        {
-            return logical;
-        }
-
-        return BiDiTextProcessor.ProcessOutputForDisplay(logical);
-    }
-
-    private static IBrush ResolveBrush(TerminalLineKind kind)
-    {
-        return kind switch
-        {
-            TerminalLineKind.System => Brushes.LightSteelBlue,
-            TerminalLineKind.Input => Brushes.DeepSkyBlue,
-            TerminalLineKind.Warning => Brushes.Goldenrod,
-            TerminalLineKind.Error => Brushes.IndianRed,
-            TerminalLineKind.Debug => Brushes.Gray,
-            _ => Brushes.Gainsboro
-        };
+        double cursorY = promptInstruction.Position.Y + 2;
+        var cursorRect = new Rect(cursorX, cursorY, 2, Math.Max(6, _renderConfig.LineHeight - 6));
+        context.DrawRectangle(_renderConfig.PromptBrush, null, cursorRect);
     }
 
     private void HandleBufferChanged(object? sender, EventArgs e)

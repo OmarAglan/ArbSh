@@ -11,15 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ArbSh.Core Project**: Extracted the shell engine into a reusable class library (`src_csharp/ArbSh.Core`) containing parser, executor, cmdlets, models, and BiDi/i18n logic.
 - **Host Output Abstraction**: Added `IExecutionSink`, `CoreConsole`, and `ShellEngine` to decouple command execution from terminal presentation.
 - **ArbSh.Terminal Project**: Added a new Avalonia GUI host (`src_csharp/ArbSh.Terminal`) with app bootstrap, window/view model, and a custom `TerminalSurface` rendering entry point.
+- **Phase 5.2 Rendering Pipeline**: Added `TerminalTextPipeline`, `TerminalLayoutEngine`, and render instruction models for output and prompt rendering.
+- **Renderer Test Coverage**: Added terminal rendering tests in `ArbSh.Test` for pipeline transformation, visible frame windowing, and logical/visual separation.
 
 ### Changed
 - **Namespace Split**: Migrated engine namespaces from `ArbSh.Console.*` to `ArbSh.Core.*` for strict separation between core logic and host UI.
 - **Console Host Refactor**: Updated `ArbSh.Console` to consume `ArbSh.Core` and route output through sink-based host boundaries.
 - **Test Project Alignment**: Updated `ArbSh.Test` references/imports to validate the extracted `ArbSh.Core` engine.
 - **Solution Composition**: Updated `ArbSh.sln` to include `ArbSh.Core` and `ArbSh.Terminal`.
+- **TerminalSurface Rendering Path**: Replaced inline drawing/reordering logic with a dedicated render pipeline and runtime font fallback chain.
 
 ### Fixed
 - **Engine/Host Coupling**: Removed direct dependence of core execution flow on `System.Console` output paths, enabling GUI-hosted rendering pipelines.
+- **Logical/Visual Boundary Discipline**: Enforced visual transformation only in the terminal rendering layer while preserving logical strings in view-model state.
 
 ## [0.7.7.11] - 2025-07-03
 

@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.0-alpha (Core Extraction + Avalonia Bootstrap)
-**Status:** Phase 5 In Progress - Core/UI Decoupling Completed
-**Next Phase:** Phase 5.2 - Native Text Rendering & Shaping
+**Status:** Phase 5 In Progress - Native Rendering Pipeline Implemented
+**Next Phase:** Phase 5.3 - RTL Input & Cursor Management
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -73,8 +73,8 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [ ] **Typography:** Embed a high-quality Arabic coding font (e.g., Cascadia Code Arabic, Kashida) as the default terminal font.
 
 #### 5.2 Native Text Rendering & Shaping
-- [ ] **HarfBuzz Integration:** Leverage Avalonia's Skia/HarfBuzz backend for pixel-perfect Arabic character shaping and ligatures.
--[ ] **Visual vs. Logical Mapping:** Use the existing `BidiAlgorithm.cs` to map logical string indices to visual screen coordinates.
+- [x] **HarfBuzz Integration:** Leverage Avalonia's Skia/HarfBuzz backend for pixel-perfect Arabic character shaping and ligatures.
+- [x] **Visual vs. Logical Mapping:** Use the existing `BidiAlgorithm.cs` at the rendering boundary to transform logical text to visual display text.
 - [ ] **Color & Theming Engine:** Implement a modern dark theme with ANSI escape sequence parsing for colored output.
 
 #### 5.3 RTL Input & Cursor Management (The Core Blocker Solved)
@@ -131,8 +131,11 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Extracted engine code into `src_csharp/ArbSh.Core`.
 - Introduced host-output abstractions (`IExecutionSink`, `CoreConsole`, `ShellEngine`) to preserve the logical/visual split and remove hard console coupling.
 - Added `src_csharp/ArbSh.Terminal` Avalonia bootstrap (App/MainWindow/ViewModel/custom surface) as the foundation for full GUI terminal rendering.
+- Implemented a dedicated terminal rendering pipeline (`TerminalTextPipeline`, `TerminalLayoutEngine`) for visual reordering/shaping of output and prompt lines.
+- Added runtime font fallback configuration for mixed Arabic/Latin terminal text.
+- Added renderer-focused tests for logical/visual separation and frame layout behavior.
 
-**Next Focus:** Implement Phase 5.2 native shaping/rendering and Phase 5.3 RTL input/cursor mapping on top of the new host architecture.
+**Next Focus:** Complete Phase 5.3 with logical-to-visual cursor index mapping and full RTL input navigation behavior.
 
 ## 🌟 Project Philosophy
 

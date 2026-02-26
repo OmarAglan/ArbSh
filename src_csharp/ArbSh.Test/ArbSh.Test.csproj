@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ArbSh.Core\ArbSh.Core.csproj" />
+    <ProjectReference Include="..\ArbSh.Terminal\ArbSh.Terminal.csproj" />
   </ItemGroup>
 
 </Project>

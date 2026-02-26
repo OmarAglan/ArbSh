@@ -3,13 +3,15 @@
 This document provides comprehensive examples for all implemented features in ArbSh - the Arabic-first shell.
 
 **Current Version:** 0.8.0-alpha
-**Status:** Phase 5 In Progress - Core Extraction + Avalonia Terminal Bootstrap
-**Next Phase:** Phase 5.2 - Native Text Rendering & Shaping
+**Status:** Phase 5 In Progress - Native Output/Prompt Rendering Implemented
+**Next Phase:** Phase 5.3 - RTL Input & Cursor Mapping
 
 ## ✅ **Fully Implemented Features**
 - `ArbSh.Core` shared engine extraction (host-agnostic parser/executor/cmdlets/BiDi)
 - Sink-based execution boundary (`IExecutionSink`) between core logic and host rendering
 - Avalonia GUI terminal project scaffold (`ArbSh.Terminal`)
+- Terminal rendering pipeline for output/prompt (`TerminalTextPipeline` + `TerminalLayoutEngine`)
+- Runtime Arabic/Latin font fallback in the Avalonia terminal surface
 - Complete BiDi Algorithm (UAX #9) with all rule sets (P, X, W, N, I, L)
 - Pipeline execution with task-based concurrency
 - Parameter binding with reflection and type conversion
@@ -30,7 +32,13 @@ This document provides comprehensive examples for all implemented features in Ar
 ### Avalonia Terminal Host (Phase 5 Foundation)
 1. Navigate to the repository root.
 2. Run `dotnet run --project src_csharp/ArbSh.Terminal`.
-3. Verify the window opens and the custom terminal surface renders without blocking the UI thread.
+3. Verify the window opens and the custom terminal surface renders output and prompt lines with Arabic-aware visual ordering.
+
+### Avalonia Rendering Notes (Phase 5.2)
+- Terminal text is stored and processed in logical order.
+- Visual reordering is applied only inside the rendering pipeline before draw.
+- Output lines that contain Arabic are right-aligned using measured visual text width.
+- Prompt + input are rendered through the same pipeline for consistent shaping behavior.
 
 ## Available Commands
 
@@ -550,10 +558,9 @@ ArbSh prioritizes Arabic language support as a core feature:
 - Cultural localization considerations
 - Arabic-first documentation and examples
 
-**Phase 5 Arabic UX Targets:**
-- RTL terminal input with correct visual cursor mapping
-- BiDi-aware render surface in the Avalonia host
-- Arabic-first prompt behavior and localization improvements
+**Phase 5.3 Arabic UX Targets:**
+- RTL terminal input navigation with logical-to-visual cursor mapping
+- Correct cursor movement across mixed Arabic/Latin grapheme sequences
 - Scrollback virtualization and clipboard correctness for mixed RTL/LTR text
 
 ## Testing and Development
