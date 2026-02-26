@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.0-alpha (Core Extraction + Avalonia Bootstrap)
-**Status:** Phase 5 In Progress - Terminal Emulator Features Implemented
-**Next Phase:** Phase 5 Completion - Typography and Theming
+**Status:** Phase 5 Completed - Custom GUI Terminal Baseline Ready
+**Next Phase:** Phase 6 - Baa Language & External Process Integration
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -64,18 +64,18 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [✅] **Type Literal Utilization:** `[TypeName]` type casting
 - [✅] **Testing:** 70+ Unicode BidiTest.txt compliance tests passing
 
-### 🚀 Phase 5: The Custom GUI Terminal (CURRENT PHASE)
+### ✅ Phase 5: The Custom GUI Terminal (COMPLETED)
 **Abandoning legacy console limitations to build a standalone, hardware-accelerated GUI terminal using Avalonia UI.**
 
 #### 5.1 GUI Framework Architecture
 - [x] **Avalonia UI Setup:** Create the new `ArbSh.Terminal` graphical project.
 - [x] **Decouple Executor:** Refactor `Executor.cs` to output to a Stream/Event system instead of `System.Console.WriteLine`.
-- [ ] **Typography:** Embed a high-quality Arabic coding font (e.g., Cascadia Code Arabic, Kashida) as the default terminal font.
+- [x] **Typography:** Embed a high-quality Arabic coding font (e.g., Cascadia Code Arabic, Kashida) as the default terminal font.
 
 #### 5.2 Native Text Rendering & Shaping
 - [x] **HarfBuzz Integration:** Leverage Avalonia's Skia/HarfBuzz backend for pixel-perfect Arabic character shaping and ligatures.
 - [x] **Visual vs. Logical Mapping:** Keep shell state in logical order and delegate visual BiDi/shaping to Avalonia text layout at the rendering boundary.
-- [ ] **Color & Theming Engine:** Implement a modern dark theme with ANSI escape sequence parsing for colored output.
+- [x] **Color & Theming Engine:** Implement a modern dark theme with ANSI escape sequence parsing for colored output.
 
 #### 5.3 RTL Input & Cursor Management (The Core Blocker Solved)
 - [x] **True RTL Cursor Positioning:** Implement a cursor that logically navigates RTL text correctly (bypassing legacy Windows `conhost` bugs).
@@ -124,7 +124,7 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 
 ## 📊 Current Status Summary
 
-### 🔄 Phase 5 Execution Status (v0.8.0-alpha)
+### ✅ Phase 5 Execution Status (v0.8.0-alpha)
 **Progress:** The architecture pivot is now implemented in code. `ArbSh.Core` has been extracted as a reusable engine (parser, executor, cmdlets, BiDi, models), while host-specific concerns remain in `ArbSh.Console` and the new `ArbSh.Terminal` project.
 
 **Completed This Cycle:**
@@ -140,8 +140,12 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Anchored the Arabic prompt to RTL flow with the final marker form `أربش< `.
 - Implemented scrollback offset virtualization with mouse-wheel and PageUp/PageDown navigation while keeping prompt pinned.
 - Added output-line selection and clipboard copy in logical-order text, alongside existing prompt-line clipboard editing.
+- Bundled terminal font assets (`CascadiaMono.ttf`, `arabtype.ttf`) and switched render font chain to packaged-first fallback.
+- Added full ANSI SGR parsing pipeline (16-color, 256-color, and truecolor) with span-based foreground/background styling.
+- Added ArbSh navy theme/palette abstractions and applied ANSI-aware styling in output rendering without mutating logical text.
+- Added tests for ANSI parser, ANSI palette mapping, and ANSI-aware terminal text pipeline behavior.
 
-**Next Focus:** Complete remaining Phase 5 items: embedded Arabic coding font and ANSI color/theming engine.
+**Next Focus:** Begin Phase 6 by integrating external process execution (`git`, `dotnet`, `node`) into the GUI terminal stream model.
 
 ## 🌟 Project Philosophy
 

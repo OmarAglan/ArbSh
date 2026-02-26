@@ -46,6 +46,20 @@ public sealed class TerminalTextPipelineTests
         Assert.True(run.HasArabic);
     }
 
+    [Fact]
+    public void BuildVisualRun_StripsAnsiEscapes_AndKeepsLogicalSource()
+    {
+        var pipeline = new TerminalTextPipeline(new FakeTextMeasurer());
+        const string logical = "\u001b[31mERROR\u001b[0m";
+
+        VisualTextRun run = pipeline.BuildVisualRun(logical, TerminalLineKind.Output, RenderConfig);
+
+        Assert.Equal(logical, run.LogicalText);
+        Assert.Equal("ERROR", run.VisualText);
+        Assert.True(run.StyleSpans.Count > 0);
+        Assert.Equal("ERROR".Length, run.MeasuredWidth);
+    }
+
     private sealed class FakeTextMeasurer : ITextMeasurer
     {
         public double MeasureWidth(string visualText, TerminalRenderConfig config)

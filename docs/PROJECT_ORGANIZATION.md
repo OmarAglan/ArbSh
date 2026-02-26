@@ -5,8 +5,8 @@
 This document defines the current architecture of **ArbSh** as an Arabic-first shell and terminal platform.
 
 **Current Version:** 0.8.0-alpha
-**Status:** Phase 5 In Progress - Terminal Emulator Features Active
-**Next Phase:** Phase 5 Completion - Typography and Theming
+**Status:** Phase 5 Completed - GUI Terminal Baseline Stable
+**Next Phase:** Phase 6 - Baa Language & External Process Integration
 
 ArbSh now uses a host-agnostic core engine with separate presentation hosts:
 - `ArbSh.Core` contains parsing, execution, cmdlets, and BiDi/i18n logic.
@@ -43,11 +43,18 @@ ArbSh/
 │   │   ├── ConsoleExecutionSink.cs
 │   │   └── Program.cs
 │   ├── ArbSh.Terminal/
+│   │   ├── Assets/
+│   │   │   └── Fonts/
 │   │   ├── Input/
 │   │   │   ├── TerminalInputBuffer.cs
 │   │   │   ├── OutputSelectionBuffer.cs
 │   │   │   └── SelectionRange.cs
 │   │   ├── Rendering/
+│   │   │   ├── AnsiSgrParser.cs
+│   │   │   ├── AnsiColorSpec.cs
+│   │   │   ├── AnsiStyleModel.cs
+│   │   │   ├── AnsiPalette.cs
+│   │   │   ├── TerminalTheme.cs
 │   │   │   ├── TerminalSurface.cs
 │   │   │   ├── TerminalTextPipeline.cs
 │   │   │   ├── TerminalLayoutEngine.cs
@@ -66,7 +73,9 @@ ArbSh/
 │       ├── TerminalTextPipelineTests.cs
 │       ├── TerminalLayoutEngineTests.cs
 │       ├── LogicalVisualSeparationTests.cs
-│       └── TerminalInputBufferTests.cs
+│       ├── TerminalInputBufferTests.cs
+│       ├── AnsiSgrParserTests.cs
+│       └── AnsiPaletteTests.cs
 ├── ROADMAP.md
 └── System.md
 ```
@@ -112,12 +121,16 @@ dotnet test src_csharp/ArbSh.Test
 - Moved cmdlets/models/parser/executor/BiDi code into the core project.
 - Added sink-based host boundary (`IExecutionSink`, `CoreConsole`, `ShellEngine`).
 - Added Avalonia terminal bootstrap project (`ArbSh.Terminal`).
+- Added packaged font assets for terminal rendering and configured asset-first font fallback.
 
 ### Completed in Phase 5.2 (Output + Prompt Rendering)
 - Added a terminal rendering pipeline that converts logical text to visual display text at the UI boundary only.
 - Implemented `TerminalTextPipeline` and `TerminalLayoutEngine` for line shaping/reordering and frame composition.
 - Refactored `TerminalSurface` to consume draw instructions instead of performing ad-hoc reordering logic inline.
 - Added runtime Arabic/Latin font fallback configuration for terminal text rendering.
+- Added ANSI SGR parsing and span-based style metadata generation (16/256/truecolor).
+- Added ArbSh navy theme + ANSI palette mapping in terminal rendering config.
+- Updated output rendering to apply ANSI foreground/background/styles without mutating logical text.
 
 ### Completed in Phase 5.3 (RTL Input + Cursor + Selection)
 - Added a dedicated input subsystem for logical text, caret, and selection state (`TerminalInputBuffer`).
@@ -125,9 +138,9 @@ dotnet test src_csharp/ArbSh.Test
 - Added pointer-based caret placement and drag selection on the prompt line.
 - Added clipboard copy/cut/paste support for selected input text.
 
-### In Progress
-- Embedded Arabic coding font packaging (Phase 5.1 remaining task).
-- ANSI color parsing and theming engine (Phase 5.2 remaining task).
+### Completed in Phase 5 Closure
+- Closed typography and color/theming remaining tasks from Phase 5.1 and 5.2.
+- Kept prompt/caret behavior untouched while extending output styling path.
 
 ### Completed in Phase 5.4 (Terminal Emulator Behaviors)
 - Added scrollback offset virtualization with mouse wheel and PageUp/PageDown navigation.

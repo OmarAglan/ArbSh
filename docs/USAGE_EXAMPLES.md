@@ -3,8 +3,8 @@
 This document provides comprehensive examples for all implemented features in ArbSh - the Arabic-first shell.
 
 **Current Version:** 0.8.0-alpha
-**Status:** Phase 5 In Progress - Terminal Emulator Features Implemented
-**Next Phase:** Phase 5 Completion - Typography and Theming
+**Status:** Phase 5 Completed - GUI Terminal Baseline Stable
+**Next Phase:** Phase 6 - Baa Language & External Process Integration
 
 ## ✅ **Fully Implemented Features**
 - `ArbSh.Core` shared engine extraction (host-agnostic parser/executor/cmdlets/BiDi)
@@ -16,7 +16,8 @@ This document provides comprehensive examples for all implemented features in Ar
 - Keyboard and mouse selection with clipboard copy/cut/paste for prompt input
 - Scrollback viewport virtualization with mouse wheel and `PageUp`/`PageDown`
 - Output history selection with logical-order copy to clipboard (`Ctrl+C`)
-- Runtime Arabic/Latin font fallback in the Avalonia terminal surface
+- Bundled terminal fonts with packaged-first Arabic/Latin fallback chain
+- ANSI SGR color/style rendering (16-color, 256-color, and truecolor)
 - Complete BiDi Algorithm (UAX #9) with all rule sets (P, X, W, N, I, L)
 - Pipeline execution with task-based concurrency
 - Parameter binding with reflection and type conversion
@@ -44,6 +45,8 @@ This document provides comprehensive examples for all implemented features in Ar
 - Visual reordering is applied only inside the rendering pipeline before draw.
 - Output lines that contain Arabic are right-aligned using measured visual text width.
 - Prompt + input are rendered through the same pipeline for consistent shaping behavior.
+- ANSI escape sequences are parsed at render time and stripped from drawn text.
+- ANSI styling is applied per span (foreground/background + decorations) without mutating logical history.
 
 ### Avalonia Input Notes (Phase 5.3)
 - Prompt input is edited in logical order and rendered through BiDi-aware text layout.
@@ -58,6 +61,11 @@ This document provides comprehensive examples for all implemented features in Ar
 - Click/drag in output history selects full lines across visible rows.
 - `Ctrl + C` copies selected output lines first; if no output selection exists, it copies selected prompt input.
 - Copied output is emitted in logical line order so external editors receive stable text.
+
+### Avalonia Typography & Theme Notes (Phase 5 Closure)
+- Terminal host bundles font assets (`CascadiaMono.ttf`, `arabtype.ttf`) and prefers packaged fonts first.
+- Default terminal look uses the ArbSh navy palette.
+- ANSI indexed and truecolor output is mapped through a dedicated terminal palette for readability.
 
 ## Available Commands
 
@@ -577,10 +585,12 @@ ArbSh prioritizes Arabic language support as a core feature:
 - Cultural localization considerations
 - Arabic-first documentation and examples
 
-**Phase 5.4 Arabic UX Delivered:**
+**Phase 5 Arabic UX Delivered:**
 - Scrollback virtualization for large output histories
 - Clipboard operations spanning output/selectable history regions
 - Keyboard and pointer scrollback navigation for long-running sessions
+- Packaged Arabic-capable font fallback for predictable rendering across machines
+- ANSI color/styling support for modern CLI output streams
 
 ## Testing and Development
 

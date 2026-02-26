@@ -10,6 +10,7 @@ namespace ArbSh.Terminal.Rendering;
 public sealed class TerminalTextPipeline
 {
     private readonly ITextMeasurer _measurer;
+    private readonly AnsiSgrParser _ansiParser = new();
 
     /// <summary>
     /// ينشئ معالج النص مع مقياس العرض المطلوب.
@@ -32,11 +33,12 @@ public sealed class TerminalTextPipeline
     public VisualTextRun BuildVisualRun(string logicalText, TerminalLineKind kind, TerminalRenderConfig config)
     {
         string safeLogical = logicalText ?? string.Empty;
-        bool hasArabic = BiDiTextProcessor.ContainsArabicText(safeLogical);
-        string visual = ToVisual(safeLogical, hasArabic);
+        ParsedTerminalText parsed = _ansiParser.Parse(safeLogical);
+        bool hasArabic = BiDiTextProcessor.ContainsArabicText(parsed.PlainText);
+        string visual = ToVisual(parsed.PlainText, hasArabic);
         double width = _measurer.MeasureWidth(visual, config);
 
-        return new VisualTextRun(safeLogical, visual, hasArabic, width, kind);
+        return new VisualTextRun(safeLogical, visual, hasArabic, width, kind, parsed.StyleSpans);
     }
 
     /// <summary>

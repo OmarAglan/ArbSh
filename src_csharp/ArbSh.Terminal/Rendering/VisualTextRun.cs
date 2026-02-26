@@ -11,9 +11,11 @@ namespace ArbSh.Terminal.Rendering;
 /// <param name="HasArabic">هل يحتوي النص المنطقي على العربية.</param>
 /// <param name="MeasuredWidth">العرض المقاس للنص المرئي.</param>
 /// <param name="Kind">نوع السطر المنطقي.</param>
+/// <param name="StyleSpans">نطاقات تنسيق ANSI المحسوبة على النص المرئي.</param>
 public sealed record VisualTextRun(
     string LogicalText,
     string VisualText,
     bool HasArabic,
     double MeasuredWidth,
-    TerminalLineKind Kind);
+    TerminalLineKind Kind,
+    IReadOnlyList<AnsiStyleSpan> StyleSpans);

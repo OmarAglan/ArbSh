@@ -337,8 +337,7 @@ public sealed class TerminalSurface : Control
                 continue;
             }
 
-            FormattedText formatted = _renderConfig.CreateFormattedText(instruction.Run.VisualText, instruction.Brush);
-            context.DrawText(formatted, instruction.Position);
+            DrawOutputLine(context, instruction);
         }
 
         if (IsFocused && _promptSnapshot is not null)
@@ -363,6 +362,24 @@ public sealed class TerminalSurface : Control
 
         DrawSelection(context, snapshot);
         layout.Draw(context, instruction.Position);
+    }
+
+    private void DrawOutputLine(DrawingContext context, TerminalDrawInstruction instruction)
+    {
+        if (string.IsNullOrEmpty(instruction.Run.VisualText))
+        {
+            return;
+        }
+
+        bool isRtl = IsTextRtl(instruction.Run.VisualText);
+        FlowDirection flow = isRtl ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+
+        TextLayout layout = _renderConfig.CreateTextLayout(instruction.Run.VisualText, instruction.Brush, flow);
+        DrawAnsiBackgrounds(context, instruction, layout);
+
+        FormattedText formatted = _renderConfig.CreateFormattedText(instruction.Run.VisualText, instruction.Brush, flow);
+        ApplyAnsiForegroundStyles(formatted, instruction);
+        context.DrawText(formatted, instruction.Position);
     }
 
     private void DrawSelection(DrawingContext context, PromptLayoutSnapshot snapshot)
@@ -402,6 +419,109 @@ public sealed class TerminalSurface : Control
             var rect = new Rect(_renderConfig.Padding.Left, instruction.Position.Y, width, _renderConfig.LineHeight);
             context.DrawRectangle(_renderConfig.OutputSelectionBrush, null, rect);
         }
+    }
+
+    private void DrawAnsiBackgrounds(DrawingContext context, TerminalDrawInstruction instruction, TextLayout layout)
+    {
+        if (instruction.Run.StyleSpans.Count == 0 || layout.TextLines.Count == 0)
+        {
+            return;
+        }
+
+        TextLine line = layout.TextLines[0];
+        int textLength = instruction.Run.VisualText.Length;
+
+        foreach (AnsiStyleSpan span in instruction.Run.StyleSpans)
+        {
+            if (!TryClampSpan(span.Start, span.Length, textLength, out int start, out int length))
+            {
+                continue;
+            }
+
+            IBrush? background = _renderConfig.ResolveAnsiBackgroundBrush(instruction.Run.Kind, span.Style);
+            if (background is null)
+            {
+                continue;
+            }
+
+            IReadOnlyList<TextBounds> bounds = line.GetTextBounds(start, length);
+            foreach (TextBounds bound in bounds)
+            {
+                Rect rect = bound.Rectangle;
+                context.DrawRectangle(
+                    background,
+                    null,
+                    new Rect(
+                        instruction.Position.X + rect.X,
+                        instruction.Position.Y + rect.Y,
+                        rect.Width,
+                        rect.Height));
+            }
+        }
+    }
+
+    private void ApplyAnsiForegroundStyles(FormattedText formatted, TerminalDrawInstruction instruction)
+    {
+        if (instruction.Run.StyleSpans.Count == 0)
+        {
+            return;
+        }
+
+        int textLength = instruction.Run.VisualText.Length;
+        foreach (AnsiStyleSpan span in instruction.Run.StyleSpans)
+        {
+            if (!TryClampSpan(span.Start, span.Length, textLength, out int start, out int length))
+            {
+                continue;
+            }
+
+            AnsiStyleState style = span.Style;
+            if (style.IsDefault)
+            {
+                continue;
+            }
+
+            IBrush fg = _renderConfig.ResolveAnsiForegroundBrush(instruction.Run.Kind, style);
+            formatted.SetForegroundBrush(fg, start, length);
+
+            if (style.Bold)
+            {
+                formatted.SetFontWeight(_renderConfig.ResolveAnsiFontWeight(style), start, length);
+            }
+
+            if (style.Italic)
+            {
+                formatted.SetFontStyle(_renderConfig.ResolveAnsiFontStyle(style), start, length);
+            }
+
+            TextDecorationCollection? decorations = _renderConfig.ResolveAnsiTextDecorations(style);
+            if (decorations is not null)
+            {
+                formatted.SetTextDecorations(decorations, start, length);
+            }
+        }
+    }
+
+    private static bool TryClampSpan(int start, int length, int maxLength, out int clampedStart, out int clampedLength)
+    {
+        clampedStart = 0;
+        clampedLength = 0;
+
+        if (length <= 0 || maxLength <= 0)
+        {
+            return false;
+        }
+
+        int safeStart = Math.Clamp(start, 0, maxLength);
+        int safeEnd = Math.Clamp(start + length, 0, maxLength);
+        if (safeEnd <= safeStart)
+        {
+            return false;
+        }
+
+        clampedStart = safeStart;
+        clampedLength = safeEnd - safeStart;
+        return true;
     }
 
     private void DrawCaret(DrawingContext context, PromptLayoutSnapshot snapshot)

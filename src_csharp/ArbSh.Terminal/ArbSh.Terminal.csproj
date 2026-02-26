@@ -19,4 +19,8 @@
     <ProjectReference Include="..\ArbSh.Core\ArbSh.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+  </ItemGroup>
+
 </Project>

@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Input Test Coverage**: Added `TerminalInputBufferTests` for grapheme-safe delete/backspace, selection replacement, and caret movement boundaries.
 - **Phase 5.4 Scrollback/Output Selection Models**: Added `TerminalFrameLayout` and `OutputSelectionBuffer` to support viewport windowing metadata and logical-order output selection/copy.
 - **Phase 5.4 Test Coverage**: Added `OutputSelectionBufferTests` and new `TerminalLayoutEngine` scrollback-offset tests.
+- **Phase 5 Typography Assets**: Added bundled terminal fonts under `src_csharp/ArbSh.Terminal/Assets/Fonts` and wired them as Avalonia resources.
+- **ANSI Rendering Model**: Added `AnsiSgrParser`, `AnsiColorSpec`, `AnsiStyleState`, `AnsiStyleSpan`, `ParsedTerminalText`, `AnsiPalette`, and `TerminalTheme`.
+- **ANSI Test Coverage**: Added `AnsiSgrParserTests` and `AnsiPaletteTests`.
 
 ### Changed
 - **Namespace Split**: Migrated engine namespaces from `ArbSh.Console.*` to `ArbSh.Core.*` for strict separation between core logic and host UI.
@@ -29,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Project Metadata**: Set `<IsTestProject>true</IsTestProject>` in `ArbSh.Test.csproj` so `dotnet test` executes tests instead of skipping.
 - **Terminal Scrollback UX**: `TerminalSurface` and `TerminalLayoutEngine` now support scrollback offsets, mouse-wheel scrolling, and PageUp/PageDown navigation while keeping the prompt pinned at the bottom.
 - **Clipboard Priority Rules**: `Ctrl+C` now copies output-history selections first (logical order) and falls back to prompt-input selection copy.
+- **Terminal Font Resolution**: `TerminalRenderConfig` now prioritizes packaged fonts before system fallback families.
+- **Terminal Text Pipeline**: `TerminalTextPipeline` now strips ANSI escapes at render time and emits style spans while preserving logical source text.
+- **Output Renderer Path**: `TerminalSurface` output drawing now applies per-span ANSI foreground/background/style formatting.
 
 ### Fixed
 - **Engine/Host Coupling**: Removed direct dependence of core execution flow on `System.Console` output paths, enabling GUI-hosted rendering pipelines.
@@ -38,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mixed BiDi Caret Placement**: Switched prompt caret position calculation to `TextLayout` hit-testing to align correctly for Arabic, English, and mixed prompt input.
 - **Selection and Cursor Drift in Mixed Text**: Unified caret/selection logic on `TextLine` hit-testing to keep editing behavior stable across Arabic/English segments.
 - **Scrollback Drift on Incoming Output**: Preserved reader position when new lines arrive while user is scrolled up in history.
+- **ANSI Escape Leakage**: ANSI control sequences no longer appear as literal text in rendered output.
 
 ## [0.7.7.11] - 2025-07-03
 
