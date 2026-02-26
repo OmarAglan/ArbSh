@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.TextFormatting;
 using ArbSh.Core.I18n;
 using ArbSh.Terminal.Models;
 using ArbSh.Terminal.ViewModels;
@@ -112,54 +113,53 @@ public sealed class TerminalSurface : Control
             _textPipeline);
 
         TerminalDrawInstruction? promptInstruction = null;
+        TextLayout? promptLayout = null;
 
         foreach (TerminalDrawInstruction instruction in instructions)
         {
-            FormattedText formatted = _renderConfig.CreateFormattedText(instruction.Run.VisualText, instruction.Brush);
-            context.DrawText(formatted, instruction.Position);
-
             if (instruction.IsPromptLine)
             {
                 promptInstruction = instruction;
+                bool isPromptRtl = IsTextRtl(instruction.Run.LogicalText);
+                FlowDirection flow = isPromptRtl ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+                promptLayout = _renderConfig.CreateTextLayout(instruction.Run.LogicalText, instruction.Brush, flow);
+                promptLayout.Draw(context, instruction.Position);
+                continue;
             }
+
+            FormattedText formatted = _renderConfig.CreateFormattedText(instruction.Run.VisualText, instruction.Brush);
+            context.DrawText(formatted, instruction.Position);
         }
 
         if (IsFocused && promptInstruction is not null)
         {
-            DrawCursor(context, promptInstruction);
+            DrawCursor(context, promptInstruction, promptLayout);
         }
     }
 
-    private void DrawCursor(DrawingContext context, TerminalDrawInstruction promptInstruction)
+    private void DrawCursor(DrawingContext context, TerminalDrawInstruction promptInstruction, TextLayout? promptLayout)
     {
-        bool isRtlParagraph = IsPromptParagraphRtl();
-        double cursorX;
+        double cursorX = promptInstruction.Position.X + promptInstruction.Run.MeasuredWidth + 1;
 
-        if (isRtlParagraph)
+        if (promptLayout is not null && promptLayout.TextLines.Count > 0)
         {
-            // For RTL prompt lines, caret at logical end appears on the visual leading edge (left side).
-            cursorX = Math.Max(_renderConfig.Padding.Left, promptInstruction.Position.X - 1);
+            TextLine line = promptLayout.TextLines[0];
+            var endHit = new CharacterHit(promptInstruction.Run.LogicalText.Length, 0);
+            double distance = line.GetDistanceFromCharacterHit(endHit);
+            cursorX = promptInstruction.Position.X + distance;
         }
-        else
-        {
-            cursorX = promptInstruction.Position.X + promptInstruction.Run.MeasuredWidth + 1;
-            double maxCursorX = Math.Max(_renderConfig.Padding.Left, Bounds.Width - _renderConfig.Padding.Right);
-            cursorX = Math.Min(maxCursorX, cursorX);
-        }
+
+        double minCursorX = _renderConfig.Padding.Left;
+        double maxCursorX = Math.Max(minCursorX, Bounds.Width - _renderConfig.Padding.Right);
+        cursorX = Math.Clamp(cursorX, minCursorX, maxCursorX);
 
         double cursorY = promptInstruction.Position.Y + 2;
         var cursorRect = new Rect(cursorX, cursorY, 2, Math.Max(6, _renderConfig.LineHeight - 6));
         context.DrawRectangle(_renderConfig.PromptBrush, null, cursorRect);
     }
 
-    private bool IsPromptParagraphRtl()
+    private static bool IsTextRtl(string logical)
     {
-        if (_viewModel is null)
-        {
-            return false;
-        }
-
-        string logical = string.Concat(_viewModel.Prompt, _inputBuffer);
         if (string.IsNullOrWhiteSpace(logical))
         {
             return false;

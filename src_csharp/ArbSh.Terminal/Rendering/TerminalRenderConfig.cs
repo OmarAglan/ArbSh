@@ -1,6 +1,7 @@
 using System.Globalization;
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Media.TextFormatting;
 using ArbSh.Terminal.Models;
 
 namespace ArbSh.Terminal.Rendering;
@@ -69,6 +70,34 @@ public sealed class TerminalRenderConfig
             Typeface,
             FontSize,
             brush);
+    }
+
+    /// <summary>
+    /// ينشئ تخطيط نص يدعم اختبارات موضع المؤشر بدقة مع BiDi.
+    /// Creates a text layout that supports accurate BiDi-aware caret hit testing.
+    /// </summary>
+    /// <param name="text">النص المنطقي المراد رسمه.</param>
+    /// <param name="brush">فرشاة الرسم.</param>
+    /// <param name="flowDirection">اتجاه الفقرة الأساسي.</param>
+    /// <returns>تخطيط النص.</returns>
+    public TextLayout CreateTextLayout(string text, IBrush brush, FlowDirection flowDirection)
+    {
+        return new TextLayout(
+            text: text,
+            typeface: Typeface,
+            fontSize: FontSize,
+            foreground: brush,
+            textAlignment: TextAlignment.Left,
+            textWrapping: TextWrapping.NoWrap,
+            textTrimming: TextTrimming.None,
+            textDecorations: null,
+            flowDirection: flowDirection,
+            maxWidth: double.PositiveInfinity,
+            maxHeight: double.PositiveInfinity,
+            lineHeight: LineHeight,
+            letterSpacing: 0,
+            maxLines: 1,
+            textStyleOverrides: null);
     }
 
     /// <summary>

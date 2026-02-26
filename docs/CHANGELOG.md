@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Logical/Visual Boundary Discipline**: Enforced visual transformation only in the terminal rendering layer while preserving logical strings in view-model state.
 - **Broken Arabic Display in Avalonia Host**: Removed manual BiDi reordering before Avalonia text layout to prevent double reordering and reversed Arabic output.
 - **Prompt Caret Misalignment (RTL)**: Updated terminal cursor placement to respect paragraph direction so caret aligns with RTL prompt/input flow.
+- **Mixed BiDi Caret Placement**: Switched prompt caret position calculation to `TextLayout` hit-testing to align correctly for Arabic, English, and mixed prompt input.
 
 ## [0.7.7.11] - 2025-07-03
 
