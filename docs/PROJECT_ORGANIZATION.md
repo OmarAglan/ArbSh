@@ -5,8 +5,8 @@
 This document defines the current architecture of **ArbSh** as an Arabic-first shell and terminal platform.
 
 **Current Version:** 0.8.0-alpha
-**Status:** Phase 5 In Progress - RTL Input Engine Active
-**Next Phase:** Phase 5.4 - Terminal Emulator Features
+**Status:** Phase 5 In Progress - Terminal Emulator Features Active
+**Next Phase:** Phase 5 Completion - Typography and Theming
 
 ArbSh now uses a host-agnostic core engine with separate presentation hosts:
 - `ArbSh.Core` contains parsing, execution, cmdlets, and BiDi/i18n logic.
@@ -45,11 +45,13 @@ ArbSh/
 │   ├── ArbSh.Terminal/
 │   │   ├── Input/
 │   │   │   ├── TerminalInputBuffer.cs
+│   │   │   ├── OutputSelectionBuffer.cs
 │   │   │   └── SelectionRange.cs
 │   │   ├── Rendering/
 │   │   │   ├── TerminalSurface.cs
 │   │   │   ├── TerminalTextPipeline.cs
 │   │   │   ├── TerminalLayoutEngine.cs
+│   │   │   ├── TerminalFrameLayout.cs
 │   │   │   ├── PromptLayoutSnapshot.cs
 │   │   │   └── TerminalRenderConfig.cs
 │   │   ├── ViewModels/
@@ -124,8 +126,13 @@ dotnet test src_csharp/ArbSh.Test
 - Added clipboard copy/cut/paste support for selected input text.
 
 ### In Progress
-- Terminal virtualization for large scrollback.
-- Broader terminal-emulator clipboard behavior for scrollback/output content.
+- Embedded Arabic coding font packaging (Phase 5.1 remaining task).
+- ANSI color parsing and theming engine (Phase 5.2 remaining task).
+
+### Completed in Phase 5.4 (Terminal Emulator Behaviors)
+- Added scrollback offset virtualization with mouse wheel and PageUp/PageDown navigation.
+- Kept prompt pinned to bottom while output viewport moves through history.
+- Added output-line selection and logical-order clipboard copy (`Ctrl+C`) for scrollback content.
 
 ## Notes on Documentation Locations
 

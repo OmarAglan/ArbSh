@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.0-alpha (Core Extraction + Avalonia Bootstrap)
-**Status:** Phase 5 In Progress - RTL Input Engine Implemented
-**Next Phase:** Phase 5.4 - Terminal Emulator Features
+**Status:** Phase 5 In Progress - Terminal Emulator Features Implemented
+**Next Phase:** Phase 5 Completion - Typography and Theming
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -83,8 +83,8 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [x] **RTL Prompt:** Pin the prompt (e.g., `أربش< `) cleanly to the right side of the window.
 
 #### 5.4 Terminal Emulator Features
-- [ ] **Scrollback Buffer:** Implement UI virtualization to handle thousands of lines of output efficiently.
-- [ ] **Clipboard Support:** BiDi-aware Copy/Paste (ensuring copied text pastes correctly into external editors in logical order).
+- [x] **Scrollback Buffer:** Implement UI virtualization to handle thousands of lines of output efficiently.
+- [x] **Clipboard Support:** BiDi-aware Copy/Paste (ensuring copied text pastes correctly into external editors in logical order).
 
 ### 🧠 Phase 6: Baa Language & External Process Integration
 **Ensuring ArbSh is the perfect host environment for the Baa compiler and general external processes.**
@@ -138,8 +138,10 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Added visual caret navigation for mixed BiDi input using `TextLine` hit-testing APIs.
 - Added input selection with mouse drag and keyboard extension, plus clipboard copy/cut/paste integration.
 - Anchored the Arabic prompt to RTL flow with the final marker form `أربش< `.
+- Implemented scrollback offset virtualization with mouse-wheel and PageUp/PageDown navigation while keeping prompt pinned.
+- Added output-line selection and clipboard copy in logical-order text, alongside existing prompt-line clipboard editing.
 
-**Next Focus:** Implement Phase 5.4 virtualization and broaden clipboard behavior beyond prompt-line editing.
+**Next Focus:** Complete remaining Phase 5 items: embedded Arabic coding font and ANSI color/theming engine.
 
 ## 🌟 Project Philosophy
 

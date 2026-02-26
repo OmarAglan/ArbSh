@@ -95,6 +95,71 @@ public sealed class TerminalLayoutEngineTests
         Assert.Equal(expectedPromptY, prompt.Position.Y);
     }
 
+    [Fact]
+    public void BuildFrameLayout_AppliesScrollbackOffsetWindow()
+    {
+        var config = new TerminalRenderConfig
+        {
+            Padding = new Thickness(10),
+            LineHeight = 20
+        };
+
+        var lines = Enumerable.Range(0, 8)
+            .Select(i => new TerminalLine($"line-{i}", TerminalLineKind.Output, DateTimeOffset.UtcNow))
+            .ToList();
+
+        var engine = new TerminalLayoutEngine();
+        var pipeline = new TerminalTextPipeline(new FakeTextMeasurer());
+
+        TerminalFrameLayout frame = engine.BuildFrameLayout(
+            lines,
+            "أربش> ",
+            string.Empty,
+            new Size(220, 130),
+            config,
+            pipeline,
+            scrollbackOffsetLines: 2);
+
+        List<TerminalDrawInstruction> outputs = [.. frame.Instructions.Where(x => !x.IsPromptLine)];
+
+        Assert.Equal(4, outputs.Count);
+        Assert.Equal("line-2", outputs[0].Run.LogicalText);
+        Assert.Equal("line-5", outputs[^1].Run.LogicalText);
+        Assert.Equal(2, frame.FirstVisibleOutputLineIndex);
+        Assert.Equal(4, frame.VisibleOutputLineCount);
+        Assert.Equal(2, frame.ScrollbackOffsetLines);
+    }
+
+    [Fact]
+    public void BuildFrameLayout_ClampsScrollbackOffsetToMaximum()
+    {
+        var config = new TerminalRenderConfig
+        {
+            Padding = new Thickness(10),
+            LineHeight = 20
+        };
+
+        var lines = Enumerable.Range(0, 6)
+            .Select(i => new TerminalLine($"line-{i}", TerminalLineKind.Output, DateTimeOffset.UtcNow))
+            .ToList();
+
+        var engine = new TerminalLayoutEngine();
+        var pipeline = new TerminalTextPipeline(new FakeTextMeasurer());
+
+        TerminalFrameLayout frame = engine.BuildFrameLayout(
+            lines,
+            "أربش> ",
+            string.Empty,
+            new Size(220, 130),
+            config,
+            pipeline,
+            scrollbackOffsetLines: 999);
+
+        Assert.Equal(2, frame.MaxScrollbackOffsetLines);
+        Assert.Equal(frame.MaxScrollbackOffsetLines, frame.ScrollbackOffsetLines);
+        Assert.Equal(0, frame.FirstVisibleOutputLineIndex);
+    }
+
     private sealed class FakeTextMeasurer : ITextMeasurer
     {
         public double MeasureWidth(string visualText, TerminalRenderConfig config)

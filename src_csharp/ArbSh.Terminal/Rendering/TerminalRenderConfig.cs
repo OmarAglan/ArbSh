@@ -55,6 +55,18 @@ public sealed class TerminalRenderConfig
     public IBrush SelectionBrush { get; init; } = new SolidColorBrush(Color.FromArgb(96, 80, 150, 255));
 
     /// <summary>
+    /// لون خلفية تحديد أسطر المخرجات.
+    /// Selection background brush for output lines.
+    /// </summary>
+    public IBrush OutputSelectionBrush { get; init; } = new SolidColorBrush(Color.FromArgb(72, 75, 130, 220));
+
+    /// <summary>
+    /// عدد الأسطر التي يتم تمريرها لكل خطوة عجلة.
+    /// Number of lines to scroll per wheel step.
+    /// </summary>
+    public int ScrollLinesPerWheelStep { get; init; } = 3;
+
+    /// <summary>
     /// نوع الخط المستخدم في الرسم.
     /// Typeface used by Avalonia text layout.
     /// </summary>

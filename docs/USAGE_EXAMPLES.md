@@ -3,8 +3,8 @@
 This document provides comprehensive examples for all implemented features in ArbSh - the Arabic-first shell.
 
 **Current Version:** 0.8.0-alpha
-**Status:** Phase 5 In Progress - RTL Input/Selection Engine Implemented
-**Next Phase:** Phase 5.4 - Terminal Emulator Features
+**Status:** Phase 5 In Progress - Terminal Emulator Features Implemented
+**Next Phase:** Phase 5 Completion - Typography and Theming
 
 ## ✅ **Fully Implemented Features**
 - `ArbSh.Core` shared engine extraction (host-agnostic parser/executor/cmdlets/BiDi)
@@ -14,6 +14,8 @@ This document provides comprehensive examples for all implemented features in Ar
 - Logical input engine with caret/selection state (`TerminalInputBuffer`)
 - Mixed BiDi caret mapping via Avalonia text hit-testing
 - Keyboard and mouse selection with clipboard copy/cut/paste for prompt input
+- Scrollback viewport virtualization with mouse wheel and `PageUp`/`PageDown`
+- Output history selection with logical-order copy to clipboard (`Ctrl+C`)
 - Runtime Arabic/Latin font fallback in the Avalonia terminal surface
 - Complete BiDi Algorithm (UAX #9) with all rule sets (P, X, W, N, I, L)
 - Pipeline execution with task-based concurrency
@@ -49,6 +51,13 @@ This document provides comprehensive examples for all implemented features in Ar
 - `Shift + Arrow` extends selection.
 - `Ctrl + A/C/X/V` supports select-all, copy, cut, and paste in prompt input.
 - Mouse click places caret and mouse drag extends selection in the prompt line.
+
+### Avalonia Terminal Emulator Notes (Phase 5.4)
+- Mouse wheel scrolls output history while keeping the prompt pinned at the bottom.
+- `PageUp` and `PageDown` navigate scrollback by viewport-sized steps.
+- Click/drag in output history selects full lines across visible rows.
+- `Ctrl + C` copies selected output lines first; if no output selection exists, it copies selected prompt input.
+- Copied output is emitted in logical line order so external editors receive stable text.
 
 ## Available Commands
 
@@ -568,10 +577,10 @@ ArbSh prioritizes Arabic language support as a core feature:
 - Cultural localization considerations
 - Arabic-first documentation and examples
 
-**Phase 5.4 Arabic UX Targets:**
+**Phase 5.4 Arabic UX Delivered:**
 - Scrollback virtualization for large output histories
 - Clipboard operations spanning output/selectable history regions
-- Additional terminal-emulator behaviors for long-running sessions
+- Keyboard and pointer scrollback navigation for long-running sessions
 
 ## Testing and Development
 

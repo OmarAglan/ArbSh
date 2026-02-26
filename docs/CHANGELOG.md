@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Renderer Test Coverage**: Added terminal rendering tests in `ArbSh.Test` for pipeline transformation, visible frame windowing, and logical/visual separation.
 - **Phase 5.3 Input Subsystem**: Added `TerminalInputBuffer`, `SelectionRange`, and `PromptLayoutSnapshot` for logical input editing, caret mapping, and selection geometry.
 - **Input Test Coverage**: Added `TerminalInputBufferTests` for grapheme-safe delete/backspace, selection replacement, and caret movement boundaries.
+- **Phase 5.4 Scrollback/Output Selection Models**: Added `TerminalFrameLayout` and `OutputSelectionBuffer` to support viewport windowing metadata and logical-order output selection/copy.
+- **Phase 5.4 Test Coverage**: Added `OutputSelectionBufferTests` and new `TerminalLayoutEngine` scrollback-offset tests.
 
 ### Changed
 - **Namespace Split**: Migrated engine namespaces from `ArbSh.Console.*` to `ArbSh.Core.*` for strict separation between core logic and host UI.
@@ -25,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TerminalSurface Interaction Model**: Upgraded keyboard/mouse input handling to support visual caret navigation, selection extension, and clipboard operations.
 - **Prompt Token Style**: Updated GUI prompt marker to RTL-oriented form `أربش< `.
 - **Test Project Metadata**: Set `<IsTestProject>true</IsTestProject>` in `ArbSh.Test.csproj` so `dotnet test` executes tests instead of skipping.
+- **Terminal Scrollback UX**: `TerminalSurface` and `TerminalLayoutEngine` now support scrollback offsets, mouse-wheel scrolling, and PageUp/PageDown navigation while keeping the prompt pinned at the bottom.
+- **Clipboard Priority Rules**: `Ctrl+C` now copies output-history selections first (logical order) and falls back to prompt-input selection copy.
 
 ### Fixed
 - **Engine/Host Coupling**: Removed direct dependence of core execution flow on `System.Console` output paths, enabling GUI-hosted rendering pipelines.
@@ -33,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Prompt Caret Misalignment (RTL)**: Updated terminal cursor placement to respect paragraph direction so caret aligns with RTL prompt/input flow.
 - **Mixed BiDi Caret Placement**: Switched prompt caret position calculation to `TextLayout` hit-testing to align correctly for Arabic, English, and mixed prompt input.
 - **Selection and Cursor Drift in Mixed Text**: Unified caret/selection logic on `TextLine` hit-testing to keep editing behavior stable across Arabic/English segments.
+- **Scrollback Drift on Incoming Output**: Preserved reader position when new lines arrive while user is scrolled up in history.
 
 ## [0.7.7.11] - 2025-07-03
 

@@ -14,16 +14,25 @@ namespace ArbSh.Terminal.Rendering;
 public sealed class TerminalSurface : Control
 {
     private const double CaretDistanceEpsilon = 0.01;
+    private const int PageScrollOverlapLines = 1;
 
     private MainWindowViewModel? _viewModel;
-    private bool _isPointerSelecting;
+    private bool _isPromptPointerSelecting;
+    private bool _isOutputPointerSelecting;
+    private int _scrollbackOffsetLines;
+    private int _lastKnownLineCount;
 
     private readonly TerminalInputBuffer _inputBuffer = new();
+    private readonly OutputSelectionBuffer _outputSelection = new();
     private readonly TerminalRenderConfig _renderConfig = new();
     private readonly TerminalTextPipeline _textPipeline = new();
     private readonly TerminalLayoutEngine _layoutEngine = new();
 
     private PromptLayoutSnapshot? _promptSnapshot;
+    private TerminalFrameLayout? _frameSnapshot;
+    private string _frameSnapshotInputText = string.Empty;
+    private int _frameSnapshotLineCount;
+    private Size _frameSnapshotSize;
 
     public TerminalSurface()
     {
@@ -43,7 +52,20 @@ public sealed class TerminalSurface : Control
         if (_viewModel is not null)
         {
             _viewModel.BufferChanged += HandleBufferChanged;
+            _lastKnownLineCount = _viewModel.Lines.Count;
         }
+        else
+        {
+            _lastKnownLineCount = 0;
+        }
+
+        _scrollbackOffsetLines = 0;
+        _outputSelection.Clear();
+        _frameSnapshot = null;
+        _frameSnapshotInputText = string.Empty;
+        _frameSnapshotLineCount = _lastKnownLineCount;
+        _frameSnapshotSize = Bounds.Size;
+        _promptSnapshot = null;
 
         InvalidateVisual();
     }
@@ -54,12 +76,24 @@ public sealed class TerminalSurface : Control
 
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
+            Point point = e.GetPosition(this);
             bool extendSelection = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-            UpdateCaretFromPointer(e.GetPosition(this), extendSelection);
 
-            _isPointerSelecting = true;
-            e.Pointer.Capture(this);
-            e.Handled = true;
+            if (TryBeginOutputSelection(point, extendSelection))
+            {
+                _isOutputPointerSelecting = true;
+                _isPromptPointerSelecting = false;
+                e.Pointer.Capture(this);
+                e.Handled = true;
+            }
+            else if (UpdateCaretFromPointer(point, extendSelection))
+            {
+                _outputSelection.Clear();
+                _isPromptPointerSelecting = true;
+                _isOutputPointerSelecting = false;
+                e.Pointer.Capture(this);
+                e.Handled = true;
+            }
         }
 
         base.OnPointerPressed(e);
@@ -67,7 +101,21 @@ public sealed class TerminalSurface : Control
 
     protected override void OnPointerMoved(PointerEventArgs e)
     {
-        if (_isPointerSelecting && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            base.OnPointerMoved(e);
+            return;
+        }
+
+        if (_isOutputPointerSelecting)
+        {
+            UpdateOutputSelectionFromPointer(e.GetPosition(this));
+            e.Handled = true;
+            base.OnPointerMoved(e);
+            return;
+        }
+
+        if (_isPromptPointerSelecting)
         {
             UpdateCaretFromPointer(e.GetPosition(this), extendSelection: true);
             e.Handled = true;
@@ -78,14 +126,44 @@ public sealed class TerminalSurface : Control
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        if (_isPointerSelecting)
+        if (_isPromptPointerSelecting || _isOutputPointerSelecting)
         {
-            _isPointerSelecting = false;
+            _isPromptPointerSelecting = false;
+            _isOutputPointerSelecting = false;
             e.Pointer.Capture(null);
             e.Handled = true;
         }
 
         base.OnPointerReleased(e);
+    }
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        if (_viewModel is null)
+        {
+            base.OnPointerWheelChanged(e);
+            return;
+        }
+
+        int direction = Math.Sign(e.Delta.Y);
+        if (direction == 0 || !TryGetFrameSnapshot(out TerminalFrameLayout frame))
+        {
+            base.OnPointerWheelChanged(e);
+            return;
+        }
+
+        int wheelSteps = Math.Max(1, (int)Math.Ceiling(Math.Abs(e.Delta.Y)));
+        int deltaLines = wheelSteps * _renderConfig.ScrollLinesPerWheelStep;
+
+        if (direction > 0)
+        {
+            ScrollbackBy(deltaLines, frame);
+            e.Handled = true;
+            return;
+        }
+
+        ScrollbackBy(-deltaLines, frame);
+        e.Handled = true;
     }
 
     protected override void OnTextInput(TextInputEventArgs e)
@@ -103,7 +181,9 @@ public sealed class TerminalSurface : Control
             return;
         }
 
+        _outputSelection.Clear();
         _inputBuffer.InsertText(e.Text);
+        _scrollbackOffsetLines = 0;
         InvalidateVisual();
         e.Handled = true;
     }
@@ -120,6 +200,7 @@ public sealed class TerminalSurface : Control
             switch (e.Key)
             {
                 case Key.A:
+                    _outputSelection.Clear();
                     _inputBuffer.SelectAll();
                     InvalidateVisual();
                     e.Handled = true;
@@ -146,49 +227,72 @@ public sealed class TerminalSurface : Control
 
         switch (e.Key)
         {
+            case Key.PageUp:
+                ScrollbackByPage(upward: true);
+                InvalidateVisual();
+                e.Handled = true;
+                break;
+
+            case Key.PageDown:
+                ScrollbackByPage(upward: false);
+                InvalidateVisual();
+                e.Handled = true;
+                break;
+
             case Key.Left:
+                _outputSelection.Clear();
                 MoveCaretVisual(moveLeft: true, extendSelection: shift);
                 InvalidateVisual();
                 e.Handled = true;
                 break;
 
             case Key.Right:
+                _outputSelection.Clear();
                 MoveCaretVisual(moveLeft: false, extendSelection: shift);
                 InvalidateVisual();
                 e.Handled = true;
                 break;
 
             case Key.Home:
+                _outputSelection.Clear();
                 _inputBuffer.MoveCaretHome(shift);
                 InvalidateVisual();
                 e.Handled = true;
                 break;
 
             case Key.End:
+                _outputSelection.Clear();
                 _inputBuffer.MoveCaretEnd(shift);
                 InvalidateVisual();
                 e.Handled = true;
                 break;
 
             case Key.Back:
+                _outputSelection.Clear();
                 _inputBuffer.Backspace();
+                _scrollbackOffsetLines = 0;
                 InvalidateVisual();
                 e.Handled = true;
                 break;
 
             case Key.Delete:
+                _outputSelection.Clear();
                 _inputBuffer.DeleteForward();
+                _scrollbackOffsetLines = 0;
                 InvalidateVisual();
                 e.Handled = true;
                 break;
 
             case Key.Escape:
                 _inputBuffer.ClearSelection();
+                _outputSelection.Clear();
                 InvalidateVisual();
                 e.Handled = true;
                 break;
 
             case Key.Enter:
+                _outputSelection.Clear();
+                _scrollbackOffsetLines = 0;
                 await SubmitInputBufferAsync();
                 e.Handled = true;
                 break;
@@ -207,17 +311,25 @@ public sealed class TerminalSurface : Control
         }
 
         IReadOnlyList<TerminalLine> lineSnapshot = [.. _viewModel.Lines];
-        IReadOnlyList<TerminalDrawInstruction> instructions = _layoutEngine.BuildFrame(
+        TerminalFrameLayout frame = _layoutEngine.BuildFrameLayout(
             lineSnapshot,
             _viewModel.Prompt,
             _inputBuffer.Text,
             Bounds.Size,
             _renderConfig,
-            _textPipeline);
+            _textPipeline,
+            _scrollbackOffsetLines);
+
+        _scrollbackOffsetLines = frame.ScrollbackOffsetLines;
+        _frameSnapshot = frame;
+        _frameSnapshotInputText = _inputBuffer.Text;
+        _frameSnapshotLineCount = lineSnapshot.Count;
+        _frameSnapshotSize = Bounds.Size;
 
         _promptSnapshot = null;
+        DrawOutputSelection(context, frame);
 
-        foreach (TerminalDrawInstruction instruction in instructions)
+        foreach (TerminalDrawInstruction instruction in frame.Instructions)
         {
             if (instruction.IsPromptLine)
             {
@@ -267,6 +379,31 @@ public sealed class TerminalSurface : Control
         }
     }
 
+    private void DrawOutputSelection(DrawingContext context, TerminalFrameLayout frame)
+    {
+        if (!_outputSelection.TryGetRange(out int selectionStart, out int selectionEnd))
+        {
+            return;
+        }
+
+        double width = Math.Max(0, Bounds.Width - _renderConfig.Padding.Left - _renderConfig.Padding.Right);
+        if (width <= 0)
+        {
+            return;
+        }
+
+        foreach (TerminalDrawInstruction instruction in frame.Instructions)
+        {
+            if (instruction.IsPromptLine || instruction.LogicalLineIndex < selectionStart || instruction.LogicalLineIndex > selectionEnd)
+            {
+                continue;
+            }
+
+            var rect = new Rect(_renderConfig.Padding.Left, instruction.Position.Y, width, _renderConfig.LineHeight);
+            context.DrawRectangle(_renderConfig.OutputSelectionBrush, null, rect);
+        }
+    }
+
     private void DrawCaret(DrawingContext context, PromptLayoutSnapshot snapshot)
     {
         double cursorX = snapshot.GetCaretXForInputIndex(_inputBuffer.CaretIndex);
@@ -289,6 +426,8 @@ public sealed class TerminalSurface : Control
 
         string input = _inputBuffer.Text;
         _inputBuffer.Clear();
+        _scrollbackOffsetLines = 0;
+        _outputSelection.Clear();
         InvalidateVisual();
 
         if (string.IsNullOrWhiteSpace(input))
@@ -426,16 +565,18 @@ public sealed class TerminalSurface : Control
         _inputBuffer.SetCaretFromLogicalIndex(targetInputIndex, extendSelection);
     }
 
-    private void UpdateCaretFromPointer(Point point, bool extendSelection)
+    private bool UpdateCaretFromPointer(Point point, bool extendSelection)
     {
         if (!TryGetPromptSnapshot(out PromptLayoutSnapshot snapshot) || !IsPointOnPromptLine(point, snapshot))
         {
-            return;
+            return false;
         }
 
         int inputIndex = snapshot.GetInputIndexFromPoint(point);
         _inputBuffer.SetCaretFromLogicalIndex(inputIndex, extendSelection);
+        _scrollbackOffsetLines = 0;
         InvalidateVisual();
+        return true;
     }
 
     private bool TryGetPromptSnapshot(out PromptLayoutSnapshot snapshot)
@@ -454,16 +595,12 @@ public sealed class TerminalSurface : Control
             return true;
         }
 
-        IReadOnlyList<TerminalLine> lineSnapshot = [.. _viewModel.Lines];
-        IReadOnlyList<TerminalDrawInstruction> instructions = _layoutEngine.BuildFrame(
-            lineSnapshot,
-            _viewModel.Prompt,
-            _inputBuffer.Text,
-            Bounds.Size,
-            _renderConfig,
-            _textPipeline);
+        if (!TryGetFrameSnapshot(out TerminalFrameLayout frame))
+        {
+            return false;
+        }
 
-        TerminalDrawInstruction? promptInstruction = instructions.FirstOrDefault(x => x.IsPromptLine);
+        TerminalDrawInstruction? promptInstruction = frame.Instructions.FirstOrDefault(x => x.IsPromptLine);
         if (promptInstruction is null)
         {
             return false;
@@ -486,7 +623,162 @@ public sealed class TerminalSurface : Control
         return point.Y >= top && point.Y <= bottom;
     }
 
+    private bool TryBeginOutputSelection(Point point, bool extendSelection)
+    {
+        if (!TryGetFrameSnapshot(out TerminalFrameLayout frame))
+        {
+            return false;
+        }
+
+        if (!TryGetOutputLineIndexFromPoint(point, frame, out int lineIndex))
+        {
+            return false;
+        }
+
+        _outputSelection.BeginOrExtend(lineIndex, extendSelection);
+        InvalidateVisual();
+        return true;
+    }
+
+    private void UpdateOutputSelectionFromPointer(Point point)
+    {
+        if (!TryGetFrameSnapshot(out TerminalFrameLayout frame))
+        {
+            return;
+        }
+
+        if (!TryGetOutputLineIndexFromPoint(point, frame, out int lineIndex))
+        {
+            return;
+        }
+
+        _outputSelection.UpdateActive(lineIndex);
+        InvalidateVisual();
+    }
+
+    private bool TryGetOutputLineIndexFromPoint(Point point, TerminalFrameLayout frame, out int lineIndex)
+    {
+        lineIndex = -1;
+
+        IReadOnlyList<TerminalDrawInstruction> outputLines = frame.Instructions.Where(x => !x.IsPromptLine).ToList();
+        if (outputLines.Count == 0)
+        {
+            return false;
+        }
+
+        double top = outputLines[0].Position.Y;
+        double bottom = outputLines[^1].Position.Y + _renderConfig.LineHeight;
+        if (point.Y < top || point.Y > bottom)
+        {
+            return false;
+        }
+
+        int row = (int)Math.Floor((point.Y - top) / _renderConfig.LineHeight);
+        row = Math.Clamp(row, 0, outputLines.Count - 1);
+
+        lineIndex = outputLines[row].LogicalLineIndex;
+        return lineIndex >= 0;
+    }
+
+    private bool TryGetFrameSnapshot(out TerminalFrameLayout frame)
+    {
+        frame = null!;
+
+        if (_viewModel is null)
+        {
+            return false;
+        }
+
+        bool isSnapshotCurrent = _frameSnapshot is not null
+            && _frameSnapshotInputText == _inputBuffer.Text
+            && _frameSnapshotLineCount == _viewModel.Lines.Count
+            && _frameSnapshotSize == Bounds.Size
+            && _frameSnapshot.ScrollbackOffsetLines == _scrollbackOffsetLines;
+
+        if (isSnapshotCurrent)
+        {
+            frame = _frameSnapshot!;
+            return true;
+        }
+
+        IReadOnlyList<TerminalLine> lineSnapshot = [.. _viewModel.Lines];
+        frame = _layoutEngine.BuildFrameLayout(
+            lineSnapshot,
+            _viewModel.Prompt,
+            _inputBuffer.Text,
+            Bounds.Size,
+            _renderConfig,
+            _textPipeline,
+            _scrollbackOffsetLines);
+
+        _frameSnapshot = frame;
+        _frameSnapshotInputText = _inputBuffer.Text;
+        _frameSnapshotLineCount = lineSnapshot.Count;
+        _frameSnapshotSize = Bounds.Size;
+        _scrollbackOffsetLines = frame.ScrollbackOffsetLines;
+        return true;
+    }
+
+    private void ScrollbackByPage(bool upward)
+    {
+        if (!TryGetFrameSnapshot(out TerminalFrameLayout frame))
+        {
+            return;
+        }
+
+        int pageSize = Math.Max(1, frame.MaxVisibleOutputLines - PageScrollOverlapLines);
+        int delta = upward ? pageSize : -pageSize;
+        ScrollbackBy(delta, frame);
+    }
+
+    private void ScrollbackBy(int deltaLines, TerminalFrameLayout frame)
+    {
+        if (deltaLines == 0)
+        {
+            return;
+        }
+
+        int target = _scrollbackOffsetLines + deltaLines;
+        int clamped = Math.Clamp(target, 0, frame.MaxScrollbackOffsetLines);
+        if (clamped == _scrollbackOffsetLines)
+        {
+            return;
+        }
+
+        _scrollbackOffsetLines = clamped;
+        _promptSnapshot = null;
+        _frameSnapshot = null;
+        InvalidateVisual();
+    }
+
     private async Task CopySelectionAsync()
+    {
+        string selected = string.Empty;
+
+        if (_outputSelection.HasSelection && _viewModel is not null)
+        {
+            selected = _outputSelection.GetSelectedText([.. _viewModel.Lines]);
+        }
+        else if (_inputBuffer.HasSelection)
+        {
+            selected = _inputBuffer.GetSelectedText();
+        }
+
+        if (string.IsNullOrEmpty(selected))
+        {
+            return;
+        }
+
+        IClipboard? clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null)
+        {
+            return;
+        }
+
+        await clipboard.SetTextAsync(selected);
+    }
+
+    private async Task CutSelectionAsync()
     {
         if (!_inputBuffer.HasSelection)
         {
@@ -506,11 +798,6 @@ public sealed class TerminalSurface : Control
         }
 
         await clipboard.SetTextAsync(selected);
-    }
-
-    private async Task CutSelectionAsync()
-    {
-        await CopySelectionAsync();
         _inputBuffer.DeleteSelectionIfAny();
     }
 
@@ -528,7 +815,9 @@ public sealed class TerminalSurface : Control
             return;
         }
 
+        _outputSelection.Clear();
         _inputBuffer.InsertText(text);
+        _scrollbackOffsetLines = 0;
     }
 
     private static int ToFullIndex(CharacterHit hit)
@@ -556,6 +845,21 @@ public sealed class TerminalSurface : Control
 
     private void HandleBufferChanged(object? sender, EventArgs e)
     {
+        if (_viewModel is not null)
+        {
+            int currentCount = _viewModel.Lines.Count;
+            int delta = currentCount - _lastKnownLineCount;
+
+            if (delta > 0 && _scrollbackOffsetLines > 0)
+            {
+                _scrollbackOffsetLines += delta;
+            }
+
+            _lastKnownLineCount = currentCount;
+        }
+
+        _frameSnapshot = null;
+        _promptSnapshot = null;
         InvalidateVisual();
     }
 }

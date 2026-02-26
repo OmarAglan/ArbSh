@@ -11,8 +11,10 @@ namespace ArbSh.Terminal.Rendering;
 /// <param name="Run">بيانات النص المرئي.</param>
 /// <param name="Brush">فرشاة الرسم.</param>
 /// <param name="IsPromptLine">هل هذا السطر هو سطر الموجه.</param>
+/// <param name="LogicalLineIndex">فهرس السطر المنطقي داخل مخزن المخرجات (-1 للموجه).</param>
 public sealed record TerminalDrawInstruction(
     Point Position,
     VisualTextRun Run,
     IBrush Brush,
-    bool IsPromptLine = false);
+    bool IsPromptLine = false,
+    int LogicalLineIndex = -1);

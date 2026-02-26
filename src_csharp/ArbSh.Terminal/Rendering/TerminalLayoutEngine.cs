@@ -10,8 +10,8 @@ namespace ArbSh.Terminal.Rendering;
 public sealed class TerminalLayoutEngine
 {
     /// <summary>
-    /// يبني تعليمات الرسم لإطار واحد (المخرجات + سطر الموجه).
-    /// Builds draw instructions for one frame (output + prompt line).
+    /// يبني تعليمات الرسم فقط (توافق رجعي للاختبارات/الاستخدامات القديمة).
+    /// Builds draw instructions only (backward compatibility for older call sites).
     /// </summary>
     /// <param name="logicalLines">أسطر الطرفية بالترتيب المنطقي.</param>
     /// <param name="promptLogical">نص الموجه المنطقي.</param>
@@ -28,6 +28,37 @@ public sealed class TerminalLayoutEngine
         TerminalRenderConfig config,
         TerminalTextPipeline pipeline)
     {
+        return BuildFrameLayout(
+            logicalLines,
+            promptLogical,
+            inputLogical,
+            surfaceSize,
+            config,
+            pipeline,
+            scrollbackOffsetLines: 0).Instructions;
+    }
+
+    /// <summary>
+    /// يبني إطارًا كاملاً مع بيانات نافذة العرض والـ scrollback.
+    /// Builds a full frame with viewport and scrollback metadata.
+    /// </summary>
+    /// <param name="logicalLines">أسطر الطرفية بالترتيب المنطقي.</param>
+    /// <param name="promptLogical">نص الموجه المنطقي.</param>
+    /// <param name="inputLogical">مخزن الإدخال المنطقي.</param>
+    /// <param name="surfaceSize">حجم سطح الرسم.</param>
+    /// <param name="config">إعدادات الرسم.</param>
+    /// <param name="pipeline">خط معالجة النص.</param>
+    /// <param name="scrollbackOffsetLines">عدد الأسطر المخفية من ذيل المخرجات.</param>
+    /// <returns>ناتج تخطيط الإطار.</returns>
+    public TerminalFrameLayout BuildFrameLayout(
+        IReadOnlyList<TerminalLine> logicalLines,
+        string promptLogical,
+        string inputLogical,
+        Size surfaceSize,
+        TerminalRenderConfig config,
+        TerminalTextPipeline pipeline,
+        int scrollbackOffsetLines)
+    {
         ArgumentNullException.ThrowIfNull(logicalLines);
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(pipeline);
@@ -40,10 +71,13 @@ public sealed class TerminalLayoutEngine
 
         double availableOutputHeight = Math.Max(0, surfaceSize.Height - top - bottom - lineHeight);
         int maxVisibleOutputLines = Math.Max(1, (int)Math.Floor(availableOutputHeight / lineHeight));
-        int start = Math.Max(0, logicalLines.Count - maxVisibleOutputLines);
+        int maxScrollbackOffsetLines = Math.Max(0, logicalLines.Count - maxVisibleOutputLines);
+        int clampedOffset = Math.Clamp(scrollbackOffsetLines, 0, maxScrollbackOffsetLines);
+        int start = Math.Max(0, logicalLines.Count - maxVisibleOutputLines - clampedOffset);
+        int end = Math.Min(logicalLines.Count, start + maxVisibleOutputLines);
 
         double y = top;
-        for (int i = start; i < logicalLines.Count; i++)
+        for (int i = start; i < end; i++)
         {
             TerminalLine line = logicalLines[i];
             VisualTextRun run = pipeline.BuildVisualRun(line.Text, line.Kind, config);
@@ -52,7 +86,9 @@ public sealed class TerminalLayoutEngine
             instructions.Add(new TerminalDrawInstruction(
                 new Point(x, y),
                 run,
-                config.ResolveBrush(line.Kind)));
+                config.ResolveBrush(line.Kind),
+                IsPromptLine: false,
+                LogicalLineIndex: i));
 
             y += lineHeight;
         }
@@ -65,9 +101,16 @@ public sealed class TerminalLayoutEngine
             new Point(promptX, promptY),
             promptRun,
             config.PromptBrush,
-            IsPromptLine: true));
+            IsPromptLine: true,
+            LogicalLineIndex: -1));
 
-        return instructions;
+        return new TerminalFrameLayout(
+            instructions,
+            FirstVisibleOutputLineIndex: start,
+            VisibleOutputLineCount: end - start,
+            MaxVisibleOutputLines: maxVisibleOutputLines,
+            ScrollbackOffsetLines: clampedOffset,
+            MaxScrollbackOffsetLines: maxScrollbackOffsetLines);
     }
 
     private static double ResolveX(double width, double textWidth, TerminalRenderConfig config, bool alignRight)
