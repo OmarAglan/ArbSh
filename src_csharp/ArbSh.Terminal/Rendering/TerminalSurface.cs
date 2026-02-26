@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using ArbSh.Core.I18n;
 using ArbSh.Terminal.Models;
 using ArbSh.Terminal.ViewModels;
 
@@ -131,13 +132,48 @@ public sealed class TerminalSurface : Control
 
     private void DrawCursor(DrawingContext context, TerminalDrawInstruction promptInstruction)
     {
-        double cursorX = promptInstruction.Position.X + promptInstruction.Run.MeasuredWidth + 1;
-        double maxCursorX = Math.Max(_renderConfig.Padding.Left, Bounds.Width - _renderConfig.Padding.Right);
-        cursorX = Math.Min(maxCursorX, cursorX);
+        bool isRtlParagraph = IsPromptParagraphRtl();
+        double cursorX;
+
+        if (isRtlParagraph)
+        {
+            // For RTL prompt lines, caret at logical end appears on the visual leading edge (left side).
+            cursorX = Math.Max(_renderConfig.Padding.Left, promptInstruction.Position.X - 1);
+        }
+        else
+        {
+            cursorX = promptInstruction.Position.X + promptInstruction.Run.MeasuredWidth + 1;
+            double maxCursorX = Math.Max(_renderConfig.Padding.Left, Bounds.Width - _renderConfig.Padding.Right);
+            cursorX = Math.Min(maxCursorX, cursorX);
+        }
 
         double cursorY = promptInstruction.Position.Y + 2;
         var cursorRect = new Rect(cursorX, cursorY, 2, Math.Max(6, _renderConfig.LineHeight - 6));
         context.DrawRectangle(_renderConfig.PromptBrush, null, cursorRect);
+    }
+
+    private bool IsPromptParagraphRtl()
+    {
+        if (_viewModel is null)
+        {
+            return false;
+        }
+
+        string logical = string.Concat(_viewModel.Prompt, _inputBuffer);
+        if (string.IsNullOrWhiteSpace(logical))
+        {
+            return false;
+        }
+
+        try
+        {
+            var runs = BidiAlgorithm.ProcessRuns(logical, -1);
+            return runs.Count > 0 && (runs[0].Level % 2 != 0);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void HandleBufferChanged(object? sender, EventArgs e)
