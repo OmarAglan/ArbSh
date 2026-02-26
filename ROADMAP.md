@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.0-alpha (Core Extraction + Avalonia Bootstrap)
-**Status:** Phase 5 In Progress - Native Rendering Pipeline Implemented
-**Next Phase:** Phase 5.3 - RTL Input & Cursor Management
+**Status:** Phase 5 In Progress - RTL Input Engine Implemented
+**Next Phase:** Phase 5.4 - Terminal Emulator Features
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -78,9 +78,9 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [ ] **Color & Theming Engine:** Implement a modern dark theme with ANSI escape sequence parsing for colored output.
 
 #### 5.3 RTL Input & Cursor Management (The Core Blocker Solved)
-- [ ] **True RTL Cursor Positioning:** Implement a cursor that logically navigates RTL text correctly (bypassing legacy Windows `conhost` bugs).
--[ ] **Input Buffer Management:** Handle keyboard events directly from the OS GUI, completely avoiding console encoding corruptions.
-- [ ] **RTL Prompt:** Pin the prompt (e.g., `أربش> `) cleanly to the right side of the window.
+- [x] **True RTL Cursor Positioning:** Implement a cursor that logically navigates RTL text correctly (bypassing legacy Windows `conhost` bugs).
+- [x] **Input Buffer Management:** Handle keyboard events directly from the OS GUI, completely avoiding console encoding corruptions.
+- [x] **RTL Prompt:** Pin the prompt (e.g., `أربش< `) cleanly to the right side of the window.
 
 #### 5.4 Terminal Emulator Features
 - [ ] **Scrollback Buffer:** Implement UI virtualization to handle thousands of lines of output efficiently.
@@ -134,8 +134,12 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Implemented a dedicated terminal rendering pipeline (`TerminalTextPipeline`, `TerminalLayoutEngine`) for visual reordering/shaping of output and prompt lines.
 - Added runtime font fallback configuration for mixed Arabic/Latin terminal text.
 - Added renderer-focused tests for logical/visual separation and frame layout behavior.
+- Implemented `TerminalInputBuffer` with logical caret, selection, grapheme-safe deletion, and insertion-at-caret editing.
+- Added visual caret navigation for mixed BiDi input using `TextLine` hit-testing APIs.
+- Added input selection with mouse drag and keyboard extension, plus clipboard copy/cut/paste integration.
+- Anchored the Arabic prompt to RTL flow with the final marker form `أربش< `.
 
-**Next Focus:** Complete Phase 5.3 with logical-to-visual cursor index mapping and full RTL input navigation behavior.
+**Next Focus:** Implement Phase 5.4 virtualization and broaden clipboard behavior beyond prompt-line editing.
 
 ## 🌟 Project Philosophy
 

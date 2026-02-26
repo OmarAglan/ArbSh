@@ -49,6 +49,12 @@ public sealed class TerminalRenderConfig
     public IBrush PromptBrush { get; init; } = Brushes.Gainsboro;
 
     /// <summary>
+    /// لون خلفية التحديد داخل سطر الإدخال.
+    /// Selection background brush for input line.
+    /// </summary>
+    public IBrush SelectionBrush { get; init; } = new SolidColorBrush(Color.FromArgb(96, 80, 150, 255));
+
+    /// <summary>
     /// نوع الخط المستخدم في الرسم.
     /// Typeface used by Avalonia text layout.
     /// </summary>

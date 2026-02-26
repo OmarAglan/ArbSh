@@ -3,14 +3,17 @@
 This document provides comprehensive examples for all implemented features in ArbSh - the Arabic-first shell.
 
 **Current Version:** 0.8.0-alpha
-**Status:** Phase 5 In Progress - Native Output/Prompt Rendering Implemented
-**Next Phase:** Phase 5.3 - RTL Input & Cursor Mapping
+**Status:** Phase 5 In Progress - RTL Input/Selection Engine Implemented
+**Next Phase:** Phase 5.4 - Terminal Emulator Features
 
 ## ✅ **Fully Implemented Features**
 - `ArbSh.Core` shared engine extraction (host-agnostic parser/executor/cmdlets/BiDi)
 - Sink-based execution boundary (`IExecutionSink`) between core logic and host rendering
 - Avalonia GUI terminal project scaffold (`ArbSh.Terminal`)
 - Terminal rendering pipeline for output/prompt (`TerminalTextPipeline` + `TerminalLayoutEngine`)
+- Logical input engine with caret/selection state (`TerminalInputBuffer`)
+- Mixed BiDi caret mapping via Avalonia text hit-testing
+- Keyboard and mouse selection with clipboard copy/cut/paste for prompt input
 - Runtime Arabic/Latin font fallback in the Avalonia terminal surface
 - Complete BiDi Algorithm (UAX #9) with all rule sets (P, X, W, N, I, L)
 - Pipeline execution with task-based concurrency
@@ -39,6 +42,13 @@ This document provides comprehensive examples for all implemented features in Ar
 - Visual reordering is applied only inside the rendering pipeline before draw.
 - Output lines that contain Arabic are right-aligned using measured visual text width.
 - Prompt + input are rendered through the same pipeline for consistent shaping behavior.
+
+### Avalonia Input Notes (Phase 5.3)
+- Prompt input is edited in logical order and rendered through BiDi-aware text layout.
+- Caret movement uses visual hit-testing for Arabic/English mixed content.
+- `Shift + Arrow` extends selection.
+- `Ctrl + A/C/X/V` supports select-all, copy, cut, and paste in prompt input.
+- Mouse click places caret and mouse drag extends selection in the prompt line.
 
 ## Available Commands
 
@@ -558,10 +568,10 @@ ArbSh prioritizes Arabic language support as a core feature:
 - Cultural localization considerations
 - Arabic-first documentation and examples
 
-**Phase 5.3 Arabic UX Targets:**
-- RTL terminal input navigation with logical-to-visual cursor mapping
-- Correct cursor movement across mixed Arabic/Latin grapheme sequences
-- Scrollback virtualization and clipboard correctness for mixed RTL/LTR text
+**Phase 5.4 Arabic UX Targets:**
+- Scrollback virtualization for large output histories
+- Clipboard operations spanning output/selectable history regions
+- Additional terminal-emulator behaviors for long-running sessions
 
 ## Testing and Development
 

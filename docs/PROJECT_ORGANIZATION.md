@@ -5,8 +5,8 @@
 This document defines the current architecture of **ArbSh** as an Arabic-first shell and terminal platform.
 
 **Current Version:** 0.8.0-alpha
-**Status:** Phase 5 In Progress - Native Rendering Pipeline Active
-**Next Phase:** Phase 5.3 - RTL Input & Cursor Mapping
+**Status:** Phase 5 In Progress - RTL Input Engine Active
+**Next Phase:** Phase 5.4 - Terminal Emulator Features
 
 ArbSh now uses a host-agnostic core engine with separate presentation hosts:
 - `ArbSh.Core` contains parsing, execution, cmdlets, and BiDi/i18n logic.
@@ -43,10 +43,14 @@ ArbSh/
 │   │   ├── ConsoleExecutionSink.cs
 │   │   └── Program.cs
 │   ├── ArbSh.Terminal/
+│   │   ├── Input/
+│   │   │   ├── TerminalInputBuffer.cs
+│   │   │   └── SelectionRange.cs
 │   │   ├── Rendering/
 │   │   │   ├── TerminalSurface.cs
 │   │   │   ├── TerminalTextPipeline.cs
 │   │   │   ├── TerminalLayoutEngine.cs
+│   │   │   ├── PromptLayoutSnapshot.cs
 │   │   │   └── TerminalRenderConfig.cs
 │   │   ├── ViewModels/
 │   │   ├── Models/
@@ -56,7 +60,11 @@ ArbSh/
 │   └── ArbSh.Test/
 │       ├── BidiAlgorithmTests.cs
 │       ├── BidiTestConformanceTests.cs
-│       └── ArabicShapingTests.cs
+│       ├── ArabicShapingTests.cs
+│       ├── TerminalTextPipelineTests.cs
+│       ├── TerminalLayoutEngineTests.cs
+│       ├── LogicalVisualSeparationTests.cs
+│       └── TerminalInputBufferTests.cs
 ├── ROADMAP.md
 └── System.md
 ```
@@ -109,9 +117,15 @@ dotnet test src_csharp/ArbSh.Test
 - Refactored `TerminalSurface` to consume draw instructions instead of performing ad-hoc reordering logic inline.
 - Added runtime Arabic/Latin font fallback configuration for terminal text rendering.
 
+### Completed in Phase 5.3 (RTL Input + Cursor + Selection)
+- Added a dedicated input subsystem for logical text, caret, and selection state (`TerminalInputBuffer`).
+- Implemented visual caret movement and hit-testing for mixed Arabic/Latin prompt input using Avalonia text layout APIs.
+- Added pointer-based caret placement and drag selection on the prompt line.
+- Added clipboard copy/cut/paste support for selected input text.
+
 ### In Progress
-- Phase 5.3 logical-to-visual cursor index mapping and RTL input navigation.
 - Terminal virtualization for large scrollback.
+- Broader terminal-emulator clipboard behavior for scrollback/output content.
 
 ## Notes on Documentation Locations
 

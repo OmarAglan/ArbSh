@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ArbSh.Terminal Project**: Added a new Avalonia GUI host (`src_csharp/ArbSh.Terminal`) with app bootstrap, window/view model, and a custom `TerminalSurface` rendering entry point.
 - **Phase 5.2 Rendering Pipeline**: Added `TerminalTextPipeline`, `TerminalLayoutEngine`, and render instruction models for output and prompt rendering.
 - **Renderer Test Coverage**: Added terminal rendering tests in `ArbSh.Test` for pipeline transformation, visible frame windowing, and logical/visual separation.
+- **Phase 5.3 Input Subsystem**: Added `TerminalInputBuffer`, `SelectionRange`, and `PromptLayoutSnapshot` for logical input editing, caret mapping, and selection geometry.
+- **Input Test Coverage**: Added `TerminalInputBufferTests` for grapheme-safe delete/backspace, selection replacement, and caret movement boundaries.
 
 ### Changed
 - **Namespace Split**: Migrated engine namespaces from `ArbSh.Console.*` to `ArbSh.Core.*` for strict separation between core logic and host UI.
@@ -20,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Project Alignment**: Updated `ArbSh.Test` references/imports to validate the extracted `ArbSh.Core` engine.
 - **Solution Composition**: Updated `ArbSh.sln` to include `ArbSh.Core` and `ArbSh.Terminal`.
 - **TerminalSurface Rendering Path**: Replaced inline drawing/reordering logic with a dedicated render pipeline and runtime font fallback chain.
+- **TerminalSurface Interaction Model**: Upgraded keyboard/mouse input handling to support visual caret navigation, selection extension, and clipboard operations.
+- **Prompt Token Style**: Updated GUI prompt marker to RTL-oriented form `أربش< `.
+- **Test Project Metadata**: Set `<IsTestProject>true</IsTestProject>` in `ArbSh.Test.csproj` so `dotnet test` executes tests instead of skipping.
 
 ### Fixed
 - **Engine/Host Coupling**: Removed direct dependence of core execution flow on `System.Console` output paths, enabling GUI-hosted rendering pipelines.
@@ -27,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Broken Arabic Display in Avalonia Host**: Removed manual BiDi reordering before Avalonia text layout to prevent double reordering and reversed Arabic output.
 - **Prompt Caret Misalignment (RTL)**: Updated terminal cursor placement to respect paragraph direction so caret aligns with RTL prompt/input flow.
 - **Mixed BiDi Caret Placement**: Switched prompt caret position calculation to `TextLayout` hit-testing to align correctly for Arabic, English, and mixed prompt input.
+- **Selection and Cursor Drift in Mixed Text**: Unified caret/selection logic on `TextLine` hit-testing to keep editing behavior stable across Arabic/English segments.
 
 ## [0.7.7.11] - 2025-07-03
 
