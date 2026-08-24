@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Diagnostics;
 
 namespace ArbSh.ProcessFixture;
 
@@ -27,6 +28,8 @@ internal static class Program
             "streams" => WriteStreams(arguments[1..]),
             "environment" => WriteEnvironment(arguments[1..]),
             "wait" => await WaitAsync(arguments[1..]).ConfigureAwait(false),
+            "spawn-tree" => await SpawnTreeAsync(arguments[1..]).ConfigureAwait(false),
+            "child-wait" => await ChildWaitAsync(arguments[1..]).ConfigureAwait(false),
             "stdin-length" => await WriteStandardInputLengthAsync().ConfigureAwait(false),
             _ => UnknownCommand(arguments[0])
         };
@@ -85,6 +88,71 @@ internal static class Program
         string standardInput = await Console.In.ReadToEndAsync().ConfigureAwait(false);
         Console.Out.Write(standardInput.Length);
         return 0;
+    }
+
+    private static async Task<int> SpawnTreeAsync(string[] arguments)
+    {
+        if (arguments.Length != 2)
+        {
+            return 2;
+        }
+
+        string triggerFile = arguments[0];
+        string childPidFile = arguments[1];
+        while (!File.Exists(triggerFile))
+        {
+            await Task.Delay(10).ConfigureAwait(false);
+        }
+
+        using Process child = StartFixtureChild("child-wait", childPidFile);
+        await File.WriteAllTextAsync(
+            childPidFile,
+            child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Encoding.UTF8).ConfigureAwait(false);
+        Console.Out.Write("tree-ready");
+        Console.Out.Flush();
+        await Task.Delay(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
+        return 0;
+    }
+
+    private static async Task<int> ChildWaitAsync(string[] arguments)
+    {
+        if (arguments.Length != 1)
+        {
+            return 2;
+        }
+
+        await File.WriteAllTextAsync(
+            arguments[0],
+            Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Encoding.UTF8).ConfigureAwait(false);
+        await Task.Delay(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
+        return 0;
+    }
+
+    private static Process StartFixtureChild(string command, string argument)
+    {
+        string processPath = Environment.ProcessPath
+            ?? throw new InvalidOperationException("تعذر تحديد مضيف العملية المساعدة.");
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = processPath,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        if (string.Equals(
+            Path.GetFileNameWithoutExtension(processPath),
+            "dotnet",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            startInfo.ArgumentList.Add(typeof(ProcessFixtureMarker).Assembly.Location);
+        }
+
+        startInfo.ArgumentList.Add(command);
+        startInfo.ArgumentList.Add(argument);
+        return Process.Start(startInfo)
+            ?? throw new InvalidOperationException("رفض النظام بدء العملية الابنة المساعدة.");
     }
 
     private static int UnknownCommand(string command)

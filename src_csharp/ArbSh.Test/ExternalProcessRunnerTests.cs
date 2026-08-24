@@ -31,6 +31,7 @@ public sealed class ExternalProcessRunnerTests
         ExternalProcessResult result = await runner.RunAsync(request);
 
         Assert.Equal(ExternalProcessTerminationReason.Exited, result.TerminationReason);
+        Assert.Equal(ExpectedOwnershipMode, result.TreeOwnershipMode);
         Assert.Equal(0, result.ExitCode);
         Assert.True(result.Succeeded);
         Assert.Equal(string.Empty, result.StandardError);
@@ -56,6 +57,7 @@ public sealed class ExternalProcessRunnerTests
         ExternalProcessResult result = await runner.RunAsync(request);
 
         Assert.Equal(ExternalProcessTerminationReason.Exited, result.TerminationReason);
+        Assert.Equal(ExpectedOwnershipMode, result.TreeOwnershipMode);
         Assert.Equal(37, result.ExitCode);
         Assert.False(result.Succeeded);
         Assert.Equal("خرج عربي", result.StandardOutput);
@@ -75,6 +77,7 @@ public sealed class ExternalProcessRunnerTests
         ExternalProcessResult result = await runner.RunAsync(request);
 
         Assert.Equal(ExternalProcessTerminationReason.Exited, result.TerminationReason);
+        Assert.Equal(ExpectedOwnershipMode, result.TreeOwnershipMode);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("0", result.StandardOutput);
     }
@@ -160,6 +163,7 @@ public sealed class ExternalProcessRunnerTests
         ExternalProcessResult result = await runner.RunAsync(request);
 
         Assert.Equal(ExternalProcessTerminationReason.LaunchFailed, result.TerminationReason);
+        Assert.Equal(ExternalProcessTreeOwnershipMode.None, result.TreeOwnershipMode);
         Assert.Null(result.ExitCode);
         Assert.False(result.Succeeded);
         Assert.Equal(string.Empty, result.StandardOutput);
@@ -184,6 +188,7 @@ public sealed class ExternalProcessRunnerTests
         ExternalProcessResult result = await runningProcess.WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.Equal(ExternalProcessTerminationReason.Cancelled, result.TerminationReason);
+        Assert.Equal(ExpectedOwnershipMode, result.TreeOwnershipMode);
         Assert.Null(result.ExitCode);
         Assert.False(result.Succeeded);
         Assert.Equal("ready", result.StandardOutput);
@@ -201,6 +206,7 @@ public sealed class ExternalProcessRunnerTests
         ExternalProcessResult result = await runner.RunAsync(request, cancellation.Token);
 
         Assert.Equal(ExternalProcessTerminationReason.Cancelled, result.TerminationReason);
+        Assert.Equal(ExternalProcessTreeOwnershipMode.None, result.TreeOwnershipMode);
         Assert.Null(result.ExitCode);
         Assert.Null(result.FailureMessage);
     }
@@ -233,6 +239,39 @@ public sealed class ExternalProcessRunnerTests
         Assert.Equal("قبل", request.EnvironmentChanges["ARBSH_PHASE2_SNAPSHOT"]);
     }
 
+    [Fact]
+    public async Task RunAsync_CancellationTerminatesDescendantProcess()
+    {
+        using var fixture = FixtureCopy.Create();
+        string triggerFile = Path.Combine(fixture.RootDirectory, "ابدأ-الابن.txt");
+        string childPidFile = Path.Combine(fixture.RootDirectory, "معرف-الابن.txt");
+        var runner = new SystemExternalProcessRunner();
+        var request = new ExternalProcessRequest(
+            ResolveDotNetHost(),
+            [fixture.AssemblyPath, "spawn-tree", triggerFile, childPidFile]);
+        using var cancellation = new CancellationTokenSource();
+
+        Task<ExternalProcessResult> runningProcess = runner.RunAsync(request, cancellation.Token);
+        await File.WriteAllTextAsync(triggerFile, "ابدأ");
+        await WaitForFileAsync(childPidFile, TimeSpan.FromSeconds(10));
+        int childPid = int.Parse(
+            await File.ReadAllTextAsync(childPidFile),
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        cancellation.Cancel();
+        ExternalProcessResult result = await runningProcess.WaitAsync(TimeSpan.FromSeconds(10));
+        await WaitForProcessExitAsync(childPid, TimeSpan.FromSeconds(10));
+
+        Assert.Equal(ExternalProcessTerminationReason.Cancelled, result.TerminationReason);
+        Assert.Equal(ExpectedOwnershipMode, result.TreeOwnershipMode);
+        Assert.False(IsProcessAlive(childPid));
+    }
+
+    private static ExternalProcessTreeOwnershipMode ExpectedOwnershipMode =>
+        OperatingSystem.IsWindows()
+            ? ExternalProcessTreeOwnershipMode.WindowsJobObject
+            : ExternalProcessTreeOwnershipMode.DotNetProcessTree;
+
     private static async Task WaitForFileAsync(string path, TimeSpan timeout)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -244,6 +283,33 @@ public sealed class ExternalProcessRunnerTests
             }
 
             await Task.Delay(25);
+        }
+    }
+
+    private static async Task WaitForProcessExitAsync(int processId, TimeSpan timeout)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        while (IsProcessAlive(processId))
+        {
+            if (stopwatch.Elapsed >= timeout)
+            {
+                throw new TimeoutException($"بقيت العملية الابنة {processId} بعد إلغاء الشجرة.");
+            }
+
+            await Task.Delay(25);
+        }
+    }
+
+    private static bool IsProcessAlive(int processId)
+    {
+        try
+        {
+            using Process process = Process.GetProcessById(processId);
+            return !process.HasExited;
+        }
+        catch (ArgumentException)
+        {
+            return false;
         }
     }
 

@@ -5,8 +5,8 @@
 This document defines the current architecture of **ArbSh** as an Arabic-first shell and terminal platform.
 
 **Current Version:** 0.8.1-alpha
-**Status:** Phase 6 In Progress - Non-Interactive External Commands Ready
-**Next Step:** Process-Tree Ownership and PTY/ConPTY
+**Status:** Phase 6 In Progress - Windows Process-Tree Ownership Ready
+**Next Step:** POSIX Process Groups, Live Streams, and PTY/ConPTY
 
 ArbSh now uses a host-agnostic core engine with separate presentation hosts:
 - `ArbSh.Core` contains parsing, execution, cmdlets, BiDi/i18n logic, and the
@@ -93,7 +93,7 @@ ArbSh/
 |---|---|---|
 | Core Engine | `src_csharp/ArbSh.Core` | Parsing, tokenization, parameter binding, cmdlet execution, pipeline, BiDi logic. |
 | Host Abstraction | `src_csharp/ArbSh.Core/Hosting` | `IExecutionSink` and sink-aware output boundary between logic and rendering. |
-| Structured Processes | `src_csharp/ArbSh.Core/Processes` | Direct argv/cwd/environment launch, UTF-8 stream capture, exit/failure classification, and cancellation. |
+| Structured Processes | `src_csharp/ArbSh.Core/Processes` | Direct argv/cwd/environment launch, UTF-8 stream capture, exit/failure classification, cancellation, and explicit process-tree ownership. |
 | Console Host | `src_csharp/ArbSh.Console` | CLI host loop, console-specific I/O, backward-compatible execution sink. |
 | GUI Terminal Host | `src_csharp/ArbSh.Terminal` | Avalonia app, view models, rendering surface, RTL-first terminal UX. |
 | Process Fixture | `src_csharp/ArbSh.ProcessFixture` | Test-only executable for deterministic process-boundary checks. |
@@ -164,8 +164,10 @@ dotnet test src_csharp/ArbSh.Test
   path used by Console and Terminal hosts.
 - Connected line-oriented pipeline input/output, separate errors, redirection,
   exact child exit codes, launch failure, and cancellation.
-- Kept live streaming, process-tree ownership, PTY/ConPTY, and Qalam hosting as
-  explicit subsequent work.
+- Added kill-on-close Windows Job Object ownership and verified cancellation of
+  a real descendant, while exposing the active ownership mode in every result.
+- Kept native POSIX process groups, live streaming, PTY/ConPTY, and Qalam
+  hosting as explicit subsequent work.
 
 ## Notes on Documentation Locations
 

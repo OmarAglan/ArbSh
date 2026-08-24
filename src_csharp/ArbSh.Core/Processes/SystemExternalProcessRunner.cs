@@ -24,7 +24,12 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
         if (cancellationToken.IsCancellationRequested)
         {
             stopwatch.Stop();
-            return CreateCancelledResult(stopwatch.Elapsed, string.Empty, string.Empty);
+            return CreateCancelledResult(
+                stopwatch.Elapsed,
+                string.Empty,
+                string.Empty,
+                ExternalProcessTreeOwnershipMode.None,
+                failureMessage: null);
         }
 
         using var process = new Process
@@ -49,36 +54,85 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
         Task<string> standardOutputTask = process.StandardOutput.ReadToEndAsync();
         Task<string> standardErrorTask = process.StandardError.ReadToEndAsync();
         Task standardInputTask = WriteStandardInputAsync(process, request);
-        bool cancelled = false;
+        IExternalProcessTreeOwner treeOwner;
 
         try
         {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            treeOwner = ExternalProcessTreeOwner.Attach(process);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (Exception exception) when (IsOwnershipException(exception))
         {
-            cancelled = true;
-            TerminateProcess(process);
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            string failureMessage = exception.Message;
+            try
+            {
+                TerminateProcess(process);
+                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception cleanupException) when (IsOwnershipException(cleanupException))
+            {
+                failureMessage += $" تعذر أيضًا إيقاف العملية بعد فشل الملكية: {cleanupException.Message}";
+            }
+
+            await ObserveStandardInputAsync(standardInputTask, process, cancelled: true).ConfigureAwait(false);
+            string failedOutput = await standardOutputTask.ConfigureAwait(false);
+            string failedError = await standardErrorTask.ConfigureAwait(false);
+            stopwatch.Stop();
+            return CreateOwnershipFailure(
+                stopwatch.Elapsed,
+                failedOutput,
+                failedError,
+                failureMessage);
         }
 
-        await ObserveStandardInputAsync(standardInputTask, process, cancelled).ConfigureAwait(false);
-        string standardOutput = await standardOutputTask.ConfigureAwait(false);
-        string standardError = await standardErrorTask.ConfigureAwait(false);
-        stopwatch.Stop();
-
-        if (cancelled)
+        using (treeOwner)
         {
-            return CreateCancelledResult(stopwatch.Elapsed, standardOutput, standardError);
-        }
+            bool cancelled = false;
+            string? cancellationFailure = null;
 
-        return new ExternalProcessResult(
-            ExternalProcessTerminationReason.Exited,
-            process.ExitCode,
-            standardOutput,
-            standardError,
-            stopwatch.Elapsed,
-            failureMessage: null);
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                cancelled = true;
+                try
+                {
+                    treeOwner.Terminate(exitCode: 130);
+                }
+                catch (Exception exception) when (IsOwnershipException(exception))
+                {
+                    cancellationFailure = exception.Message;
+                    TerminateProcess(process);
+                }
+
+                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+
+            await ObserveStandardInputAsync(standardInputTask, process, cancelled).ConfigureAwait(false);
+            string standardOutput = await standardOutputTask.ConfigureAwait(false);
+            string standardError = await standardErrorTask.ConfigureAwait(false);
+            stopwatch.Stop();
+
+            if (cancelled)
+            {
+                return CreateCancelledResult(
+                    stopwatch.Elapsed,
+                    standardOutput,
+                    standardError,
+                    treeOwner.Mode,
+                    cancellationFailure);
+            }
+
+            return new ExternalProcessResult(
+                ExternalProcessTerminationReason.Exited,
+                process.ExitCode,
+                standardOutput,
+                standardError,
+                stopwatch.Elapsed,
+                failureMessage: null,
+                treeOwner.Mode);
+        }
     }
 
     private static ProcessStartInfo CreateStartInfo(ExternalProcessRequest request)
@@ -197,6 +251,14 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
             or PlatformNotSupportedException;
     }
 
+    private static bool IsOwnershipException(Exception exception)
+    {
+        return exception is Win32Exception
+            or UnauthorizedAccessException
+            or InvalidOperationException
+            or PlatformNotSupportedException;
+    }
+
     private static ExternalProcessResult CreateLaunchFailure(TimeSpan duration, string message)
     {
         return new ExternalProcessResult(
@@ -205,13 +267,16 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
             standardOutput: string.Empty,
             standardError: string.Empty,
             duration,
-            message);
+            message,
+            ExternalProcessTreeOwnershipMode.None);
     }
 
     private static ExternalProcessResult CreateCancelledResult(
         TimeSpan duration,
         string standardOutput,
-        string standardError)
+        string standardError,
+        ExternalProcessTreeOwnershipMode treeOwnershipMode,
+        string? failureMessage)
     {
         return new ExternalProcessResult(
             ExternalProcessTerminationReason.Cancelled,
@@ -219,6 +284,23 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
             standardOutput,
             standardError,
             duration,
-            failureMessage: null);
+            failureMessage,
+            treeOwnershipMode);
+    }
+
+    private static ExternalProcessResult CreateOwnershipFailure(
+        TimeSpan duration,
+        string standardOutput,
+        string standardError,
+        string failureMessage)
+    {
+        return new ExternalProcessResult(
+            ExternalProcessTerminationReason.OwnershipFailed,
+            exitCode: null,
+            standardOutput,
+            standardError,
+            duration,
+            failureMessage,
+            ExternalProcessTreeOwnershipMode.None);
     }
 }

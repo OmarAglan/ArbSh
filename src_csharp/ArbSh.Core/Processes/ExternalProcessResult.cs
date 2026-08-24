@@ -11,7 +11,8 @@ public sealed class ExternalProcessResult
         string standardOutput,
         string standardError,
         TimeSpan duration,
-        string? failureMessage)
+        string? failureMessage,
+        ExternalProcessTreeOwnershipMode treeOwnershipMode)
     {
         TerminationReason = terminationReason;
         ExitCode = exitCode;
@@ -19,6 +20,7 @@ public sealed class ExternalProcessResult
         StandardError = standardError;
         Duration = duration;
         FailureMessage = failureMessage;
+        TreeOwnershipMode = treeOwnershipMode;
     }
 
     /// <summary>
@@ -47,9 +49,15 @@ public sealed class ExternalProcessResult
     public TimeSpan Duration { get; }
 
     /// <summary>
-    /// وصف فشل البنية التحتية عند تعذر البدء، وإلا تكون القيمة <see langword="null"/>.
+    /// وصف فشل البنية التحتية عند تعذر البدء أو الملكية أو الإنهاء المضمون،
+    /// وإلا تكون القيمة <see langword="null"/>.
     /// </summary>
     public string? FailureMessage { get; }
+
+    /// <summary>
+    /// آلية ملكية شجرة العملية التي استُخدمت فعليًا.
+    /// </summary>
+    public ExternalProcessTreeOwnershipMode TreeOwnershipMode { get; }
 
     /// <summary>
     /// يحدد أن العملية بدأت وخرجت برمز صفر.

@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   executables, empty/Arabic arguments, built-in precedence, bidirectional
   pipelines, separate stream redirection, exact child exit codes, launch
   failure code 127, and cancellation code 130.
+- **Windows Process-Tree Ownership**: Added kill-on-close Windows Job Object
+  ownership, explicit ownership-mode reporting, and fail-closed ownership
+  failure classification.
+- **Descendant Cancellation Gate**: Extended the process fixture to spawn a
+  real child and verify cancellation leaves no surviving descendant.
 
 ### Changed
 - **.NET 10 LTS Baseline**: Migrated every project from .NET 9 to .NET 10 and
@@ -48,6 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Invocation Parsing**: Preserved token positions and a dedicated ordered
   invocation-argument view so external options are not mistaken for ArbSh
   cmdlet parameters and quoted executable paths remain intact.
+- **Host Failure Codes**: Reserved temporary code 125 for process-tree
+  ownership failure while retaining 127 for launch failure and 130 for
+  cancellation until `arbsh-host-v1` is frozen.
 
 ### Fixed
 - **Pipeline Error Classification**: Preserved existing `PipelineObject`

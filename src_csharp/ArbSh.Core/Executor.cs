@@ -256,6 +256,7 @@ namespace ArbSh.Core
                                     ExternalProcessTerminationReason.Exited => result.ExitCode ?? 1,
                                     ExternalProcessTerminationReason.Cancelled => 130,
                                     ExternalProcessTerminationReason.LaunchFailed => 127,
+                                    ExternalProcessTerminationReason.OwnershipFailed => 125,
                                     _ => 1
                                 };
 
@@ -272,6 +273,22 @@ namespace ArbSh.Core
                                 {
                                     outputCollection.Add(new PipelineObject(
                                         $"أُلغي الأمر الخارجي '{currentCommand.CommandName}'.",
+                                        isError: true));
+
+                                    if (!string.IsNullOrWhiteSpace(result.FailureMessage))
+                                    {
+                                        outputCollection.Add(new PipelineObject(
+                                            $"تعذر إنهاء شجرة الأمر عبر مالكها؛ استُخدم الإنهاء الاحتياطي: {result.FailureMessage}",
+                                            isError: true));
+                                    }
+                                }
+                                else if (result.TerminationReason is ExternalProcessTerminationReason.OwnershipFailed)
+                                {
+                                    string detail = string.IsNullOrWhiteSpace(result.FailureMessage)
+                                        ? "لم يقدم النظام تفاصيل إضافية."
+                                        : result.FailureMessage;
+                                    outputCollection.Add(new PipelineObject(
+                                        $"تعذر امتلاك شجرة الأمر الخارجي '{currentCommand.CommandName}': {detail}",
                                         isError: true));
                                 }
                             }

@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.1-alpha (Phase 6 Kickoff)
-**Status:** Phase 6 In Progress - Non-Interactive External Commands Ready
-**Next Step:** Process-Tree Ownership and PTY/ConPTY
+**Status:** Phase 6 In Progress - Windows Process-Tree Ownership Ready
+**Next Step:** POSIX Process Groups, Live Streams, and PTY/ConPTY
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -110,7 +110,10 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [x] **Structured Process Core:** Added reusable immutable request/result contracts, UTF-8 stream capture, exit/failure classification, and cancellation.
 - [x] **Structured Launch:** Build non-interactive external processes from argv/cwd/environment instead of concatenated shell command strings.
 - [x] **Executor Integration:** Resolve commands that are not built-ins and route them through the structured runner without changing built-in precedence.
-- [ ] **Process-Tree Ownership:** Use Windows Job Objects and POSIX process groups so cancellation leaves no child or grandchild alive.
+- [x] **Windows Process-Tree Ownership:** Assign every launched process to a
+  kill-on-close Job Object and verify cancellation leaves no descendant alive.
+- [ ] **POSIX Process-Tree Ownership:** Replace the visible transitional .NET
+  tree-kill mode with native process groups and prove the same gate on Linux.
 - [ ] **Qalam Host Parity:** Run the same ArbSh CLI through Qalam's PTY/ConPTY panel without embedding the Avalonia window.
 
 ### 🔧 Phase 7: Advanced Shell & Developer UX (Future)
@@ -172,10 +175,13 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
   redirection to external processes in both directions.
 - Added real-process coverage for quoted executables, Arabic paths, empty and
   option arguments, exit codes, launch failure, cancellation, and redirection.
+- Added explicit Windows Job Object ownership with kill-on-close semantics,
+  fail-closed ownership errors, a visible ownership mode, and a real spawned
+  descendant cancellation gate.
 
-**Next Focus:** Add explicit Windows Job Object and POSIX process-group
-ownership, then introduce the interactive PTY/ConPTY path with incremental
-streaming, resize, terminal control flow, and a no-surviving-descendants gate.
+**Next Focus:** Add native POSIX process-group ownership and its Linux
+no-surviving-descendants gate, then introduce the interactive PTY/ConPTY path
+with incremental streaming, resize, and terminal control flow.
 
 ## 🌟 Project Philosophy
 

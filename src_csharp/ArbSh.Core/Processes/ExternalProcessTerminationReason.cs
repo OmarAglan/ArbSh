@@ -18,5 +18,10 @@ public enum ExternalProcessTerminationReason
     /// <summary>
     /// تعذر بدء العملية أصلًا.
     /// </summary>
-    LaunchFailed
+    LaunchFailed,
+
+    /// <summary>
+    /// بدأت العملية لكن تعذر امتلاك شجرتها، فأوقفها ArbSh بدل المتابعة دون ضمان.
+    /// </summary>
+    OwnershipFailed
 }
