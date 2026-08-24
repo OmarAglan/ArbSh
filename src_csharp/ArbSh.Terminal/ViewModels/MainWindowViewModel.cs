@@ -1,31 +1,50 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Avalonia.Threading;
 using ArbSh.Core;
 using ArbSh.Terminal.Models;
 
 namespace ArbSh.Terminal.ViewModels;
 
-public sealed class MainWindowViewModel
+public sealed class MainWindowViewModel : INotifyPropertyChanged
 {
     private const string ExitCommand = "اخرج";
     private readonly ShellSessionState _session;
     private readonly ObservableCollection<TerminalLine> _lines = [];
     private readonly ReadOnlyObservableCollection<TerminalLine> _readonlyLines;
+    private string _statusText = "جاهز";
 
     public MainWindowViewModel(string? initialWorkingDirectory = null)
     {
         _session = new ShellSessionState(initialWorkingDirectory);
         _readonlyLines = new ReadOnlyObservableCollection<TerminalLine>(_lines);
-        AddLine("مرحباً بكم في أربش - الواجهة الرسومية قيد البناء.", TerminalLineKind.System);
-        AddLine($"المجلد الحالي: {_session.CurrentDirectory}", TerminalLineKind.System);
-        AddLine("اكتب أمرًا واضغط Enter للتنفيذ.", TerminalLineKind.System);
-        AddLine("للخروج من الواجهة اكتب: اخرج", TerminalLineKind.System);
+        AddLine("مرحبًا بك في أربش", TerminalLineKind.System);
+        AddLine("صدفة عربية حديثة — اكتب «مساعدة» لعرض الأوامر.", TerminalLineKind.System);
     }
 
+    public event PropertyChangedEventHandler? PropertyChanged;
     public event EventHandler? BufferChanged;
     public event EventHandler? ExitRequested;
 
     public ReadOnlyObservableCollection<TerminalLine> Lines => _readonlyLines;
+
+    public string CurrentDirectory => _session.CurrentDirectory;
+
+    public string StatusText
+    {
+        get => _statusText;
+        private set
+        {
+            if (string.Equals(_statusText, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _statusText = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string Prompt { get; } = "أربش> ";
 
@@ -53,6 +72,7 @@ public sealed class MainWindowViewModel
 
         try
         {
+            StatusText = "جارٍ التنفيذ…";
             await Task.Run(
                 () => ShellEngine.ExecuteInput(
                     logicalInput,
@@ -64,7 +84,12 @@ public sealed class MainWindowViewModel
         }
         catch (Exception ex)
         {
-            AddLine($"ERROR: {ex.Message}", TerminalLineKind.Error);
+            AddLine($"خطأ: {ex.Message}", TerminalLineKind.Error);
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(CurrentDirectory));
+            StatusText = "جاهز";
         }
     }
 
@@ -89,6 +114,11 @@ public sealed class MainWindowViewModel
         }
 
         BufferChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     private sealed class TerminalExecutionSink : IExecutionSink

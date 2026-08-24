@@ -37,6 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failure classification.
 - **Descendant Cancellation Gate**: Extended the process fixture to spawn a
   real child and verify cancellation leaves no surviving descendant.
+- **Linux POSIX Ownership**: Added direct-argv launch through util-linux
+  `setsid`, session verification, process-group termination, and effective-PATH
+  executable preflight without an intermediate shell.
+- **Background Descendant Gate**: Added coverage proving a normally exited root
+  cannot leave a background child alive or keep inherited output pipes open.
+- **Arabic Terminal Chrome**: Added an Arabic brand header, ellipsized live
+  working-directory panel, execution status, keyboard-hint footer, larger text,
+  and a compact two-line welcome experience.
+- **Terminal Chrome Tests**: Added model tests for the welcome surface, current
+  folder updates, and execution status transitions.
 
 ### Changed
 - **.NET 10 LTS Baseline**: Migrated every project from .NET 9 to .NET 10 and

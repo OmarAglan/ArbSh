@@ -1,14 +1,118 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:rendering="clr-namespace:ArbSh.Terminal.Rendering"
+        xmlns:vm="clr-namespace:ArbSh.Terminal.ViewModels"
         x:Class="ArbSh.Terminal.MainWindow"
-        Title="أربش - ArbSh Terminal"
+        x:DataType="vm:MainWindowViewModel"
+        Title="أربش — الطرفية العربية"
         Width="1200"
         Height="760"
-        MinWidth="900"
-        MinHeight="560"
-        Background="#0B0E14">
-  <Border Background="#10141F" Padding="16" CornerRadius="8">
-    <rendering:TerminalSurface x:Name="TerminalSurface" />
-  </Border>
+        MinWidth="820"
+        MinHeight="520"
+        Background="#080C14"
+        FontFamily="Segoe UI, Noto Sans Arabic UI, Arial">
+  <Grid RowDefinitions="60,*,32">
+    <Border Grid.Row="0"
+            Background="#0D1320"
+            BorderBrush="#202A3B"
+            BorderThickness="0,0,0,1"
+            Padding="18,10">
+      <Grid ColumnDefinitions="*,Auto">
+        <Border Grid.Column="0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                MaxWidth="620"
+                Background="#111A29"
+                BorderBrush="#253249"
+                BorderThickness="1"
+                CornerRadius="7"
+                Padding="12,6">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+            <TextBlock Grid.Column="0"
+                       Text="المجلد"
+                       Foreground="#7890B5"
+                       FontSize="12"
+                       VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding CurrentDirectory}"
+                       Foreground="#C8D5E8"
+                       FontFamily="Cascadia Mono, Consolas"
+                       FontSize="12"
+                       FlowDirection="LeftToRight"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Spacing="11">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="أربش"
+                       Foreground="#F4F8FF"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Right" />
+            <TextBlock Text="الطرفية العربية"
+                       Foreground="#8296B5"
+                       FontSize="11"
+                       HorizontalAlignment="Right" />
+          </StackPanel>
+          <Border Width="38"
+                  Height="38"
+                  Background="#157A8A"
+                  CornerRadius="10">
+            <TextBlock Text="أ"
+                       Foreground="White"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+          </Border>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1"
+            Margin="12,10,12,9"
+            Background="#0E1420"
+            BorderBrush="#202C40"
+            BorderThickness="1"
+            CornerRadius="9"
+            ClipToBounds="True">
+      <rendering:TerminalSurface x:Name="TerminalSurface" />
+    </Border>
+
+    <Border Grid.Row="2"
+            Background="#0B111C"
+            BorderBrush="#202A3B"
+            BorderThickness="0,1,0,0"
+            Padding="14,0">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Column="0"
+                   Text="أربش 0.8.1-alpha  •  UTF-8"
+                   Foreground="#667A99"
+                   FontSize="11"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="Enter تنفيذ   •   Ctrl+C نسخ   •   PgUp/PgDn السجل"
+                   Foreground="#667A99"
+                   FontSize="11"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="7"
+                    VerticalAlignment="Center">
+          <Ellipse Width="7" Height="7" Fill="#35D49A" />
+          <TextBlock Text="{Binding StatusText}"
+                     Foreground="#AFC0D8"
+                     FontSize="11"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
 </Window>

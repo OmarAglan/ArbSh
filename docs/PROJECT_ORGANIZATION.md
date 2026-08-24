@@ -5,8 +5,8 @@
 This document defines the current architecture of **ArbSh** as an Arabic-first shell and terminal platform.
 
 **Current Version:** 0.8.1-alpha
-**Status:** Phase 6 In Progress - Windows Process-Tree Ownership Ready
-**Next Step:** POSIX Process Groups, Live Streams, and PTY/ConPTY
+**Status:** Phase 6 In Progress - Windows/Linux Process Ownership Implemented
+**Next Step:** Linux CI Receipt, Live Streams, and PTY/ConPTY
 
 ArbSh now uses a host-agnostic core engine with separate presentation hosts:
 - `ArbSh.Core` contains parsing, execution, cmdlets, BiDi/i18n logic, and the
@@ -80,6 +80,7 @@ ArbSh/
 │       ├── TerminalLayoutEngineTests.cs
 │       ├── LogicalVisualSeparationTests.cs
 │       ├── TerminalInputBufferTests.cs
+│       ├── TerminalShellChromeTests.cs
 │       ├── AnsiSgrParserTests.cs
 │       ├── ExternalProcessRunnerTests.cs
 │       └── AnsiPaletteTests.cs
@@ -166,8 +167,12 @@ dotnet test src_csharp/ArbSh.Test
   exact child exit codes, launch failure, and cancellation.
 - Added kill-on-close Windows Job Object ownership and verified cancellation of
   a real descendant, while exposing the active ownership mode in every result.
-- Kept native POSIX process groups, live streaming, PTY/ConPTY, and Qalam
-  hosting as explicit subsequent work.
+- Added Linux launch through `setsid`, effective-PATH preflight, explicit POSIX
+  ownership reporting, and shared cancellation/root-exit descendant gates.
+- Added Arabic terminal chrome with live folder/status bindings and larger,
+  more legible terminal spacing without changing the logical/visual text split.
+- Kept the Linux CI receipt, live streaming, PTY/ConPTY, and Qalam hosting as
+  explicit subsequent work.
 
 ## Notes on Documentation Locations
 

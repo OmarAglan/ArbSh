@@ -37,25 +37,25 @@ public sealed class TerminalRenderConfig
     /// مقاس الخط المستخدم في الرسم.
     /// Font size used for drawing.
     /// </summary>
-    public double FontSize { get; init; } = 15;
+    public double FontSize { get; init; } = 17;
 
     /// <summary>
     /// ارتفاع السطر في مساحة الرسم.
     /// Line height for terminal rows.
     /// </summary>
-    public double LineHeight { get; init; } = 22;
+    public double LineHeight { get; init; } = 27;
 
     /// <summary>
     /// الهوامش الداخلية لسطح الرسم.
     /// Surface padding.
     /// </summary>
-    public Thickness Padding { get; init; } = new(14, 10, 14, 10);
+    public Thickness Padding { get; init; } = new(22, 16, 22, 16);
 
     /// <summary>
     /// لون الخلفية.
     /// Surface background brush.
     /// </summary>
-    public IBrush BackgroundBrush { get; init; } = new SolidColorBrush(Color.Parse("#10141F"));
+    public IBrush BackgroundBrush { get; init; } = new SolidColorBrush(Color.Parse("#0E1420"));
 
     /// <summary>
     /// لون سطر الموجّه (Prompt).

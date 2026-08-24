@@ -267,10 +267,40 @@ public sealed class ExternalProcessRunnerTests
         Assert.False(IsProcessAlive(childPid));
     }
 
+    [Fact]
+    public async Task RunAsync_NormalRootExitCleansUpBackgroundDescendant()
+    {
+        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using var fixture = FixtureCopy.Create();
+        string childPidFile = Path.Combine(fixture.RootDirectory, "معرف-ابن-الخلفية.txt");
+        var runner = new SystemExternalProcessRunner();
+        var request = new ExternalProcessRequest(
+            ResolveDotNetHost(),
+            [fixture.AssemblyPath, "spawn-and-exit", childPidFile]);
+
+        ExternalProcessResult result = await runner.RunAsync(request).WaitAsync(TimeSpan.FromSeconds(10));
+        int childPid = int.Parse(
+            await File.ReadAllTextAsync(childPidFile),
+            System.Globalization.CultureInfo.InvariantCulture);
+        await WaitForProcessExitAsync(childPid, TimeSpan.FromSeconds(10));
+
+        Assert.Equal(ExternalProcessTerminationReason.Exited, result.TerminationReason);
+        Assert.Equal(ExpectedOwnershipMode, result.TreeOwnershipMode);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("parent-exited", result.StandardOutput);
+        Assert.False(IsProcessAlive(childPid));
+    }
+
     private static ExternalProcessTreeOwnershipMode ExpectedOwnershipMode =>
         OperatingSystem.IsWindows()
             ? ExternalProcessTreeOwnershipMode.WindowsJobObject
-            : ExternalProcessTreeOwnershipMode.DotNetProcessTree;
+            : OperatingSystem.IsLinux()
+                ? ExternalProcessTreeOwnershipMode.PosixProcessGroup
+                : ExternalProcessTreeOwnershipMode.DotNetProcessTree;
 
     private static async Task WaitForFileAsync(string path, TimeSpan timeout)
     {

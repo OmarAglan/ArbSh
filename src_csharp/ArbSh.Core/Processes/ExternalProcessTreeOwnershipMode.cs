@@ -11,6 +11,9 @@ public enum ExternalProcessTreeOwnershipMode
     /// <summary>ملكية صريحة عبر Windows Job Object.</summary>
     WindowsJobObject,
 
+    /// <summary>ملكية صريحة عبر جلسة ومجموعة عمليات POSIX على Linux.</summary>
+    PosixProcessGroup,
+
     /// <summary>
     /// قتل شجرة العملية الذي توفره .NET. هذا وضع انتقالي ظاهر على الأنظمة
     /// التي لم يكتمل فيها محول مجموعة العمليات بعد.

@@ -20,7 +20,96 @@ internal static class ExternalProcessTreeOwner
 
         return OperatingSystem.IsWindows()
             ? WindowsJobProcessTreeOwner.Attach(process)
-            : new DotNetProcessTreeOwner(process);
+            : OperatingSystem.IsLinux()
+                ? PosixProcessGroupOwner.Attach(process)
+                : new DotNetProcessTreeOwner(process);
+    }
+
+    private sealed class PosixProcessGroupOwner : IExternalProcessTreeOwner
+    {
+        private const int NoSuchProcess = 3;
+        private const int SigKill = 9;
+        private static readonly TimeSpan SessionReadyTimeout = TimeSpan.FromSeconds(2);
+        private readonly int _processGroupId;
+        private bool _disposed;
+
+        private PosixProcessGroupOwner(int processGroupId)
+        {
+            _processGroupId = processGroupId;
+        }
+
+        public ExternalProcessTreeOwnershipMode Mode =>
+            ExternalProcessTreeOwnershipMode.PosixProcessGroup;
+
+        internal static PosixProcessGroupOwner Attach(Process process)
+        {
+            int processId = process.Id;
+            var stopwatch = Stopwatch.StartNew();
+
+            while (!process.HasExited && stopwatch.Elapsed < SessionReadyTimeout)
+            {
+                int sessionId = GetSessionId(processId);
+                if (sessionId == processId)
+                {
+                    return new PosixProcessGroupOwner(processId);
+                }
+
+                if (sessionId < 0 && Marshal.GetLastPInvokeError() is not NoSuchProcess)
+                {
+                    throw new Win32Exception(
+                        Marshal.GetLastPInvokeError(),
+                        "تعذر التحقق من جلسة العملية على POSIX.");
+                }
+
+                Thread.Sleep(2);
+            }
+
+            if (process.HasExited)
+            {
+                return new PosixProcessGroupOwner(processId);
+            }
+
+            throw new InvalidOperationException(
+                "بدأت العملية على Linux لكنها لم تدخل مجموعة POSIX مستقلة في المهلة المحددة.");
+        }
+
+        public void Terminate(uint exitCode)
+        {
+            KillProcessGroup(throwOnFailure: true);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            KillProcessGroup(throwOnFailure: false);
+        }
+
+        private void KillProcessGroup(bool throwOnFailure)
+        {
+            if (Kill(-_processGroupId, SigKill) == 0)
+            {
+                return;
+            }
+
+            int error = Marshal.GetLastPInvokeError();
+            if (error == NoSuchProcess || !throwOnFailure)
+            {
+                return;
+            }
+
+            throw new Win32Exception(error, "تعذر إنهاء مجموعة عمليات POSIX.");
+        }
+
+        [DllImport("libc", EntryPoint = "getsid", SetLastError = true)]
+        private static extern int GetSessionId(int processId);
+
+        [DllImport("libc", EntryPoint = "kill", SetLastError = true)]
+        private static extern int Kill(int processId, int signal);
     }
 
     private sealed class DotNetProcessTreeOwner : IExternalProcessTreeOwner

@@ -29,6 +29,7 @@ internal static class Program
             "environment" => WriteEnvironment(arguments[1..]),
             "wait" => await WaitAsync(arguments[1..]).ConfigureAwait(false),
             "spawn-tree" => await SpawnTreeAsync(arguments[1..]).ConfigureAwait(false),
+            "spawn-and-exit" => await SpawnAndExitAsync(arguments[1..]).ConfigureAwait(false),
             "child-wait" => await ChildWaitAsync(arguments[1..]).ConfigureAwait(false),
             "stdin-length" => await WriteStandardInputLengthAsync().ConfigureAwait(false),
             _ => UnknownCommand(arguments[0])
@@ -127,6 +128,23 @@ internal static class Program
             Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture),
             Encoding.UTF8).ConfigureAwait(false);
         await Task.Delay(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
+        return 0;
+    }
+
+    private static async Task<int> SpawnAndExitAsync(string[] arguments)
+    {
+        if (arguments.Length != 1)
+        {
+            return 2;
+        }
+
+        using Process child = StartFixtureChild("child-wait", arguments[0]);
+        await File.WriteAllTextAsync(
+            arguments[0],
+            child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Encoding.UTF8).ConfigureAwait(false);
+        Console.Out.Write("parent-exited");
+        Console.Out.Flush();
         return 0;
     }
 

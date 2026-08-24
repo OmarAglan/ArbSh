@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.1-alpha (Phase 6 Kickoff)
-**Status:** Phase 6 In Progress - Windows Process-Tree Ownership Ready
-**Next Step:** POSIX Process Groups, Live Streams, and PTY/ConPTY
+**Status:** Phase 6 In Progress - Windows/Linux Process Ownership Implemented
+**Next Step:** Linux CI Receipt, Live Streams, and PTY/ConPTY
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -112,8 +112,10 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [x] **Executor Integration:** Resolve commands that are not built-ins and route them through the structured runner without changing built-in precedence.
 - [x] **Windows Process-Tree Ownership:** Assign every launched process to a
   kill-on-close Job Object and verify cancellation leaves no descendant alive.
-- [ ] **POSIX Process-Tree Ownership:** Replace the visible transitional .NET
-  tree-kill mode with native process groups and prove the same gate on Linux.
+- [x] **Linux POSIX Process-Group Adapter:** Launch through `setsid` with direct
+  argv, verify the new session before continuing, and terminate the whole group.
+- [ ] **Linux Ownership Receipt:** Prove cancellation and normal-root-exit
+  descendant cleanup in Linux CI; macOS retains the visible transitional mode.
 - [ ] **Qalam Host Parity:** Run the same ArbSh CLI through Qalam's PTY/ConPTY panel without embedding the Avalonia window.
 
 ### 🔧 Phase 7: Advanced Shell & Developer UX (Future)
@@ -178,10 +180,16 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Added explicit Windows Job Object ownership with kill-on-close semantics,
   fail-closed ownership errors, a visible ownership mode, and a real spawned
   descendant cancellation gate.
+- Added a Linux `setsid` adapter that creates the POSIX session before the
+  target executes, preserves missing-executable classification through
+  effective-PATH preflight, and runs the same descendant gates in Linux CI.
+- Reworked ArbSh.Terminal chrome with an Arabic brand header, compact live
+  working-directory panel, execution status, shortcut footer, larger terminal
+  typography, and two focused GUI contract tests.
 
-**Next Focus:** Add native POSIX process-group ownership and its Linux
-no-surviving-descendants gate, then introduce the interactive PTY/ConPTY path
-with incremental streaming, resize, and terminal control flow.
+**Next Focus:** Obtain the Linux process-group receipt, then introduce the
+interactive PTY/ConPTY path with incremental streaming, resize, and terminal
+control flow.
 
 ## 🌟 Project Philosophy
 

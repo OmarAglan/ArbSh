@@ -32,9 +32,29 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
                 failureMessage: null);
         }
 
+        ProcessStartInfo startInfo;
+        try
+        {
+            startInfo = CreateStartInfo(request);
+        }
+        catch (PlatformNotSupportedException exception)
+        {
+            stopwatch.Stop();
+            return CreateOwnershipFailure(
+                stopwatch.Elapsed,
+                string.Empty,
+                string.Empty,
+                exception.Message);
+        }
+        catch (Exception exception) when (IsLaunchException(exception))
+        {
+            stopwatch.Stop();
+            return CreateLaunchFailure(stopwatch.Elapsed, exception.Message);
+        }
+
         using var process = new Process
         {
-            StartInfo = CreateStartInfo(request)
+            StartInfo = startInfo
         };
 
         try
@@ -84,11 +104,12 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
                 failureMessage);
         }
 
-        using (treeOwner)
-        {
-            bool cancelled = false;
-            string? cancellationFailure = null;
+        ExternalProcessTreeOwnershipMode treeOwnershipMode = treeOwner.Mode;
+        bool cancelled = false;
+        string? cancellationFailure = null;
 
+        try
+        {
             try
             {
                 await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
@@ -108,38 +129,50 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
 
                 await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
             }
+        }
+        finally
+        {
+            // إغلاق المالك بعد خروج الجذر ينهي أي أبناء بقوا في الخلفية قبل
+            // انتظار اكتمال أنابيب stdout/stderr الموروثة منهم.
+            treeOwner.Dispose();
+        }
 
-            await ObserveStandardInputAsync(standardInputTask, process, cancelled).ConfigureAwait(false);
-            string standardOutput = await standardOutputTask.ConfigureAwait(false);
-            string standardError = await standardErrorTask.ConfigureAwait(false);
-            stopwatch.Stop();
+        await ObserveStandardInputAsync(standardInputTask, process, cancelled).ConfigureAwait(false);
+        string standardOutput = await standardOutputTask.ConfigureAwait(false);
+        string standardError = await standardErrorTask.ConfigureAwait(false);
+        stopwatch.Stop();
 
-            if (cancelled)
-            {
-                return CreateCancelledResult(
-                    stopwatch.Elapsed,
-                    standardOutput,
-                    standardError,
-                    treeOwner.Mode,
-                    cancellationFailure);
-            }
-
-            return new ExternalProcessResult(
-                ExternalProcessTerminationReason.Exited,
-                process.ExitCode,
+        if (cancelled)
+        {
+            return CreateCancelledResult(
+                stopwatch.Elapsed,
                 standardOutput,
                 standardError,
-                stopwatch.Elapsed,
-                failureMessage: null,
-                treeOwner.Mode);
+                treeOwnershipMode,
+                cancellationFailure);
         }
+
+        return new ExternalProcessResult(
+            ExternalProcessTerminationReason.Exited,
+            process.ExitCode,
+            standardOutput,
+            standardError,
+            stopwatch.Elapsed,
+            failureMessage: null,
+            treeOwnershipMode);
     }
 
     private static ProcessStartInfo CreateStartInfo(ExternalProcessRequest request)
     {
+        bool useLinuxProcessGroup = OperatingSystem.IsLinux();
+        string targetExecutable = useLinuxProcessGroup
+            ? ResolveLinuxTargetExecutable(request)
+            : request.Executable;
         var startInfo = new ProcessStartInfo
         {
-            FileName = request.Executable,
+            FileName = useLinuxProcessGroup
+                ? ResolveLinuxSetSidExecutable()
+                : request.Executable,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -157,6 +190,12 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
         if (request.WorkingDirectory is not null)
         {
             startInfo.WorkingDirectory = request.WorkingDirectory;
+        }
+
+        if (useLinuxProcessGroup)
+        {
+            startInfo.ArgumentList.Add("--");
+            startInfo.ArgumentList.Add(targetExecutable);
         }
 
         foreach (string argument in request.Arguments)
@@ -182,6 +221,74 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
         }
 
         return startInfo;
+    }
+
+    private static string ResolveLinuxSetSidExecutable()
+    {
+        string[] candidates = ["/usr/bin/setsid", "/bin/setsid"];
+        foreach (string candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new PlatformNotSupportedException(
+            "يتطلب امتلاك شجرة العملية على Linux أداة setsid من حزمة util-linux، ولم تُعثر عليها في /usr/bin أو /bin.");
+    }
+
+    private static string ResolveLinuxTargetExecutable(ExternalProcessRequest request)
+    {
+        string executable = request.Executable;
+        string workingDirectory = request.WorkingDirectory ?? Environment.CurrentDirectory;
+
+        if (Path.IsPathRooted(executable) || executable.Contains(Path.DirectorySeparatorChar))
+        {
+            string candidate = Path.IsPathRooted(executable)
+                ? executable
+                : Path.Combine(workingDirectory, executable);
+            string fullPath = Path.GetFullPath(candidate);
+            if (File.Exists(fullPath))
+            {
+                return fullPath;
+            }
+
+            throw new FileNotFoundException(
+                $"لم يُعثر على البرنامج الخارجي المطلوب: {executable}",
+                fullPath);
+        }
+
+        string? pathValue = request.InheritEnvironment
+            ? Environment.GetEnvironmentVariable("PATH")
+            : null;
+        foreach (KeyValuePair<string, string?> change in request.EnvironmentChanges)
+        {
+            if (string.Equals(change.Key, "PATH", StringComparison.Ordinal))
+            {
+                pathValue = change.Value;
+            }
+        }
+
+        // تستخدم execvp مسار النظام الافتراضي عندما لا تكون PATH موجودة.
+        pathValue ??= "/bin:/usr/bin";
+        foreach (string directory in pathValue.Split(Path.PathSeparator))
+        {
+            string baseDirectory = string.IsNullOrEmpty(directory)
+                ? workingDirectory
+                : Path.IsPathRooted(directory)
+                    ? directory
+                    : Path.Combine(workingDirectory, directory);
+            string candidate = Path.GetFullPath(Path.Combine(baseDirectory, executable));
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new FileNotFoundException(
+            $"لم يُعثر على البرنامج الخارجي '{executable}' في PATH الفعالة.",
+            executable);
     }
 
     private static async Task WriteStandardInputAsync(

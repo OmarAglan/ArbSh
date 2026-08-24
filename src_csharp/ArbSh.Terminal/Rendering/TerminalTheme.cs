@@ -12,13 +12,13 @@ public sealed class TerminalTheme
     /// لون خلفية الطرفية الأساسي.
     /// Terminal background color.
     /// </summary>
-    public Color Background { get; init; } = Color.Parse("#10141F");
+    public Color Background { get; init; } = Color.Parse("#0E1420");
 
     /// <summary>
     /// اللون الأساسي للنص العام.
     /// Default foreground color.
     /// </summary>
-    public Color Foreground { get; init; } = Color.Parse("#D8DEE9");
+    public Color Foreground { get; init; } = Color.Parse("#DCE6F5");
 
     /// <summary>
     /// لون نص الموجه.
@@ -30,7 +30,7 @@ public sealed class TerminalTheme
     /// لون سطر النظام.
     /// System line color.
     /// </summary>
-    public Color SystemForeground { get; init; } = Color.Parse("#B9C8E6");
+    public Color SystemForeground { get; init; } = Color.Parse("#BFD0EA");
 
     /// <summary>
     /// لون سطر الإدخال.

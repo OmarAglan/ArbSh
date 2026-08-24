@@ -30,6 +30,10 @@ jobs:
           cache: true
           cache-dependency-path: src_csharp/**/*.csproj
 
+      - name: Verify Linux process-group adapter
+        if: runner.os == 'Linux'
+        run: setsid --version
+
       - name: Restore
         run: dotnet restore src_csharp/ArbSh.sln
 

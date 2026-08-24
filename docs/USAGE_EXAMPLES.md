@@ -3,8 +3,8 @@
 This document provides comprehensive examples for all implemented features in ArbSh - the Arabic-first shell.
 
 **Current Version:** 0.8.1-alpha
-**Status:** Phase 6 In Progress - Windows Process-Tree Ownership Ready
-**Next Step:** POSIX Process Groups, Live Streams, and PTY/ConPTY
+**Status:** Phase 6 In Progress - Windows/Linux Process Ownership Implemented
+**Next Step:** Linux CI Receipt, Live Streams, and PTY/ConPTY
 
 ## ✅ **Fully Implemented Features**
 - `ArbSh.Core` shared engine extraction (host-agnostic parser/executor/cmdlets/BiDi)
