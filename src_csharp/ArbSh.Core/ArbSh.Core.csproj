@@ -1,13 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="ICU4N" Version="60.1.0-alpha.437" />
+    <PackageReference Include="ICU4N" Version="60.1.0-alpha.440" />
   </ItemGroup>
 
 </Project>

@@ -118,7 +118,7 @@ namespace ArbSh.Console.I18n
 
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 
                 // Fallback to standard console input
@@ -167,7 +167,7 @@ namespace ArbSh.Console.I18n
                 _stdinReader = null;
                 _isInitialized = false;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
         }

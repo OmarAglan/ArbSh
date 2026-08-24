@@ -122,7 +122,7 @@ ArbSh/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- .NET 9 SDK
+- .NET 10 SDK (the feature band is pinned in `global.json`)
 - Windows, macOS, or Linux
 
 ### Running ArbSh

@@ -43,8 +43,8 @@ namespace ArbSh.Test
             var testCases = new List<BidiTestCase>();
             var lines = File.ReadAllLines(filePath);
             
-            List<int?> currentLevels = null;
-            List<int> currentReorder = null;
+            List<int?>? currentLevels = null;
+            List<int>? currentReorder = null;
             int lineNumber = 0;
 
             foreach (var line in lines)
@@ -304,7 +304,8 @@ namespace ArbSh.Test
 
             for (int i = 0; i < actual.Count; i++)
             {
-                if (expected[i].HasValue && actual[i] != expected[i].Value)
+                int? expectedLevel = expected[i];
+                if (expectedLevel is int value && actual[i] != value)
                     return false;
             }
             return true;

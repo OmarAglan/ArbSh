@@ -23,7 +23,7 @@
   Target runtime identifier (default: win-x64).
 
 .PARAMETER TargetFramework
-  Target framework (default: net9.0).
+  Target framework (default: net10.0).
 
 .PARAMETER CreateInstaller
   When set, also builds the terminal installer package zip.
@@ -36,7 +36,7 @@ param(
     [string]$Version,
 
     [string]$RuntimeID = "win-x64",
-    [string]$TargetFramework = "net9.0",
+    [string]$TargetFramework = "net10.0",
 
     [switch]$CreateInstaller,
     [switch]$SkipChangelogUpdate
@@ -126,7 +126,7 @@ function Invoke-DotNetPublish {
     }
 
     Write-Step "Publishing: $ProjectPath"
-    & dotnet publish $ProjectPath -c Release -r $RuntimeID --self-contained true
+    & dotnet publish $ProjectPath -c Release -r $RuntimeID --framework $TargetFramework --self-contained true -p:Version=$Version
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet publish failed for $ProjectPath (exit code $LASTEXITCODE)."
     }

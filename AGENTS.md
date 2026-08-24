@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`ArbSh` is a .NET 9 solution centered in `src_csharp/ArbSh.sln`:
+`ArbSh` is a .NET 10 solution centered in `src_csharp/ArbSh.sln`:
 - `src_csharp/ArbSh.Core`: shell engine (parser, executor, cmdlets, BiDi/i18n, session state).
 - `src_csharp/ArbSh.Console`: console host.
 - `src_csharp/ArbSh.Terminal`: Avalonia GUI terminal host and rendering/input pipeline.

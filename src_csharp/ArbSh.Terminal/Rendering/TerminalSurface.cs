@@ -929,7 +929,7 @@ public sealed class TerminalSurface : Control
             return;
         }
 
-        string? text = await clipboard.GetTextAsync();
+        string? text = await clipboard.TryGetTextAsync();
         if (string.IsNullOrEmpty(text))
         {
             return;

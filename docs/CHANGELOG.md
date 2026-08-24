@@ -13,10 +13,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Host Contract Plan**: Added `docs/ARBSH_HOST_V1.md` to define ownership,
   PTY/ConPTY hosting, structured process launch, cancellation, Qalam
   integration, installer admission, and cross-platform acceptance gates.
+- **Cross-Platform CI**: Added Windows and Linux restore, package audit,
+  Release build, and test gates using the .NET 10 SDK.
 
 ### Changed
-- **Runtime Prerequisite**: Corrected the documented prerequisite to the .NET 9
-  SDK used by the current project files.
+- **.NET 10 LTS Baseline**: Migrated every project from .NET 9 to .NET 10 and
+  pinned the supported SDK feature band in `global.json`.
+- **Central Build Metadata**: Moved the target framework, language version,
+  nullable settings, deterministic builds, and product version into
+  `Directory.Build.props`.
+- **Release Automation**: Release publishing now targets .NET 10 explicitly
+  and stamps both hosts with the requested release version.
+- **Avalonia Patch Level**: Updated Avalonia from 11.3.6 to 11.3.20 so the
+  .NET 10 baseline no longer restores the vulnerable D-Bus dependency chain.
+- **ICU4N Patch Level**: Updated ICU4N from 60.1.0-alpha.437 to
+  60.1.0-alpha.440 for the current SDK toolchain.
+
+### Fixed
+- **Pipeline Error Classification**: Preserved existing `PipelineObject`
+  metadata emitted by cmdlets instead of wrapping error records as stdout.
+- **.NET 10 Build Warnings**: Updated clipboard usage, nullable test state, and
+  analyzer-sensitive assertions for a clean Release build.
 
 ## [0.8.1-alpha] - 2026-02-26
 ### Added

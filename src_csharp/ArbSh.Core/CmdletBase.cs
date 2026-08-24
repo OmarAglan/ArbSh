@@ -47,7 +47,7 @@ namespace ArbSh.Core
             {
                 try
                 {
-                    OutputCollection.Add(new PipelineObject(output));
+                    OutputCollection.Add(output as PipelineObject ?? new PipelineObject(output));
                 }
                 catch (InvalidOperationException)
                 {
@@ -104,7 +104,7 @@ namespace ArbSh.Core
             if (!properties.Any()) return; // No pipeline parameters defined
 
             object inputValue = input.Value;
-            Type? inputType = inputValue?.GetType();
+            Type inputType = inputValue.GetType();
 
             // CoreConsole.WriteLine($"DEBUG (BindPipeline): Attempting pipeline binding for input type {inputType?.Name ?? "null"} to {cmdletType.Name}");
 
@@ -129,7 +129,7 @@ namespace ArbSh.Core
                         try
                         {
                             TypeConverter converter = TypeDescriptor.GetConverter(propInfo.Property.PropertyType);
-                            if (converter != null && converter.CanConvertFrom(inputType))
+                            if (converter != null && converter.CanConvertFrom(inputType!))
                             {
                                 valueToSet = converter.ConvertFrom(inputValue);
                                 bound = true;

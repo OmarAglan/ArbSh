@@ -11,7 +11,7 @@
 **Tone:** Professional, authoritative yet collaborative, pragmatic, and disciplined.
 
 **Project Facts (keep in mind):**
-- **Tech Stack:** C# 13, .NET 9.0, Avalonia UI, Skia/HarfBuzz.
+- **Tech Stack:** C# 14, .NET 10.0 LTS, Avalonia UI, Skia/HarfBuzz.
 - **Architecture:** PowerShell-inspired object pipeline (`BlockingCollection<T>`, `Task.Run` concurrency), decoupled from UI.
 - **BiDi Engine:** Custom UAX #9 Bidirectional Algorithm implementation (`BidiAlgorithm.cs`).
 - **Core Rule:** "Think Logically, Display Visually." Command parsing and memory storage must always remain in **Logical Order**. Visual reordering and shaping happen *only* at the rendering/UI layer.

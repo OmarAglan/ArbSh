@@ -79,7 +79,7 @@ public sealed class TerminalInputBufferTests
 
         buffer.MoveCaretEnd(extendSelection: true);
 
-        SelectionRange selection = Assert.NotNull(buffer.Selection).Value;
+        SelectionRange selection = Assert.NotNull(buffer.Selection);
         Assert.Equal(0, selection.Start);
         Assert.Equal(5, selection.End);
     }

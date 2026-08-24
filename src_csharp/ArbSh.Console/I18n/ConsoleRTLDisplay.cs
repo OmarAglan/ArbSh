@@ -136,7 +136,7 @@ namespace ArbSh.Console.I18n
                 
                 return shaped;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return arabicText;
             }

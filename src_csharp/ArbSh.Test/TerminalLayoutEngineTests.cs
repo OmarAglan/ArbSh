@@ -32,8 +32,8 @@ public sealed class TerminalLayoutEngineTests
             config,
             pipeline);
 
-        TerminalDrawInstruction ltr = Assert.Single(frame.Where(x => x.Run.LogicalText == "abc"));
-        TerminalDrawInstruction rtl = Assert.Single(frame.Where(x => x.Run.LogicalText == "مرحبا"));
+        TerminalDrawInstruction ltr = Assert.Single(frame, x => x.Run.LogicalText == "abc");
+        TerminalDrawInstruction rtl = Assert.Single(frame, x => x.Run.LogicalText == "مرحبا");
 
         Assert.Equal(config.Padding.Left, ltr.Position.X);
         Assert.True(rtl.Position.X > config.Padding.Left);
@@ -90,7 +90,7 @@ public sealed class TerminalLayoutEngineTests
             config,
             pipeline);
 
-        TerminalDrawInstruction prompt = Assert.Single(frame.Where(x => x.IsPromptLine));
+        TerminalDrawInstruction prompt = Assert.Single(frame, x => x.IsPromptLine);
         double expectedPromptY = Math.Max(config.Padding.Top, 140 - config.Padding.Bottom - config.LineHeight);
         Assert.Equal(expectedPromptY, prompt.Position.Y);
     }
