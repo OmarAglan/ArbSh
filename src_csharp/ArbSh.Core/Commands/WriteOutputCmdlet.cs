@@ -6,6 +6,7 @@ namespace ArbSh.Core.Commands
     /// يكتب النص/الكائن إلى مجرى المخرجات.
     /// </summary>
     [ArabicName("اطبع")]
+    [ArabicDescription("يطبع نصًا أو قيمة في مجرى مخرجات الطرفية.")]
     public class WriteOutputCmdlet : CmdletBase
     {
         /// <summary>

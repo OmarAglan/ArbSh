@@ -4,6 +4,7 @@ namespace ArbSh.Core.Commands
     /// يعرض المجلد الحالي للجلسة.
     /// </summary>
     [ArabicName("المسار")]
+    [ArabicDescription("يعرض مسار مجلد العمل الحالي.")]
     public sealed class GetCurrentDirectoryCmdlet : CmdletBase
     {
         /// <inheritdoc />

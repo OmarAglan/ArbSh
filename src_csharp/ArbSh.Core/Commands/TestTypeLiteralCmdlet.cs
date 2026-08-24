@@ -6,6 +6,7 @@ namespace ArbSh.Core.Commands
     /// أمر لاختبار تحويلات نوع المعاملات باستخدام صيغ الأنواع.
     /// </summary>
     [ArabicName("اختبار-نوع")]
+    [ArabicDescription("يفحص تحويل القيم إلى أنواع صريحة للمطورين.")]
     public class TestTypeLiteralCmdlet : CmdletBase
     {
         /// <summary>

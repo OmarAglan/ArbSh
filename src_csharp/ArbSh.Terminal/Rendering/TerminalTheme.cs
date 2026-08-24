@@ -18,7 +18,7 @@ public sealed class TerminalTheme
     /// اللون الأساسي للنص العام.
     /// Default foreground color.
     /// </summary>
-    public Color Foreground { get; init; } = Color.Parse("#DCE6F5");
+    public Color Foreground { get; init; } = Color.Parse("#EDF3FC");
 
     /// <summary>
     /// لون نص الموجه.
@@ -30,31 +30,31 @@ public sealed class TerminalTheme
     /// لون سطر النظام.
     /// System line color.
     /// </summary>
-    public Color SystemForeground { get; init; } = Color.Parse("#BFD0EA");
+    public Color SystemForeground { get; init; } = Color.Parse("#D8E5F7");
 
     /// <summary>
     /// لون سطر الإدخال.
     /// Input line color.
     /// </summary>
-    public Color InputForeground { get; init; } = Color.Parse("#5EC8FF");
+    public Color InputForeground { get; init; } = Color.Parse("#6ED5FF");
 
     /// <summary>
     /// لون التحذير.
     /// Warning line color.
     /// </summary>
-    public Color WarningForeground { get; init; } = Color.Parse("#F5C15C");
+    public Color WarningForeground { get; init; } = Color.Parse("#FFD166");
 
     /// <summary>
     /// لون الأخطاء.
     /// Error line color.
     /// </summary>
-    public Color ErrorForeground { get; init; } = Color.Parse("#F07178");
+    public Color ErrorForeground { get; init; } = Color.Parse("#FF7B86");
 
     /// <summary>
     /// لون الرسائل التشخيصية.
     /// Debug line color.
     /// </summary>
-    public Color DebugForeground { get; init; } = Color.Parse("#8B93A6");
+    public Color DebugForeground { get; init; } = Color.Parse("#ADB9CC");
 
     /// <summary>
     /// لون تحديد الإدخال.

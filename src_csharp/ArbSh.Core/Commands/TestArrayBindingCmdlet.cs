@@ -7,6 +7,7 @@ namespace ArbSh.Core.Commands
     /// أمر لاختبار ربط المصفوفات عبر المعاملات الموضعية.
     /// </summary>
     [ArabicName("اختبار-مصفوفة")]
+    [ArabicDescription("يفحص ربط عدة قيم نصية في معامل مصفوفة للمطورين.")]
     public class TestArrayBindingCmdlet : CmdletBase
     {
         /// <summary>

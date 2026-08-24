@@ -6,6 +6,7 @@ namespace ArbSh.Core.Commands
     /// يغيّر المجلد الحالي للجلسة.
     /// </summary>
     [ArabicName("انتقل")]
+    [ArabicDescription("يغيّر مجلد العمل الحالي، أو يعرضه عند حذف المسار.")]
     public sealed class ChangeDirectoryCmdlet : CmdletBase
     {
         /// <summary>

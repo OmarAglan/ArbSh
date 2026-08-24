@@ -1,4 +1,4 @@
-using System.Linq;
+using ArbSh.Core.Models;
 
 namespace ArbSh.Core.Commands
 {
@@ -6,27 +6,20 @@ namespace ArbSh.Core.Commands
     /// يعرض قائمة الأوامر العربية المتاحة في أربش.
     /// </summary>
     [ArabicName("الأوامر")]
+    [ArabicDescription("يعرض جميع أوامر أربش العربية ووصف كل أمر.")]
     public class GetCommandCmdlet : CmdletBase
     {
         /// <inheritdoc />
         public override void EndProcessing()
         {
-            IReadOnlyDictionary<string, Type> allCommands = CommandDiscovery.GetAllCommands();
-            if (allCommands.Count == 0)
+            WriteObject("أوامر أربش العربية:");
+            foreach (ArabicCommandInfo command in CommandDiscovery.GetArabicCatalog())
             {
-                WriteObject("لا توجد أوامر متاحة.");
-                return;
+                WriteObject($"  {command.Name} — {command.Description}");
             }
 
-            IEnumerable<string> commandNames = allCommands.Keys
-                .Append("اخرج")
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(x => x, StringComparer.Ordinal);
-
-            foreach (string commandName in commandNames)
-            {
-                WriteObject(commandName);
-            }
+            WriteObject("");
+            WriteObject("للتفاصيل: مساعدة <اسم-الأمر>");
         }
     }
 }

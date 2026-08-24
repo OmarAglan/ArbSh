@@ -85,8 +85,9 @@ PTY/ConPTY في الخطوة التالية.
 - Copied output is emitted in logical line order so external editors receive stable text.
 
 ### Avalonia Typography & Theme Notes (Phase 5 Closure)
-- Terminal host bundles font assets (`CascadiaMono.ttf`, `arabtype.ttf`) and prefers packaged fonts first.
-- Default terminal look uses the ArbSh navy palette.
+- Terminal host bundles font assets (`CascadiaMono.ttf`, `arabtype.ttf`) and prefers modern Arabic UI system fonts before the bundled compatibility fallback.
+- Default terminal text is 20 logical pixels with a 32-pixel line height and uses the high-contrast ArbSh navy palette.
+- `Ctrl + +` and `Ctrl + -` zoom the terminal text, `Ctrl + 0` restores the default, and holding `Ctrl` while using the mouse wheel zooms in or out.
 - ANSI indexed and truecolor output is mapped through a dedicated terminal palette for readability.
 
 ## Available Commands
@@ -103,15 +104,18 @@ PTY/ConPTY في الخطوة التالية.
 **Example:**
 ```powershell
 ArbSh> الأوامر
-انتقل
-اعرض
-اختبار-مصفوفة
-اختبار-نوع
-اخرج
-اطبع
-المسار
-الأوامر
-مساعدة
+أوامر أربش العربية:
+  الأوامر — يعرض جميع أوامر أربش العربية ووصف كل أمر.
+  اعرض — يعرض ملفات مجلد ومجلداته الفرعية المباشرة.
+  اخرج — ينهي جلسة أربش الحالية.
+  اطبع — يطبع نصًا أو قيمة في مجرى مخرجات الطرفية.
+  انتقل — يغيّر مجلد العمل الحالي، أو يعرضه عند حذف المسار.
+  اختبار-مصفوفة — يفحص ربط عدة قيم نصية في معامل مصفوفة للمطورين.
+  اختبار-نوع — يفحص تحويل القيم إلى أنواع صريحة للمطورين.
+  المسار — يعرض مسار مجلد العمل الحالي.
+  مساعدة — يعرض دليل الأوامر أو شرح أمر عربي محدد.
+
+للتفاصيل: مساعدة <اسم-الأمر>
 ```
 
 ### 2. مساعدة

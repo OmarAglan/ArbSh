@@ -15,6 +15,7 @@ public sealed class TerminalSurface : Control
 {
     private const double CaretDistanceEpsilon = 0.01;
     private const int PageScrollOverlapLines = 1;
+    private const double FontZoomStep = 2;
 
     private MainWindowViewModel? _viewModel;
     private bool _isPromptPointerSelecting;
@@ -139,6 +140,17 @@ public sealed class TerminalSurface : Control
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            int zoomDirection = Math.Sign(e.Delta.Y);
+            if (zoomDirection != 0)
+            {
+                ChangeFontSize(zoomDirection * FontZoomStep);
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (_viewModel is null)
         {
             base.OnPointerWheelChanged(e);
@@ -220,6 +232,24 @@ public sealed class TerminalSurface : Control
                 case Key.V:
                     await PasteClipboardAsync();
                     InvalidateVisual();
+                    e.Handled = true;
+                    return;
+
+                case Key.Add:
+                case Key.OemPlus:
+                    ChangeFontSize(FontZoomStep);
+                    e.Handled = true;
+                    return;
+
+                case Key.Subtract:
+                case Key.OemMinus:
+                    ChangeFontSize(-FontZoomStep);
+                    e.Handled = true;
+                    return;
+
+                case Key.D0:
+                case Key.NumPad0:
+                    ResetFontSize();
                     e.Handled = true;
                     return;
             }
@@ -849,6 +879,31 @@ public sealed class TerminalSurface : Control
         int pageSize = Math.Max(1, frame.MaxVisibleOutputLines - PageScrollOverlapLines);
         int delta = upward ? pageSize : -pageSize;
         ScrollbackBy(delta, frame);
+    }
+
+    private void ChangeFontSize(double delta)
+    {
+        if (_renderConfig.SetFontSize(_renderConfig.FontSize + delta))
+        {
+            InvalidateLayoutSnapshots();
+        }
+    }
+
+    private void ResetFontSize()
+    {
+        if (_renderConfig.ResetFontSize())
+        {
+            InvalidateLayoutSnapshots();
+        }
+    }
+
+    private void InvalidateLayoutSnapshots()
+    {
+        _frameSnapshot = null;
+        _promptSnapshot = null;
+        _frameSnapshotSize = default;
+        InvalidateMeasure();
+        InvalidateVisual();
     }
 
     private void ScrollbackBy(int deltaLines, TerminalFrameLayout frame)

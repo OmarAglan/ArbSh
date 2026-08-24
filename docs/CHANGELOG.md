@@ -60,6 +60,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Live Stream Gates**: Added deterministic process and end-to-end tests that
   hold a child open until its first Arabic output is observed. The complete
   Windows suite now passes 161 tests.
+- **Accessible Terminal Typography**: Raised the default terminal font from 17
+  to 20 logical pixels with a 32-pixel line height, preferred modern Arabic UI
+  fallbacks, strengthened chrome and terminal contrast, and enlarged status
+  text for high-DPI displays.
+- **Terminal Zoom**: Added bounded `Ctrl++`, `Ctrl+-`, `Ctrl+0`, and Ctrl+wheel
+  zoom that rebuilds BiDi caret, selection, and scrollback layout snapshots.
+- **Visibility Gates**: Added default-size, zoom-bound, line-spacing, and WCAG
+  normal-text contrast checks. The complete Windows suite now passes 164 tests.
+- **Arabic Command Catalog**: Bare `مساعدة` and `الأوامر` now enumerate every
+  Arabic command with a concise Arabic description and point directly to
+  command-specific help; the terminal welcome names both discovery paths.
+- **Arabic Surface Gates**: Every cmdlet must now provide an Arabic name and
+  description, every public parameter must provide an Arabic name, and smoke
+  tests execute every engine command without exposing legacy English aliases.
+  The complete Windows suite now passes 175 tests.
 
 ### Changed
 - **.NET 10 LTS Baseline**: Migrated every project from .NET 9 to .NET 10 and
@@ -73,6 +88,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   .NET 10 baseline no longer restores the vulnerable D-Bus dependency chain.
 - **Process Fixture Signals**: Publish readiness files atomically and only
   after flushed output, eliminating races between tests and fixture writers.
+- **Command Discovery Concurrency**: Build the reflection command catalog once
+  through a thread-safe lazy snapshot so simultaneous first commands cannot
+  corrupt the cache or register the same Arabic name twice.
 - **ICU4N Patch Level**: Updated ICU4N from 60.1.0-alpha.437 to
   60.1.0-alpha.440 for the current SDK toolchain.
 - **Invocation Parsing**: Preserved token positions and a dedicated ordered

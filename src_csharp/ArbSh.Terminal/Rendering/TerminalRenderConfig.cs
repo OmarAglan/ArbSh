@@ -13,6 +13,17 @@ namespace ArbSh.Terminal.Rendering;
 public sealed class TerminalRenderConfig
 {
     /// <summary>
+    /// مقاس الخط الافتراضي المقروء على شاشات سطح المكتب عالية الكثافة.
+    /// </summary>
+    public const double DefaultFontSize = 20;
+
+    /// <summary>
+    /// أصغر وأكبر مقاس مسموح بهما لتكبير الطرفية.
+    /// </summary>
+    public const double MinimumFontSize = 14;
+    public const double MaximumFontSize = 32;
+
+    /// <summary>
     /// سمة ArbSh المستخدمة في ألوان الواجهة الافتراضية.
     /// ArbSh UI theme used for default terminal colors.
     /// </summary>
@@ -30,20 +41,21 @@ public sealed class TerminalRenderConfig
     /// </summary>
     public FontFamily FontFamily { get; init; } = new(
         "avares://ArbSh.Terminal/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono, " +
+        "Noto Sans Arabic UI, Segoe UI, Tahoma, " +
         "avares://ArbSh.Terminal/Assets/Fonts/arabtype.ttf#Arabic Typesetting, " +
-        "Cascadia Mono, Cascadia Code, Arabic Typesetting, Noto Sans Arabic UI, Segoe UI, Consolas, Courier New");
+        "Cascadia Mono, Cascadia Code, Consolas, Courier New");
 
     /// <summary>
     /// مقاس الخط المستخدم في الرسم.
     /// Font size used for drawing.
     /// </summary>
-    public double FontSize { get; init; } = 17;
+    public double FontSize { get; private set; } = DefaultFontSize;
 
     /// <summary>
     /// ارتفاع السطر في مساحة الرسم.
     /// Line height for terminal rows.
     /// </summary>
-    public double LineHeight { get; init; } = 27;
+    public double LineHeight { get; set; } = 32;
 
     /// <summary>
     /// الهوامش الداخلية لسطح الرسم.
@@ -86,6 +98,32 @@ public sealed class TerminalRenderConfig
     /// Typeface used by Avalonia text layout.
     /// </summary>
     public Typeface Typeface => new(FontFamily, FontStyle.Normal, FontWeight.Normal);
+
+    /// <summary>
+    /// يغيّر مقاس خط الطرفية ضمن حدود قابلة للقراءة ويضبط ارتفاع السطر معه.
+    /// </summary>
+    /// <param name="fontSize">المقاس المطلوب بوحدات Avalonia المنطقية.</param>
+    /// <returns>true إذا تغير المقاس فعليًا.</returns>
+    public bool SetFontSize(double fontSize)
+    {
+        double clamped = Math.Clamp(fontSize, MinimumFontSize, MaximumFontSize);
+        if (Math.Abs(FontSize - clamped) < 0.01)
+        {
+            return false;
+        }
+
+        FontSize = clamped;
+        LineHeight = Math.Ceiling(clamped * 1.6);
+        return true;
+    }
+
+    /// <summary>
+    /// يعيد مقاس الخط الافتراضي.
+    /// </summary>
+    public bool ResetFontSize()
+    {
+        return SetFontSize(DefaultFontSize);
+    }
 
     /// <summary>
     /// ينشئ كائن نص جاهز للرسم والقياس.

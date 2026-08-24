@@ -20,7 +20,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _session = new ShellSessionState(initialWorkingDirectory);
         _readonlyLines = new ReadOnlyObservableCollection<TerminalLine>(_lines);
         AddLine("مرحبًا بك في أربش", TerminalLineKind.System);
-        AddLine("صدفة عربية حديثة — اكتب «مساعدة» لعرض الأوامر.", TerminalLineKind.System);
+        AddLine("صدفة عربية حديثة — اكتب «الأوامر» للقائمة أو «مساعدة» للدليل.", TerminalLineKind.System);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

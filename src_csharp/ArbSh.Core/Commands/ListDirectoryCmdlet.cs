@@ -7,6 +7,7 @@ namespace ArbSh.Core.Commands
     /// يعرض محتويات المجلد الحالي أو مجلد محدد.
     /// </summary>
     [ArabicName("اعرض")]
+    [ArabicDescription("يعرض ملفات مجلد ومجلداته الفرعية المباشرة.")]
     public sealed class ListDirectoryCmdlet : CmdletBase
     {
         /// <summary>

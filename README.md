@@ -33,6 +33,7 @@ uses the same core and process behavior.
 - **Object Pipeline:** PowerShell-inspired object-based command pipeline
 - **Task-Based Concurrency:** Efficient parallel pipeline execution
 - **Live Process Output:** Incremental UTF-8 stdout/stderr delivery while tools are still running
+- **Readable Arabic Terminal:** High-contrast 20 px default typography with `Ctrl++`, `Ctrl+-`, `Ctrl+0`, and Ctrl+wheel zoom
 - **Reflection-Based Binding:** Dynamic parameter binding with type conversion
 - **Subexpression Execution:** PowerShell-style `$(...)` command substitution
 - **Type Literal Support:** `[TypeName]` type casting functionality
@@ -91,15 +92,18 @@ uses the same core and process behavior.
 - Full Unicode text processing and BiDi algorithm compliance
 
 **Available Commands:**
-- `اطبع` - Output objects to pipeline or console
-- `مساعدة` - Display command help and documentation
-- `الأوامر` - List all available commands
-- `انتقل` - Change current session directory
-- `المسار` - Print current session directory
-- `اعرض` - List files/folders in current or target directory
-- `اختبار-مصفوفة` - Validate array parameter binding behavior
-- `اختبار-نوع` - Validate type literal conversion behavior
-- `اخرج` - Exit the current host session (host command)
+- `الأوامر` — يعرض جميع أوامر أربش العربية ووصف كل أمر.
+- `مساعدة` — يعرض دليل الأوامر أو شرح أمر عربي محدد.
+- `اطبع` — يطبع نصًا أو قيمة في مجرى مخرجات الطرفية.
+- `انتقل` — يغيّر مجلد العمل الحالي، أو يعرضه عند حذف المسار.
+- `المسار` — يعرض مسار مجلد العمل الحالي.
+- `اعرض` — يعرض ملفات مجلد ومجلداته الفرعية المباشرة.
+- `اختبار-مصفوفة` — يفحص ربط عدة قيم نصية في معامل مصفوفة للمطورين.
+- `اختبار-نوع` — يفحص تحويل القيم إلى أنواع صريحة للمطورين.
+- `اخرج` — ينهي جلسة أربش الحالية.
+
+اكتب `الأوامر` داخل أربش للقائمة المختصرة، أو `مساعدة` للدليل الكامل، أو
+`مساعدة اعرض` لشرح أمر بعينه. لا تعرض الواجهة أسماء تنفيذ إنجليزية بديلة.
 
 **BiDi Algorithm Implementation:**
 - Complete UAX #9 compliance with all rule sets (P, X, W, N, I, L)
@@ -111,7 +115,7 @@ uses the same core and process behavior.
 
 **Upcoming Features:**
 - Prove the POSIX ownership and no-surviving-descendant gates in Linux CI
-- Add PTY/ConPTY hosting, live streams, resize, and terminal control flow
+- Add PTY/ConPTY hosting, interactive stdin, resize, and terminal control flow
 - Baa compiler output hosting with flawless Arabic rendering
 - Add the Arabic `تشغيل` workflow for Baa files and Takween projects
 

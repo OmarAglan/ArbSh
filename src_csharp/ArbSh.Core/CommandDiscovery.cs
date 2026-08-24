@@ -1,4 +1,5 @@
 using System.Reflection;
+using ArbSh.Core.Models;
 
 namespace ArbSh.Core
 {
@@ -8,7 +9,9 @@ namespace ArbSh.Core
     /// </summary>
     public static class CommandDiscovery
     {
-        private static Dictionary<string, Type>? _commandCache;
+        private static readonly Lazy<IReadOnlyDictionary<string, Type>> CommandCache = new(
+            BuildCache,
+            LazyThreadSafetyMode.ExecutionAndPublication);
 
         /// <summary>
         /// يعثر على نوع الأمر الموافق للاسم العربي المعطى.
@@ -17,12 +20,7 @@ namespace ArbSh.Core
         /// <returns>نوع الأمر أو null إذا لم يوجد.</returns>
         public static Type? Find(string commandName)
         {
-            if (_commandCache == null)
-            {
-                BuildCache();
-            }
-
-            _commandCache!.TryGetValue(commandName, out Type? cmdletType);
+            CommandCache.Value.TryGetValue(commandName, out Type? cmdletType);
             return cmdletType;
         }
 
@@ -32,21 +30,37 @@ namespace ArbSh.Core
         /// <returns>قاموس أوامر قابل للقراءة.</returns>
         public static IReadOnlyDictionary<string, Type> GetAllCommands()
         {
-            if (_commandCache == null)
-            {
-                BuildCache();
-            }
+            return CommandCache.Value;
+        }
 
-            return _commandCache!;
+        /// <summary>
+        /// يرجع دليلًا عربيًا مرتبًا لكل أوامر المحرك وأمر الخروج الذي يملكه المضيف.
+        /// </summary>
+        public static IReadOnlyList<ArabicCommandInfo> GetArabicCatalog()
+        {
+            IEnumerable<ArabicCommandInfo> engineCommands = GetAllCommands()
+                .Select(pair => new ArabicCommandInfo(
+                    pair.Key,
+                    pair.Value.GetCustomAttribute<ArabicDescriptionAttribute>()?.Description
+                        ?? "لا يتوفر وصف لهذا الأمر.",
+                    pair.Value));
+
+            return engineCommands
+                .Append(new ArabicCommandInfo(
+                    "اخرج",
+                    "ينهي جلسة أربش الحالية.",
+                    ImplementingType: null))
+                .OrderBy(command => command.Name, StringComparer.Ordinal)
+                .ToArray();
         }
 
         /// <summary>
         /// يبني مخزن الأوامر عبر فحص الأنواع في التجميعة الحالية.
         /// </summary>
-        private static void BuildCache()
+        private static IReadOnlyDictionary<string, Type> BuildCache()
         {
             CoreConsole.WriteLine("DEBUG (Discovery): Building Arabic command cache...");
-            _commandCache = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+            var commandCache = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
             Assembly currentAssembly = Assembly.GetExecutingAssembly();
             IEnumerable<Type> cmdletTypes = currentAssembly.GetTypes()
@@ -62,20 +76,21 @@ namespace ArbSh.Core
                 }
 
                 string arabicName = arabicNameAttr.Name;
-                if (!_commandCache.ContainsKey(arabicName))
+                if (!commandCache.ContainsKey(arabicName))
                 {
-                    _commandCache.Add(arabicName, type);
+                    commandCache.Add(arabicName, type);
                     CoreConsole.WriteLine($"DEBUG (Discovery): Registered '{arabicName}' -> {type.FullName}");
                     continue;
                 }
 
-                if (_commandCache[arabicName] != type)
+                if (commandCache[arabicName] != type)
                 {
-                    CoreConsole.WriteLine($"WARN (Discovery): Duplicate Arabic command '{arabicName}' between {type.FullName} and {_commandCache[arabicName].FullName}.");
+                    CoreConsole.WriteLine($"WARN (Discovery): Duplicate Arabic command '{arabicName}' between {type.FullName} and {commandCache[arabicName].FullName}.");
                 }
             }
 
-            CoreConsole.WriteLine($"DEBUG (Discovery): Arabic cache built with {_commandCache.Count} command(s).");
+            CoreConsole.WriteLine($"DEBUG (Discovery): Arabic cache built with {commandCache.Count} command(s).");
+            return commandCache;
         }
     }
 }

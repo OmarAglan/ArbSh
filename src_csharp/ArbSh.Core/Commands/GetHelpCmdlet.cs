@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using ArbSh.Core.Models;
 
 namespace ArbSh.Core.Commands
 {
@@ -7,6 +8,7 @@ namespace ArbSh.Core.Commands
     /// يعرض المساعدة العامة أو تفاصيل أمر عربي محدد.
     /// </summary>
     [ArabicName("مساعدة")]
+    [ArabicDescription("يعرض دليل الأوامر أو شرح أمر عربي محدد.")]
     public class GetHelpCmdlet : CmdletBase
     {
         /// <summary>
@@ -52,27 +54,15 @@ namespace ArbSh.Core.Commands
                 return;
             }
 
-            WriteObject("استخدام المساعدة:");
-            WriteObject("  مساعدة <الأمر>");
-            WriteObject("مثال:");
-            WriteObject("  مساعدة الأوامر");
-
-            if (!Full)
+            WriteObject("دليل أوامر أربش العربية:");
+            foreach (ArabicCommandInfo command in CommandDiscovery.GetArabicCatalog())
             {
-                return;
+                WriteObject($"  {command.Name} — {command.Description}");
             }
 
-            WriteObject("\nالأوامر المتاحة:");
-            IReadOnlyDictionary<string, Type> allCommands = CommandDiscovery.GetAllCommands();
-            IEnumerable<string> commandNames = allCommands.Keys
-                .Append("اخرج")
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(x => x, StringComparer.Ordinal);
-
-            foreach (string commandName in commandNames)
-            {
-                WriteObject($"  {commandName}");
-            }
+            WriteObject("");
+            WriteObject("لشرح أمر: مساعدة <اسم-الأمر>");
+            WriteObject("مثال: مساعدة اعرض");
         }
 
         private void DisplayCommandHelp(Type cmdletType)
@@ -90,6 +80,12 @@ namespace ArbSh.Core.Commands
 
             helpBuilder.AppendLine("\nالاسم");
             helpBuilder.AppendLine($"  {commandName}");
+
+            string description = cmdletType
+                .GetCustomAttribute<ArabicDescriptionAttribute>()?.Description
+                ?? "لا يتوفر وصف لهذا الأمر.";
+            helpBuilder.AppendLine("\nالوصف");
+            helpBuilder.AppendLine($"  {description}");
 
             helpBuilder.AppendLine("\nالصيغة");
             helpBuilder.Append($"  {commandName}");

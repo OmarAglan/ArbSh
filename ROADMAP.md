@@ -71,6 +71,7 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [x] **Avalonia UI Setup:** Create the new `ArbSh.Terminal` graphical project.
 - [x] **Decouple Executor:** Refactor `Executor.cs` to output to a Stream/Event system instead of `System.Console.WriteLine`.
 - [x] **Typography:** Embed a high-quality Arabic coding font (e.g., Cascadia Code Arabic, Kashida) as the default terminal font.
+- [x] **Accessible Readability:** Use larger high-contrast Arabic defaults and keyboard/mouse terminal zoom with tested size bounds.
 
 #### 5.2 Native Text Rendering & Shaping
 - [x] **HarfBuzz Integration:** Leverage Avalonia's Skia/HarfBuzz backend for pixel-perfect Arabic character shaping and ligatures.
@@ -166,7 +167,11 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Added full ANSI SGR parsing pipeline (16-color, 256-color, and truecolor) with span-based foreground/background styling.
 - Added ArbSh navy theme/palette abstractions and applied ANSI-aware styling in output rendering without mutating logical text.
 - Added tests for ANSI parser, ANSI palette mapping, and ANSI-aware terminal text pipeline behavior.
-- Finalized Arabic-only command surface (`الأوامر`, `مساعدة`, `اطبع`, `اختبار-مصفوفة`, `اختبار-نوع`, plus host `اخرج`) and removed legacy command aliases.
+- Finalized the Arabic-only command surface, removed legacy aliases, and made
+  `الأوامر` and bare `مساعدة` list every Arabic command with its description.
+- Added metadata and smoke gates that require Arabic names/descriptions for all
+  commands, Arabic names for every public parameter, and successful execution
+  of every engine command.
 - Added session-scoped working directory state and new file commands (`انتقل`, `المسار`, `اعرض`) with Arabic path support.
 - Added terminal startup `--working-dir` handling to open ArbSh in a selected Explorer folder.
 - Added Windows installer packaging scripts (`Install-ArbSh.ps1`, `Uninstall-ArbSh.ps1`) and release automation support for context-menu registration.
