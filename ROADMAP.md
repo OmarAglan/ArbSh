@@ -89,6 +89,12 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 ### 🧠 Phase 6: Baa Language & External Process Integration
 **Ensuring ArbSh is the perfect host environment for the Baa compiler and general external processes.**
 
+#### 6.0 Eco Host Contract
+- [x] Register ArbSh as an independently released Eco ecosystem project.
+- [x] Document the planned [`arbsh-host-v1`](docs/ARBSH_HOST_V1.md) ownership and admission boundary.
+- [ ] Freeze the CLI, session, UTF-8 stream, exit-status, environment, working-directory, and cancellation contract.
+- [ ] Keep Baa, Nazm, and Takween directly invokable; ArbSh must remain an optional developer-experience layer.
+
 #### 6.1 Hosting the Baa Compiler
 - [ ] **Compiler Output Rendering:** Ensure the terminal flawlessly displays the Arabic stdout/stderr produced by the Baa compiler.
 - [ ] **Script Execution:** Support executing `.baa` script files directly from the ArbSh command line (`ArbSh> شغل برنامج.baa`).
@@ -101,6 +107,9 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [ ] **Process Pipeline:** Integrate external processes with the ArbSh object pipeline.
 - [ ] **Stream Handling:** Correctly capture and route `stdin`, `stdout`, and `stderr` for background and foreground processes.
 - [ ] **Arabic Path Support:** Handle Arabic file and directory names natively when launching external tools.
+- [ ] **Structured Launch:** Build external processes from argv/cwd/environment instead of concatenated shell command strings.
+- [ ] **Process-Tree Ownership:** Use Windows Job Objects and POSIX process groups so cancellation leaves no child or grandchild alive.
+- [ ] **Qalam Host Parity:** Run the same ArbSh CLI through Qalam's PTY/ConPTY panel without embedding the Avalonia window.
 
 ### 🔧 Phase 7: Advanced Shell & Developer UX (Future)
 **Polishing the developer experience.**
@@ -123,6 +132,9 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [ ] **Baa Package Manager (BPM) Interface:** Integrate commands to download and install Baa libraries from a central repository.
 - [ ] **IDE Integration:** Visual Studio Code extension compatibility for ArbSh scripts.
 - [ ] **Documentation Portal:** Generate an Arabic website documenting the shell features.
+- [ ] **Standalone Installer Contract:** Pass install, upgrade, repair, health-check, and uninstall gates independently.
+- [ ] **Developer Kit Admission:** Join Baa-Developer-Kit only after the standalone installer and Windows/Linux host gates pass.
+- [ ] **Shared Arabic Corpus:** Publish `eco-arabic-text-corpus-v1` fixtures for Qalam, Pyramid-Engine, and a bounded future PyramidOS subset.
 
 ## 📊 Current Status Summary
 

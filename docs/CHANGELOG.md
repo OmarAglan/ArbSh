@@ -8,7 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- (Future changes go here)
+- **Eco Ecosystem Membership**: Registered ArbSh as the independently released
+  Arabic-first shell and terminal host for the Baa ecosystem.
+- **Host Contract Plan**: Added `docs/ARBSH_HOST_V1.md` to define ownership,
+  PTY/ConPTY hosting, structured process launch, cancellation, Qalam
+  integration, installer admission, and cross-platform acceptance gates.
+
+### Changed
+- **Runtime Prerequisite**: Corrected the documented prerequisite to the .NET 9
+  SDK used by the current project files.
 
 ## [0.8.1-alpha] - 2026-02-26
 ### Added

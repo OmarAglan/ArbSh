@@ -1,8 +1,8 @@
 # ArbSh Documentation Index
 
-**Current Version:** 0.7.7.11
-**Status:** Phase 4 Complete - Full BiDi Algorithm UAX #9 Compliance
-**Next Phase:** Phase 5 - Console I/O with BiDi Rendering
+**Current Version:** 0.8.1-alpha
+**Status:** Phase 6 In Progress - External Process and Eco Integration
+**Next Phase:** Freeze `arbsh-host-v1` and implement structured process hosting
 
 This index provides comprehensive access to all ArbSh project documentation, organized by category and current relevance.
 
@@ -14,7 +14,8 @@ This index provides comprehensive access to all ArbSh project documentation, org
 | [ROADMAP.md](../ROADMAP.md) | Development phases, completed features, upcoming work | ✅ Current | Developers, PM |
 | [PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md) | Project structure, architecture, implementation status | ✅ Current | Developers |
 | [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) | Comprehensive feature guide with working examples | ✅ Current | Users, Developers |
-| [CHANGELOG.md](../CHANGELOG.md) | Version history and technical implementation details | ✅ Current | All Users |
+| [CHANGELOG.md](CHANGELOG.md) | Version history and technical implementation details | ✅ Current | All Users |
+| [ARBSH_HOST_V1.md](ARBSH_HOST_V1.md) | Planned Eco host, process, PTY/ConPTY, and Qalam integration contract | 🧭 Planned | Integrators |
 
 ## 🔬 Technical Implementation Documentation
 
@@ -34,7 +35,7 @@ Comprehensive technical documentation for the Unicode BiDi Algorithm (UAX #9) im
 
 | Document | Description | Status | Focus |
 |----------|-------------|--------|-------|
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Development guidelines and contribution process | 🔄 Needs Update | Contributors |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | Development guidelines and contribution process | ✅ Current | Contributors |
 | Task Management Files | Detailed implementation task tracking | ✅ Active | Project Planning |
 
 ## 📚 User Documentation
@@ -57,17 +58,6 @@ Comprehensive technical documentation for the Unicode BiDi Algorithm (UAX #9) im
 | **Pipeline Execution** | [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md#pipeline-and-redirection) | ✅ Complete | Task-based concurrency |
 | **Parameter Binding** | [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) | ✅ Complete | Reflection-based binding |
 
-## 🏛️ Historical Documentation (Original C Implementation)
-
-Preserved for reference and historical context:
-
-| Document Location | Description | Relevance |
-|-------------------|-------------|-----------|
-| `old_c_code/docs/ARABIC_SUPPORT_GUIDE.md` | Original C Arabic implementation | 📚 Reference |
-| `old_c_code/docs/TESTING_FRAMEWORK.md` | Original C testing strategy | 📚 Reference |
-| `old_c_code/docs/CMAKE_CONFIGURATION.md` | Original C build system | 📚 Historical |
-| `old_c_code/docs/BAA_INTEGRATION.md` | Original integration plans | 📚 Historical |
-
 ## 🎯 Documentation Roadmaps
 
 ### For New Users
@@ -78,15 +68,15 @@ Preserved for reference and historical context:
 ### For Developers
 1. **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - Architecture and project structure
 2. **BiDi Design Documents** - Technical implementation details for Unicode compliance
-3. **[CHANGELOG.md](../CHANGELOG.md)** - Technical implementation history
+3. **[CHANGELOG.md](CHANGELOG.md)** - Technical implementation history
 4. **Task Management Files** - Current development planning and progress
 
 ### For Contributors
-1. **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development guidelines (needs update)
+1. **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Development guidelines
 2. **[PROJECT_ORGANIZATION.md](PROJECT_ORGANIZATION.md)** - Understanding codebase structure
 3. **BiDi Design Documents** - Technical specifications for algorithm implementation
 
-## 📋 Planned Documentation (Phase 5+)
+## 📋 Planned Documentation (Phase 6+)
 
 ### User Documentation
 - **Installation Guide** - Setup instructions for different platforms
@@ -97,7 +87,7 @@ Preserved for reference and historical context:
 ### Technical Documentation
 - **API Reference** - Generated from XML comments
 - **Cmdlet Developer Guide** - Creating custom cmdlets
-- **BiDi Rendering Guide** - Console I/O with BiDi support
+- **PTY/ConPTY Hosting Guide** - Interactive process and terminal integration
 - **Testing Guide** - Framework and testing strategies
 
 ### Localization Documentation
@@ -108,7 +98,7 @@ Preserved for reference and historical context:
 ## 📝 Documentation Maintenance
 
 **Current Standards:**
-- All documentation reflects version 0.7.7.11 status
+- Maintained documents reflect version 0.8.1-alpha status
 - Technical accuracy verified against working implementation
 - Examples tested with actual ArbSh shell
 - Arabic-first philosophy consistently represented

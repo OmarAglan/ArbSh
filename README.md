@@ -6,6 +6,17 @@
 
 ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifically for Arabic developers and users. Inspired by PowerShell's object pipeline architecture, ArbSh provides a powerful, extensible environment with native Arabic language support and full Unicode BiDi compliance.
 
+## Eco Ecosystem Role
+
+ArbSh is Eco's official Arabic-first shell and standalone terminal direction.
+It owns shell parsing, interactive sessions, process hosting, and terminal UX;
+it does not own Baa compilation, Takween project semantics, Nazm encoding, or
+Qalam editor features. Baa, Nazm, and Takween remain usable without ArbSh.
+
+The planned [`arbsh-host-v1`](docs/ARBSH_HOST_V1.md) boundary will let Qalam
+host the ArbSh CLI through PTY/ConPTY while the standalone Avalonia terminal
+uses the same core and process behavior.
+
 ## 🌟 Key Features
 
 ### Arabic-First Design
@@ -111,7 +122,7 @@ ArbSh/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- .NET 6.0 or later
+- .NET 9 SDK
 - Windows, macOS, or Linux
 
 ### Running ArbSh
