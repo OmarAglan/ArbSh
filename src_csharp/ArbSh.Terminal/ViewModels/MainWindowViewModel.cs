@@ -53,7 +53,14 @@ public sealed class MainWindowViewModel
 
         try
         {
-            await Task.Run(() => ShellEngine.ExecuteInput(logicalInput, sink, options, _session), cancellationToken);
+            await Task.Run(
+                () => ShellEngine.ExecuteInput(
+                    logicalInput,
+                    sink,
+                    options,
+                    _session,
+                    cancellationToken: cancellationToken),
+                cancellationToken);
         }
         catch (Exception ex)
         {

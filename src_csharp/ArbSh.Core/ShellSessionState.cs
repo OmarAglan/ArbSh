@@ -22,6 +22,12 @@ namespace ArbSh.Core
         /// </summary>
         public string CurrentDirectory { get; set; }
 
+        /// <summary>
+        /// رمز خروج آخر عبارة نفذتها الجلسة. تحفظ العمليات الخارجية رمزها كما
+        /// هو، ويستخدم أربش 127 لفشل الإطلاق و130 للإلغاء.
+        /// </summary>
+        public int LastExitCode { get; internal set; }
+
         private static string ResolveInitialDirectory(string? initialDirectory)
         {
             if (!string.IsNullOrWhiteSpace(initialDirectory))

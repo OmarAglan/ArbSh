@@ -61,6 +61,12 @@ namespace ArbSh.Core
         public List<object> Arguments { get; } // Changed from List<string> to List<object>
 
         /// <summary>
+        /// الوسائط المنطقية المرتبة كما ستُمرر إلى برنامج خارجي. تحتفظ هذه
+        /// القائمة بالخيارات التي تبدأ بشرطة وبالوسائط الفارغة وحدود المسافات.
+        /// </summary>
+        public List<string> InvocationArguments { get; }
+
+        /// <summary>
         /// A dictionary to hold named parameters and their values.
         /// Keys are parameter names (e.g., "-Path", "-اسم"). Values are the string representation.
         /// </summary>
@@ -83,6 +89,7 @@ namespace ArbSh.Core
         {
             CommandName = commandName;
             Arguments = arguments ?? new List<object>(); // Changed from List<string>
+            InvocationArguments = new List<string>();
             Parameters = parameters ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // Case-insensitive keys
             Redirections = new List<RedirectionInfo>(); // Initialize redirection list
         }

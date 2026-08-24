@@ -1,8 +1,8 @@
 # ArbSh - Arabic-First Shell
 
 **Current Version:** 0.8.1-alpha
-**Status:** Phase 6 In Progress - Structured Process Foundation Ready
-**Next Step:** External Command Integration in the ArbSh Executor
+**Status:** Phase 6 In Progress - Non-Interactive External Commands Ready
+**Next Step:** Process-Tree Ownership and PTY/ConPTY
 
 ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifically for Arabic developers and users. Inspired by PowerShell's object pipeline architecture, ArbSh provides a powerful, extensible environment with native Arabic language support and full Unicode BiDi compliance.
 
@@ -39,6 +39,9 @@ uses the same core and process behavior.
 - **Structured Process Core:** Direct argv/cwd/environment launch with separate
   UTF-8 stdout/stderr, exit status, failure classification, and cancellation
   without `cmd /c` or another intermediate shell
+- **External Commands:** Unresolved commands run through the structured layer
+  with built-in precedence, session working directory, line-oriented pipelines,
+  redirection, and exact child exit-code preservation
 
 ## 🚀 Current Status (Version 0.8.1-alpha)
 
@@ -90,14 +93,13 @@ uses the same core and process behavior.
 - 70+ BidiTest.txt compliance tests passing
 - Real-time BiDi processing for mixed Arabic/English content
 
-## 🎯 Next Step: External Command Integration
+## 🎯 Next Step: Interactive Process Hosting
 
 **Upcoming Features:**
-- Route unresolved commands through the verified structured process runner
-- External process execution inside the GUI terminal (`git`, `dotnet`, `node`)
+- Own descendant processes with Windows Job Objects and POSIX process groups
+- Add PTY/ConPTY hosting, live streams, resize, and terminal control flow
 - Baa compiler output hosting with flawless Arabic rendering
-- Stream routing for foreground/background process integration
-- Arabic path/process handling improvements
+- Add the Arabic `تشغيل` workflow for Baa files and Takween projects
 
 ## 📁 Project Structure
 
@@ -208,12 +210,12 @@ ArbSh is designed specifically for Arabic developers and users, not as a bilingu
 ## 📋 Current Limitations
 
 **Current Focus (Phase 6):**
-- External process execution in the custom terminal
+- Explicit process-tree ownership and interactive PTY/ConPTY hosting
 - Baa compiler integration workflow
-- Process stream interop with ArbSh pipeline
+- Live foreground/background stream integration
 
 **Future Phases:**
-- External process execution (Phase 6)
+- Qalam-hosted ArbSh sessions and developer-kit admission
 - Advanced scripting features (Phase 7)
 - Tab completion and command history
 - Rich error handling and reporting
@@ -227,4 +229,4 @@ ArbSh aims to be the premier command-line shell for Arabic developers, providing
 - Cross-platform compatibility
 - Extensible cmdlet framework
 
-**Current Status:** Phase 6 In Progress - Structured Process Foundation Ready
+**Current Status:** Phase 6 In Progress - Non-Interactive External Commands Ready

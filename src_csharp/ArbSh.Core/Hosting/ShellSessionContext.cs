@@ -30,6 +30,21 @@ namespace ArbSh.Core
         }
 
         /// <summary>
+        /// رمز خروج آخر عبارة في الجلسة النشطة.
+        /// </summary>
+        internal static int LastExitCode
+        {
+            get => CurrentState.Value?.LastExitCode ?? 0;
+            set
+            {
+                if (CurrentState.Value is not null)
+                {
+                    CurrentState.Value.LastExitCode = value;
+                }
+            }
+        }
+
+        /// <summary>
         /// يدخل حالة جلسة في نطاق التنفيذ الحالي.
         /// </summary>
         /// <param name="state">حالة الجلسة.</param>

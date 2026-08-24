@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tests covering Arabic paths, spaces, empty and shell-metacharacter arguments,
   clean/inherited environments, separated output streams, exit codes, launch
   failures, and cancellation.
+- **External Command Execution**: Routed commands not resolved as Arabic
+  built-ins through the structured runner with session working-directory
+  inheritance, ordered argv, line-oriented pipeline stdin/stdout/stderr, and
+  existing shell redirection behavior.
+- **External Command Integration Tests**: Added real-process tests for quoted
+  executables, empty/Arabic arguments, built-in precedence, bidirectional
+  pipelines, separate stream redirection, exact child exit codes, launch
+  failure code 127, and cancellation code 130.
 
 ### Changed
 - **.NET 10 LTS Baseline**: Migrated every project from .NET 9 to .NET 10 and
@@ -37,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   .NET 10 baseline no longer restores the vulnerable D-Bus dependency chain.
 - **ICU4N Patch Level**: Updated ICU4N from 60.1.0-alpha.437 to
   60.1.0-alpha.440 for the current SDK toolchain.
+- **Invocation Parsing**: Preserved token positions and a dedicated ordered
+  invocation-argument view so external options are not mistaken for ArbSh
+  cmdlet parameters and quoted executable paths remain intact.
 
 ### Fixed
 - **Pipeline Error Classification**: Preserved existing `PipelineObject`

@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.1-alpha (Phase 6 Kickoff)
-**Status:** Phase 6 In Progress - Structured Process Foundation Ready
-**Next Step:** Connect External Commands to the ArbSh Executor
+**Status:** Phase 6 In Progress - Non-Interactive External Commands Ready
+**Next Step:** Process-Tree Ownership and PTY/ConPTY
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -103,13 +103,13 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 #### 6.2 General Process Management (Pseudo-TTY)
 - [x] **Filesystem Built-ins:** Added Arabic file/directory commands (`انتقل`, `المسار`, `اعرض`) with session-scoped working directory behavior.
 - [x] **Windows Installer Context Menu:** Added installer packaging scripts that register `Open in ArbSh` and pass `--working-dir` from Explorer.
-- [ ] **External Commands:** Execute system commands (`git`, `dotnet`, `node`) *inside* the custom GUI terminal.
-- [ ] **Process Pipeline:** Integrate external processes with the ArbSh object pipeline.
-- [ ] **Stream Handling:** Correctly capture and route `stdin`, `stdout`, and `stderr` for background and foreground processes.
-- [ ] **Arabic Path Support:** Handle Arabic file and directory names natively when launching external tools.
+- [x] **External Commands:** Execute non-interactive system commands (`git`, `dotnet`, `node`) through the shared core used by both hosts.
+- [x] **Process Pipeline:** Integrate line-oriented external stdin/stdout/stderr with the ArbSh object pipeline in both directions.
+- [ ] **Live Stream Handling:** Stream `stdin`, `stdout`, and `stderr` incrementally for background and foreground interactive processes.
+- [x] **Arabic Path Support:** Preserve Arabic working directories, executable/argument paths, spaces, and empty arguments when launching external tools.
 - [x] **Structured Process Core:** Added reusable immutable request/result contracts, UTF-8 stream capture, exit/failure classification, and cancellation.
 - [x] **Structured Launch:** Build non-interactive external processes from argv/cwd/environment instead of concatenated shell command strings.
-- [ ] **Executor Integration:** Resolve commands that are not built-ins and route them through the structured runner without changing built-in precedence.
+- [x] **Executor Integration:** Resolve commands that are not built-ins and route them through the structured runner without changing built-in precedence.
 - [ ] **Process-Tree Ownership:** Use Windows Job Objects and POSIX process groups so cancellation leaves no child or grandchild alive.
 - [ ] **Qalam Host Parity:** Run the same ArbSh CLI through Qalam's PTY/ConPTY panel without embedding the Avalonia window.
 
@@ -140,8 +140,8 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 
 ## 📊 Current Status Summary
 
-### ✅ Phase 6 Kickoff Status (v0.8.1-alpha)
-**Progress:** ArbSh entered Phase 6 with foundational file-management commands and installer integration while preserving the Phase 5 GUI baseline and logical/visual separation architecture.
+### ✅ Phase 6 Progress (v0.8.1-alpha)
+**Progress:** ArbSh now has foundational file-management commands, installer integration, and verified non-interactive external-command execution while preserving the Phase 5 GUI baseline and logical/visual separation architecture.
 
 **Completed This Cycle:**
 - Extracted engine code into `src_csharp/ArbSh.Core`.
@@ -164,11 +164,18 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Added session-scoped working directory state and new file commands (`انتقل`, `المسار`, `اعرض`) with Arabic path support.
 - Added terminal startup `--working-dir` handling to open ArbSh in a selected Explorer folder.
 - Added Windows installer packaging scripts (`Install-ArbSh.ps1`, `Uninstall-ArbSh.ps1`) and release automation support for context-menu registration.
+- Added immutable structured process requests/results with direct argv, cwd,
+  environment, UTF-8 streams, exit/failure classification, and cancellation.
+- Routed unresolved commands through the structured runner while preserving
+  Arabic built-in precedence and the session working directory.
+- Connected line-oriented ArbSh pipelines and existing stdout/stderr
+  redirection to external processes in both directions.
+- Added real-process coverage for quoted executables, Arabic paths, empty and
+  option arguments, exit codes, launch failure, cancellation, and redirection.
 
-**Next Focus:** Integrate the verified structured runner with command discovery
-and `Executor`, preserving built-in precedence, session working directory,
-environment changes, exit status, and separate stdout/stderr before adding the
-interactive PTY path.
+**Next Focus:** Add explicit Windows Job Object and POSIX process-group
+ownership, then introduce the interactive PTY/ConPTY path with incremental
+streaming, resize, terminal control flow, and a no-surviving-descendants gate.
 
 ## 🌟 Project Philosophy
 

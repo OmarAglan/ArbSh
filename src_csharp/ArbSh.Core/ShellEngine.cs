@@ -12,11 +12,15 @@ public static class ShellEngine
     /// <param name="sink">The host sink for output.</param>
     /// <param name="options">Execution options.</param>
     /// <param name="session">حالة الجلسة الحالية (مثل المجلد الحالي).</param>
+    /// <param name="externalProcessRunner">منفذ العمليات الخارجية، أو التنفيذ النظامي الافتراضي.</param>
+    /// <param name="cancellationToken">إشارة إلغاء العملية الخارجية النشطة.</param>
     public static void ExecuteInput(
         string inputLine,
         IExecutionSink sink,
         ExecutionOptions? options = null,
-        ShellSessionState? session = null)
+        ShellSessionState? session = null,
+        Processes.IExternalProcessRunner? externalProcessRunner = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(inputLine);
         ArgumentNullException.ThrowIfNull(sink);
@@ -26,6 +30,6 @@ public static class ShellEngine
         using var sessionScope = ShellSessionContext.Push(session);
         using var scope = CoreConsole.PushSink(sink, options);
         var commands = Parser.Parse(inputLine);
-        Executor.Execute(commands, sink, options);
+        Executor.Execute(commands, sink, options, externalProcessRunner, cancellationToken);
     }
 }

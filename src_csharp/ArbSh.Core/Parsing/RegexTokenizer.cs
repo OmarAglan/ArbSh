@@ -52,7 +52,7 @@ namespace ArbSh.Core.Parsing
 
             // Identifiers / Arguments (Must come after parameters/variables/type literals)
             // Allows letters (inc. Arabic), numbers, underscore, hyphen. Also allows '.', '\', '/' for paths.
-            (TokenType.Identifier,      @"(?<Identifier>[\p{L}_\./\\-][\p{L}\p{N}_\./\\-]*)"), // Starts with letter, _, ., /, \, - followed by more
+            (TokenType.Identifier,      @"(?<Identifier>[\p{L}_\./\\-][\p{L}\p{N}_\./\\:\-]*)"), // Starts with letter, _, ., /, \, - followed by path/name characters
 
             // Unknown (Catch-all for error reporting) - Must be last
             (TokenType.Unknown,         @"(?<Unknown>.)")
@@ -85,7 +85,7 @@ namespace ArbSh.Core.Parsing
                     // Optionally add these as Unknown tokens
                     foreach(char c in gapText)
                     {
-                         tokens.Add(new Token(TokenType.Unknown, c.ToString()));
+                         tokens.Add(new Token(TokenType.Unknown, c.ToString(), currentPosition++));
                     }
                 }
 
@@ -104,7 +104,7 @@ namespace ArbSh.Core.Parsing
                             string value = match.Value;
                             // TODO: Add post-processing for strings (remove quotes, handle escapes) if needed here
                             // For now, just add the raw matched value.
-                            tokens.Add(new Token(def.Type, value));
+                            tokens.Add(new Token(def.Type, value, match.Index));
                         }
                         matched = true;
                         break; // Move to the next match
@@ -115,7 +115,7 @@ namespace ArbSh.Core.Parsing
                 {
                     // This shouldn't happen if the Unknown pattern is last and correct
                     CoreConsole.WriteLine($"ERROR (Tokenizer): Match found but no group matched? Value: '{match.Value}'");
-                    tokens.Add(new Token(TokenType.Unknown, match.Value));
+                    tokens.Add(new Token(TokenType.Unknown, match.Value, match.Index));
                 }
 
                 currentPosition = match.Index + match.Length;
@@ -127,9 +127,9 @@ namespace ArbSh.Core.Parsing
                  string remainingText = input.Substring(currentPosition);
                  CoreConsole.WriteLine($"WARN (Tokenizer): Unconsumed trailing characters: '{remainingText}'");
                  // Optionally add these as Unknown tokens
-                 foreach(char c in remainingText)
+                 for (int i = 0; i < remainingText.Length; i++)
                  {
-                      tokens.Add(new Token(TokenType.Unknown, c.ToString()));
+                      tokens.Add(new Token(TokenType.Unknown, remainingText[i].ToString(), currentPosition + i));
                  }
             }
 

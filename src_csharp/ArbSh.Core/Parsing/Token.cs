@@ -30,14 +30,30 @@ namespace ArbSh.Core.Parsing
     /// </summary>
     public readonly struct Token
     {
+        /// <summary>نوع الرمز.</summary>
         public TokenType Type { get; }
-        public string Value { get; }
-        // TODO: Add position/line info later if needed for better error reporting
 
-        public Token(TokenType type, string value)
+        /// <summary>القيمة الخام للرمز.</summary>
+        public string Value { get; }
+
+        /// <summary>موضع بداية الرمز في نص مرحلة خط الأنابيب.</summary>
+        public int Start { get; }
+
+        /// <summary>طول الرمز بوحدات UTF-16.</summary>
+        public int Length { get; }
+
+        /// <summary>الموضع التالي لنهاية الرمز.</summary>
+        public int End => Start + Length;
+
+        /// <summary>
+        /// ينشئ رمزًا مع موضعه للحفاظ على حدود الوسائط بعد حذف المسافات.
+        /// </summary>
+        public Token(TokenType type, string value, int start = 0)
         {
             Type = type;
             Value = value;
+            Start = start;
+            Length = value.Length;
         }
 
         public override string ToString() => $"[{Type}: '{Value}']";

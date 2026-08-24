@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System;
-using System.Collections.Generic;
 using System.Linq; // Needed for Skip
 using System.Text; // Needed for StringBuilder
 using System.Text.RegularExpressions; // Needed for Regex.Match
@@ -198,14 +196,16 @@ namespace ArbSh.Core
             List<Token> tokens = RegexTokenizer.Tokenize(stageInput);
             if (tokens.Count == 0) return null;
 
-            // First token should be the command name (Identifier)
-            if (tokens[0].Type != TokenType.Identifier)
+            // A command can be a PATH-resolved name or a quoted executable path.
+            if (tokens[0].Type != TokenType.Identifier
+                && tokens[0].Type != TokenType.StringLiteralDQ
+                && tokens[0].Type != TokenType.StringLiteralSQ)
             {
                 // Handle error: Expected a command name identifier
                 CoreConsole.WriteLine($"ERROR (Parser): Expected command name, but got token type {tokens[0].Type} ('{tokens[0].Value}')");
                 return null; // Or throw exception
             }
-            string commandName = tokens[0].Value;
+            string commandName = NormalizeInvocationToken(tokens[0]);
             List<Token> remainingTokens = tokens.Skip(1).ToList(); // Start with tokens after command name
 
             // Create the command object early so we can add redirections
@@ -296,6 +296,10 @@ namespace ArbSh.Core
                 }
             }
 
+
+            // Preserve an ordered argv view for external commands before the
+            // built-in parameter binder interprets leading '-' tokens.
+            parsedCommand.InvocationArguments.AddRange(ParseInvocationArguments(remainingTokens));
 
             // --- Argument/Parameter Parsing (using remaining tokens AFTER redirection removal) ---
             List<object> arguments = parsedCommand.Arguments;
@@ -604,8 +608,9 @@ namespace ArbSh.Core
                         case 'v': sb.Append('\v'); break;
                         // TODO: Add \uXXXX and \xXX unicode/hex escapes if needed
                         default:
-                            // If not a recognized escape sequence, just append the character following the backslash literally.
-                            // (The backslash itself is consumed by the escape check `rawString[i] == '\\'`)
+                            // Preserve unknown escape sequences so quoted Windows
+                            // paths such as C:\Program Files do not lose separators.
+                            sb.Append('\\');
                             sb.Append(rawString[i]);
                             break;
                     }
@@ -616,6 +621,62 @@ namespace ArbSh.Core
                 }
             }
             return sb.ToString();
+        }
+
+        private static List<string> ParseInvocationArguments(List<Token> tokens)
+        {
+            var arguments = new List<string>();
+            var current = new StringBuilder();
+            bool argumentStarted = false;
+            Token? previous = null;
+
+            foreach (Token token in tokens)
+            {
+                if (previous is Token previousToken
+                    && token.Start > previousToken.End
+                    && argumentStarted)
+                {
+                    arguments.Add(current.ToString());
+                    current.Clear();
+                    argumentStarted = false;
+                }
+
+                current.Append(NormalizeInvocationToken(token));
+                argumentStarted = true;
+                previous = token;
+            }
+
+            if (argumentStarted)
+            {
+                arguments.Add(current.ToString());
+            }
+
+            return arguments;
+        }
+
+        private static string NormalizeInvocationToken(Token token)
+        {
+            if (token.Type == TokenType.StringLiteralDQ)
+            {
+                string content = token.Value.Length >= 2
+                    ? token.Value.Substring(1, token.Value.Length - 2)
+                    : string.Empty;
+                return ProcessEscapesInString(content);
+            }
+
+            if (token.Type == TokenType.StringLiteralSQ)
+            {
+                return token.Value.Length >= 2
+                    ? token.Value.Substring(1, token.Value.Length - 2)
+                    : string.Empty;
+            }
+
+            if (token.Type == TokenType.Variable)
+            {
+                return GetVariableValue(token.Value.Substring(1));
+            }
+
+            return token.Value;
         }
     }
 }

@@ -5,8 +5,8 @@
 This document defines the current architecture of **ArbSh** as an Arabic-first shell and terminal platform.
 
 **Current Version:** 0.8.1-alpha
-**Status:** Phase 6 In Progress - Structured Process Foundation Ready
-**Next Step:** Connect External Commands to the ArbSh Executor
+**Status:** Phase 6 In Progress - Non-Interactive External Commands Ready
+**Next Step:** Process-Tree Ownership and PTY/ConPTY
 
 ArbSh now uses a host-agnostic core engine with separate presentation hosts:
 - `ArbSh.Core` contains parsing, execution, cmdlets, BiDi/i18n logic, and the
@@ -155,6 +155,17 @@ dotnet test src_csharp/ArbSh.Test
 - Added scrollback offset virtualization with mouse wheel and PageUp/PageDown navigation.
 - Kept prompt pinned to bottom while output viewport moves through history.
 - Added output-line selection and logical-order clipboard copy (`Ctrl+C`) for scrollback content.
+
+### Completed in Phase 6 (Non-Interactive Process Path)
+- Added the structured process contracts and system runner under
+  `ArbSh.Core/Processes` without an intermediate command shell.
+- Preserved a dedicated ordered argv view in the parser for external commands.
+- Routed commands unresolved as Arabic built-ins through the shared executor
+  path used by Console and Terminal hosts.
+- Connected line-oriented pipeline input/output, separate errors, redirection,
+  exact child exit codes, launch failure, and cancellation.
+- Kept live streaming, process-tree ownership, PTY/ConPTY, and Qalam hosting as
+  explicit subsequent work.
 
 ## Notes on Documentation Locations
 
