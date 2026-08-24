@@ -2,9 +2,10 @@
 
 ## Project Structure & Module Organization
 `ArbSh` is a .NET 10 solution centered in `src_csharp/ArbSh.sln`:
-- `src_csharp/ArbSh.Core`: shell engine (parser, executor, cmdlets, BiDi/i18n, session state).
+- `src_csharp/ArbSh.Core`: shell engine (parser, executor, cmdlets, BiDi/i18n, session state, structured process runner).
 - `src_csharp/ArbSh.Console`: console host.
 - `src_csharp/ArbSh.Terminal`: Avalonia GUI terminal host and rendering/input pipeline.
+- `src_csharp/ArbSh.ProcessFixture`: helper executable used only by process-contract tests.
 - `src_csharp/ArbSh.Test`: xUnit tests.
 - `docs/`: roadmap, usage, architecture notes, changelog.
 - `installer/`: Windows install/uninstall scripts (Explorer context-menu support).

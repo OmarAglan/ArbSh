@@ -1,8 +1,8 @@
 # ArbSh - Arabic-First Shell
 
 **Current Version:** 0.8.1-alpha
-**Status:** Phase 6 In Progress - File Management & Windows Installer Integration
-**Next Phase:** Phase 6 - Baa Language & External Process Integration
+**Status:** Phase 6 In Progress - Structured Process Foundation Ready
+**Next Step:** External Command Integration in the ArbSh Executor
 
 ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifically for Arabic developers and users. Inspired by PowerShell's object pipeline architecture, ArbSh provides a powerful, extensible environment with native Arabic language support and full Unicode BiDi compliance.
 
@@ -36,6 +36,9 @@ uses the same core and process behavior.
 - **Built on .NET:** Cross-platform support (Windows, macOS, Linux)
 - **Unicode Compliant:** Full UTF-8 and Unicode text processing
 - **Modern C# Architecture:** Extensible cmdlet framework
+- **Structured Process Core:** Direct argv/cwd/environment launch with separate
+  UTF-8 stdout/stderr, exit status, failure classification, and cancellation
+  without `cmd /c` or another intermediate shell
 
 ## 🚀 Current Status (Version 0.8.1-alpha)
 
@@ -87,9 +90,10 @@ uses the same core and process behavior.
 - 70+ BidiTest.txt compliance tests passing
 - Real-time BiDi processing for mixed Arabic/English content
 
-## 🎯 Next Phase: Phase 6 - Baa Language & External Process Integration
+## 🎯 Next Step: External Command Integration
 
 **Upcoming Features:**
+- Route unresolved commands through the verified structured process runner
 - External process execution inside the GUI terminal (`git`, `dotnet`, `node`)
 - Baa compiler output hosting with flawless Arabic rendering
 - Stream routing for foreground/background process integration
@@ -100,13 +104,12 @@ uses the same core and process behavior.
 ```
 ArbSh/
 ├── src_csharp/                 # C#/.NET Implementation
-│   ├── ArbSh.Console/          # Main console application
-│   │   ├── Commands/           # Cmdlet implementations
-│   │   ├── Parsing/            # Parser and tokenizer
-│   │   ├── I18n/               # BiDi algorithm and Arabic support
-│   │   ├── Models/             # Data models and pipeline objects
-│   │   └── Program.cs          # REPL entry point
-│   └── ArbSh.sln              # Visual Studio solution
+│   ├── ArbSh.Core/             # Shell engine and structured process layer
+│   ├── ArbSh.Console/          # Console REPL host
+│   ├── ArbSh.Terminal/         # Avalonia GUI terminal host
+│   ├── ArbSh.ProcessFixture/   # External-process contract test helper
+│   ├── ArbSh.Test/             # xUnit test suite
+│   └── ArbSh.sln               # Visual Studio solution
 ├── docs/                       # Comprehensive documentation
 │   ├── BIDI_*_RULES_DESIGN.md # BiDi algorithm technical specs
 │   ├── USAGE_EXAMPLES.md      # Complete feature guide
@@ -224,4 +227,4 @@ ArbSh aims to be the premier command-line shell for Arabic developers, providing
 - Cross-platform compatibility
 - Extensible cmdlet framework
 
-**Current Status:** Phase 6 In Progress - File Management/Installer Foundations Ready
+**Current Status:** Phase 6 In Progress - Structured Process Foundation Ready

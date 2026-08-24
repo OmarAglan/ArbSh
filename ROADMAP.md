@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.1-alpha (Phase 6 Kickoff)
-**Status:** Phase 6 In Progress - File Management & Installer Integration
-**Next Phase:** Phase 6 - Baa Language & External Process Integration
+**Status:** Phase 6 In Progress - Structured Process Foundation Ready
+**Next Step:** Connect External Commands to the ArbSh Executor
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -107,7 +107,9 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [ ] **Process Pipeline:** Integrate external processes with the ArbSh object pipeline.
 - [ ] **Stream Handling:** Correctly capture and route `stdin`, `stdout`, and `stderr` for background and foreground processes.
 - [ ] **Arabic Path Support:** Handle Arabic file and directory names natively when launching external tools.
-- [ ] **Structured Launch:** Build external processes from argv/cwd/environment instead of concatenated shell command strings.
+- [x] **Structured Process Core:** Added reusable immutable request/result contracts, UTF-8 stream capture, exit/failure classification, and cancellation.
+- [x] **Structured Launch:** Build non-interactive external processes from argv/cwd/environment instead of concatenated shell command strings.
+- [ ] **Executor Integration:** Resolve commands that are not built-ins and route them through the structured runner without changing built-in precedence.
 - [ ] **Process-Tree Ownership:** Use Windows Job Objects and POSIX process groups so cancellation leaves no child or grandchild alive.
 - [ ] **Qalam Host Parity:** Run the same ArbSh CLI through Qalam's PTY/ConPTY panel without embedding the Avalonia window.
 
@@ -163,7 +165,10 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - Added terminal startup `--working-dir` handling to open ArbSh in a selected Explorer folder.
 - Added Windows installer packaging scripts (`Install-ArbSh.ps1`, `Uninstall-ArbSh.ps1`) and release automation support for context-menu registration.
 
-**Next Focus:** Begin Phase 6 by integrating external process execution (`git`, `dotnet`, `node`) into the GUI terminal stream model.
+**Next Focus:** Integrate the verified structured runner with command discovery
+and `Executor`, preserving built-in precedence, session working directory,
+environment changes, exit status, and separate stdout/stderr before adding the
+interactive PTY path.
 
 ## 🌟 Project Philosophy
 

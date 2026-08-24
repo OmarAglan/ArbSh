@@ -4,14 +4,17 @@
 
 This document defines the current architecture of **ArbSh** as an Arabic-first shell and terminal platform.
 
-**Current Version:** 0.8.0-alpha
-**Status:** Phase 5 Completed - GUI Terminal Baseline Stable
-**Next Phase:** Phase 6 - Baa Language & External Process Integration
+**Current Version:** 0.8.1-alpha
+**Status:** Phase 6 In Progress - Structured Process Foundation Ready
+**Next Step:** Connect External Commands to the ArbSh Executor
 
 ArbSh now uses a host-agnostic core engine with separate presentation hosts:
-- `ArbSh.Core` contains parsing, execution, cmdlets, and BiDi/i18n logic.
+- `ArbSh.Core` contains parsing, execution, cmdlets, BiDi/i18n logic, and the
+  non-interactive structured process boundary.
 - `ArbSh.Console` is the legacy/compatibility console host.
 - `ArbSh.Terminal` is the new Avalonia GUI terminal host.
+- `ArbSh.ProcessFixture` is a test-only external executable for process-contract
+  verification.
 
 ## Current Directory Structure
 
@@ -35,6 +38,7 @@ ArbSh/
 │   │   ├── I18n/
 │   │   ├── Models/
 │   │   ├── Parsing/
+│   │   ├── Processes/
 │   │   ├── Executor.cs
 │   │   ├── Parser.cs
 │   │   └── ShellEngine.cs
@@ -66,6 +70,8 @@ ArbSh/
 │   │   ├── App.axaml
 │   │   ├── MainWindow.axaml
 │   │   └── Program.cs
+│   ├── ArbSh.ProcessFixture/
+│   │   └── Program.cs
 │   └── ArbSh.Test/
 │       ├── BidiAlgorithmTests.cs
 │       ├── BidiTestConformanceTests.cs
@@ -75,6 +81,7 @@ ArbSh/
 │       ├── LogicalVisualSeparationTests.cs
 │       ├── TerminalInputBufferTests.cs
 │       ├── AnsiSgrParserTests.cs
+│       ├── ExternalProcessRunnerTests.cs
 │       └── AnsiPaletteTests.cs
 ├── ROADMAP.md
 └── System.md
@@ -86,8 +93,10 @@ ArbSh/
 |---|---|---|
 | Core Engine | `src_csharp/ArbSh.Core` | Parsing, tokenization, parameter binding, cmdlet execution, pipeline, BiDi logic. |
 | Host Abstraction | `src_csharp/ArbSh.Core/Hosting` | `IExecutionSink` and sink-aware output boundary between logic and rendering. |
+| Structured Processes | `src_csharp/ArbSh.Core/Processes` | Direct argv/cwd/environment launch, UTF-8 stream capture, exit/failure classification, and cancellation. |
 | Console Host | `src_csharp/ArbSh.Console` | CLI host loop, console-specific I/O, backward-compatible execution sink. |
 | GUI Terminal Host | `src_csharp/ArbSh.Terminal` | Avalonia app, view models, rendering surface, RTL-first terminal UX. |
+| Process Fixture | `src_csharp/ArbSh.ProcessFixture` | Test-only executable for deterministic process-boundary checks. |
 | Test Suite | `src_csharp/ArbSh.Test` | Unit and conformance tests for BiDi and core behavior. |
 
 ## Key Design Principles

@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   integration, installer admission, and cross-platform acceptance gates.
 - **Cross-Platform CI**: Added Windows and Linux restore, package audit,
   Release build, and test gates using the .NET 10 SDK.
+- **Structured Process Contract**: Added immutable request/result contracts and
+  a reusable non-interactive runner using direct argv, explicit working
+  directory and environment changes, UTF-8 stdin/stdout/stderr, exit codes,
+  launch-failure classification, and cancellation without an intermediate
+  command shell.
+- **Process Contract Fixtures**: Added a dedicated helper executable and ten
+  tests covering Arabic paths, spaces, empty and shell-metacharacter arguments,
+  clean/inherited environments, separated output streams, exit codes, launch
+  failures, and cancellation.
 
 ### Changed
 - **.NET 10 LTS Baseline**: Migrated every project from .NET 9 to .NET 10 and
