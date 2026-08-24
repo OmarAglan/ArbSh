@@ -47,6 +47,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a compact two-line welcome experience.
 - **Terminal Chrome Tests**: Added model tests for the welcome surface, current
   folder updates, and execution status transitions.
+- **ArbSh Application Identity**: Added an original Arabic `أ` plus terminal
+  cursor icon as transparent PNG and multi-resolution ICO assets, and applied
+  it to the Avalonia header, window, published executable, and shortcuts that
+  use the executable icon.
+- **Live Process Output Contract**: Added typed stdout/stderr chunks, a
+  thread-safe streaming sink boundary, and a streaming runner extension that
+  still returns the complete captured process result.
+- **Live Pipeline Delivery**: The executor now consumes its final pipeline
+  stage while producers are running, so complete stdout/stderr lines reach the
+  Console and Avalonia hosts before the child process exits.
+- **Live Stream Gates**: Added deterministic process and end-to-end tests that
+  hold a child open until its first Arabic output is observed. The complete
+  Windows suite now passes 161 tests.
 
 ### Changed
 - **.NET 10 LTS Baseline**: Migrated every project from .NET 9 to .NET 10 and
@@ -58,6 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and stamps both hosts with the requested release version.
 - **Avalonia Patch Level**: Updated Avalonia from 11.3.6 to 11.3.20 so the
   .NET 10 baseline no longer restores the vulnerable D-Bus dependency chain.
+- **Process Fixture Signals**: Publish readiness files atomically and only
+  after flushed output, eliminating races between tests and fixture writers.
 - **ICU4N Patch Level**: Updated ICU4N from 60.1.0-alpha.437 to
   60.1.0-alpha.440 for the current SDK toolchain.
 - **Invocation Parsing**: Preserved token positions and a dedicated ordered

@@ -26,6 +26,7 @@ internal static class Program
         {
             "inspect" => await InspectAsync(arguments[1..]).ConfigureAwait(false),
             "streams" => WriteStreams(arguments[1..]),
+            "live-streams" => await WriteLiveStreamsAsync(arguments[1..]).ConfigureAwait(false),
             "environment" => WriteEnvironment(arguments[1..]),
             "wait" => await WaitAsync(arguments[1..]).ConfigureAwait(false),
             "spawn-tree" => await SpawnTreeAsync(arguments[1..]).ConfigureAwait(false),
@@ -61,6 +62,31 @@ internal static class Program
         return exitCode;
     }
 
+    private static async Task<int> WriteLiveStreamsAsync(string[] arguments)
+    {
+        if (arguments.Length != 2)
+        {
+            return 2;
+        }
+
+        string readyFile = arguments[0];
+        string releaseFile = arguments[1];
+        Console.Out.WriteLine("خرج حي أول");
+        Console.Out.Flush();
+        await WriteSignalFileAsync(readyFile, "جاهز").ConfigureAwait(false);
+
+        while (!File.Exists(releaseFile))
+        {
+            await Task.Delay(10).ConfigureAwait(false);
+        }
+
+        Console.Error.WriteLine("خطأ حي");
+        Console.Error.Flush();
+        Console.Out.Write("خرج حي أخير");
+        Console.Out.Flush();
+        return 0;
+    }
+
     private static int WriteEnvironment(string[] variableNames)
     {
         string?[] values = variableNames
@@ -77,9 +103,9 @@ internal static class Program
             return 2;
         }
 
-        await File.WriteAllTextAsync(arguments[0], "جاهز", Encoding.UTF8).ConfigureAwait(false);
         Console.Out.Write("ready");
         Console.Out.Flush();
+        await WriteSignalFileAsync(arguments[0], "جاهز").ConfigureAwait(false);
         await Task.Delay(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
         return 0;
     }
@@ -106,10 +132,9 @@ internal static class Program
         }
 
         using Process child = StartFixtureChild("child-wait", childPidFile);
-        await File.WriteAllTextAsync(
+        await WriteSignalFileAsync(
             childPidFile,
-            child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            Encoding.UTF8).ConfigureAwait(false);
+            child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)).ConfigureAwait(false);
         Console.Out.Write("tree-ready");
         Console.Out.Flush();
         await Task.Delay(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
@@ -123,10 +148,6 @@ internal static class Program
             return 2;
         }
 
-        await File.WriteAllTextAsync(
-            arguments[0],
-            Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            Encoding.UTF8).ConfigureAwait(false);
         await Task.Delay(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
         return 0;
     }
@@ -139,10 +160,9 @@ internal static class Program
         }
 
         using Process child = StartFixtureChild("child-wait", arguments[0]);
-        await File.WriteAllTextAsync(
+        await WriteSignalFileAsync(
             arguments[0],
-            child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            Encoding.UTF8).ConfigureAwait(false);
+            child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)).ConfigureAwait(false);
         Console.Out.Write("parent-exited");
         Console.Out.Flush();
         return 0;
@@ -171,6 +191,13 @@ internal static class Program
         startInfo.ArgumentList.Add(argument);
         return Process.Start(startInfo)
             ?? throw new InvalidOperationException("رفض النظام بدء العملية الابنة المساعدة.");
+    }
+
+    private static async Task WriteSignalFileAsync(string path, string contents)
+    {
+        string temporaryPath = $"{path}.{Environment.ProcessId}.tmp";
+        await File.WriteAllTextAsync(temporaryPath, contents, Encoding.UTF8).ConfigureAwait(false);
+        File.Move(temporaryPath, path, overwrite: true);
     }
 
     private static int UnknownCommand(string command)

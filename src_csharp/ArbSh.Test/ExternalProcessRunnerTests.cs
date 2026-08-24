@@ -66,6 +66,39 @@ public sealed class ExternalProcessRunnerTests
     }
 
     [Fact]
+    public async Task RunStreamingAsync_DeliversOutputBeforeExitAndStillCapturesTheResult()
+    {
+        using var fixture = FixtureCopy.Create();
+        string readyFile = Path.Combine(fixture.RootDirectory, "البث-جاهز.txt");
+        string releaseFile = Path.Combine(fixture.RootDirectory, "اسمح-بالخروج.txt");
+        var runner = new SystemExternalProcessRunner();
+        var outputSink = new RecordingOutputSink();
+        var request = new ExternalProcessRequest(
+            ResolveDotNetHost(),
+            [fixture.AssemblyPath, "live-streams", readyFile, releaseFile]);
+
+        Task<ExternalProcessResult> runningProcess = runner.RunStreamingAsync(request, outputSink);
+        ExternalProcessOutputChunk firstChunk = await outputSink.FirstChunk
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(ExternalProcessStream.StandardOutput, firstChunk.Stream);
+        Assert.Contains("خرج حي أول", firstChunk.Text, StringComparison.Ordinal);
+        Assert.False(runningProcess.IsCompleted);
+
+        await File.WriteAllTextAsync(releaseFile, "تابع");
+        ExternalProcessResult result = await runningProcess.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(ExternalProcessTerminationReason.Exited, result.TerminationReason);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal($"خرج حي أول{Environment.NewLine}خرج حي أخير", result.StandardOutput);
+        Assert.Equal($"خطأ حي{Environment.NewLine}", result.StandardError);
+        Assert.Contains(
+            outputSink.Chunks,
+            chunk => chunk.Stream is ExternalProcessStream.StandardError
+                && chunk.Text.Contains("خطأ حي", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task RunAsync_DefaultInputModeClosesStandardInput()
     {
         using var fixture = FixtureCopy.Create();
@@ -340,6 +373,31 @@ public sealed class ExternalProcessRunnerTests
         catch (ArgumentException)
         {
             return false;
+        }
+    }
+
+    private sealed class RecordingOutputSink : IExternalProcessOutputSink
+    {
+        private readonly object _sync = new();
+        private readonly TaskCompletionSource<ExternalProcessOutputChunk> _firstChunk =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public List<ExternalProcessOutputChunk> Chunks { get; } = [];
+
+        public Task<ExternalProcessOutputChunk> FirstChunk => _firstChunk.Task;
+
+        public ValueTask WriteAsync(
+            ExternalProcessOutputChunk chunk,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            lock (_sync)
+            {
+                Chunks.Add(chunk);
+            }
+
+            _firstChunk.TrySetResult(chunk);
+            return ValueTask.CompletedTask;
         }
     }
 

@@ -1,8 +1,12 @@
+<p align="center">
+  <img src="src_csharp/ArbSh.Terminal/Assets/Brand/ArbShIcon.png" width="128" alt="شعار أربش" />
+</p>
+
 # ArbSh - Arabic-First Shell
 
 **Current Version:** 0.8.1-alpha
-**Status:** Phase 6 In Progress - Windows/Linux Process Ownership Implemented
-**Next Step:** Linux CI Receipt, Live Streams, and PTY/ConPTY
+**Status:** Phase 6 In Progress - Live Process Output Implemented
+**Next Step:** Linux CI Receipt and Interactive PTY/ConPTY
 
 ArbSh is an Arabic-first command-line shell built on C#/.NET, designed specifically for Arabic developers and users. Inspired by PowerShell's object pipeline architecture, ArbSh provides a powerful, extensible environment with native Arabic language support and full Unicode BiDi compliance.
 
@@ -28,6 +32,7 @@ uses the same core and process behavior.
 ### Modern Shell Architecture
 - **Object Pipeline:** PowerShell-inspired object-based command pipeline
 - **Task-Based Concurrency:** Efficient parallel pipeline execution
+- **Live Process Output:** Incremental UTF-8 stdout/stderr delivery while tools are still running
 - **Reflection-Based Binding:** Dynamic parameter binding with type conversion
 - **Subexpression Execution:** PowerShell-style `$(...)` command substitution
 - **Type Literal Support:** `[TypeName]` type casting functionality
@@ -221,7 +226,7 @@ ArbSh is designed specifically for Arabic developers and users, not as a bilingu
 **Current Focus (Phase 6):**
 - Linux process-group CI and interactive PTY/ConPTY hosting
 - Baa compiler integration workflow
-- Live foreground/background stream integration
+- Interactive stdin, resize, control signals, and background-job integration
 
 **Future Phases:**
 - Qalam-hosted ArbSh sessions and developer-kit admission
@@ -238,4 +243,4 @@ ArbSh aims to be the premier command-line shell for Arabic developers, providing
 - Cross-platform compatibility
 - Extensible cmdlet framework
 
-**Current Status:** Phase 6 In Progress - Windows/Linux Process Ownership Implemented
+**Current Status:** Phase 6 In Progress - Live Process Output Implemented

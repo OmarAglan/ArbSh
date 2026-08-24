@@ -81,6 +81,45 @@ public sealed class ExternalCommandIntegrationTests
     }
 
     [Fact]
+    public async Task ExecuteInput_PublishesExternalOutputBeforeTheProcessExits()
+    {
+        string root = CreateTempDirectory();
+        string readyFile = Path.Combine(root, "المحرك-جاهز.txt");
+        string releaseFile = Path.Combine(root, "حرر-المحرك.txt");
+        var session = new ShellSessionState(root);
+        var sink = new CaptureSink();
+        string command = JoinCommand(
+            ResolveDotNetHost(),
+            FixtureAssemblyPath,
+            "live-streams",
+            readyFile,
+            releaseFile);
+
+        try
+        {
+            Task execution = Task.Run(() => ShellEngine.ExecuteInput(
+                command,
+                sink,
+                session: session));
+
+            string firstOutput = await sink.FirstOutput.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal("خرج حي أول", firstOutput);
+            Assert.False(execution.IsCompleted);
+
+            await File.WriteAllTextAsync(releaseFile, "تابع");
+            await execution.WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.Equal(["خرج حي أول", "خرج حي أخير"], sink.Outputs);
+            Assert.Equal(["خطأ حي"], sink.Errors);
+            Assert.Equal(0, session.LastExitCode);
+        }
+        finally
+        {
+            TryDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public void ExecuteInput_AppliesShellRedirectionToExternalStreams()
     {
         string root = CreateTempDirectory();
@@ -315,6 +354,8 @@ public sealed class ExternalCommandIntegrationTests
     private sealed class CaptureSink : IExecutionSink
     {
         private readonly object _sync = new();
+        private readonly TaskCompletionSource<string> _firstOutput =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public List<string> Outputs { get; } = [];
 
@@ -324,12 +365,16 @@ public sealed class ExternalCommandIntegrationTests
 
         public List<string> Debugs { get; } = [];
 
+        public Task<string> FirstOutput => _firstOutput.Task;
+
         public void WriteOutput(string message)
         {
             lock (_sync)
             {
                 Outputs.Add(message);
             }
+
+            _firstOutput.TrySetResult(message);
         }
 
         public void WriteError(string message)

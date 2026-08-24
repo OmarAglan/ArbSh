@@ -1,8 +1,8 @@
 # ArbSh Development Roadmap
 
 **Current Version:** 0.8.1-alpha (Phase 6 Kickoff)
-**Status:** Phase 6 In Progress - Windows/Linux Process Ownership Implemented
-**Next Step:** Linux CI Receipt, Live Streams, and PTY/ConPTY
+**Status:** Phase 6 In Progress - Live Process Output Implemented
+**Next Step:** Linux CI Receipt and Interactive PTY/ConPTY
 
 This roadmap outlines the development phases for ArbSh - an Arabic-first command-line shell built on C#/.NET with PowerShell-inspired architecture and full Unicode BiDi compliance. 
 
@@ -105,7 +105,8 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
 - [x] **Windows Installer Context Menu:** Added installer packaging scripts that register `Open in ArbSh` and pass `--working-dir` from Explorer.
 - [x] **External Commands:** Execute non-interactive system commands (`git`, `dotnet`, `node`) through the shared core used by both hosts.
 - [x] **Process Pipeline:** Integrate line-oriented external stdin/stdout/stderr with the ArbSh object pipeline in both directions.
-- [ ] **Live Stream Handling:** Stream `stdin`, `stdout`, and `stderr` incrementally for background and foreground interactive processes.
+- [x] **Live Output Streaming:** Stream non-interactive UTF-8 `stdout` and `stderr` incrementally through the structured runner and ArbSh pipeline while preserving complete captured results.
+- [ ] **Interactive Stream Handling:** Add incremental stdin, terminal resize, control signals, and background-job flow through PTY/ConPTY.
 - [x] **Arabic Path Support:** Preserve Arabic working directories, executable/argument paths, spaces, and empty arguments when launching external tools.
 - [x] **Structured Process Core:** Added reusable immutable request/result contracts, UTF-8 stream capture, exit/failure classification, and cancellation.
 - [x] **Structured Launch:** Build non-interactive external processes from argv/cwd/environment instead of concatenated shell command strings.
@@ -188,8 +189,9 @@ ArbSh aims to be the premier Arabic-first shell environment and the ultimate com
   typography, and two focused GUI contract tests.
 
 **Next Focus:** Obtain the Linux process-group receipt, then introduce the
-interactive PTY/ConPTY path with incremental streaming, resize, and terminal
-control flow.
+interactive PTY/ConPTY path with incremental stdin, resize, terminal control
+flow, and background jobs. Incremental stdout/stderr for non-interactive tools
+is now complete.
 
 ## 🌟 Project Philosophy
 

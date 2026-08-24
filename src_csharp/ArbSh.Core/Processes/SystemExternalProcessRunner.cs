@@ -7,7 +7,7 @@ namespace ArbSh.Core.Processes;
 /// <summary>
 /// تنفيذ نظامي للعملية المنظمة باستخدام <see cref="ProcessStartInfo.ArgumentList"/> مباشرة.
 /// </summary>
-public sealed class SystemExternalProcessRunner : IExternalProcessRunner
+public sealed class SystemExternalProcessRunner : IStreamingExternalProcessRunner
 {
     private static readonly Encoding Utf8WithoutBom = new UTF8Encoding(
         encoderShouldEmitUTF8Identifier: false,
@@ -17,6 +17,24 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
     public async Task<ExternalProcessResult> RunAsync(
         ExternalProcessRequest request,
         CancellationToken cancellationToken = default)
+    {
+        return await RunCoreAsync(request, outputSink: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<ExternalProcessResult> RunStreamingAsync(
+        ExternalProcessRequest request,
+        IExternalProcessOutputSink outputSink,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(outputSink);
+        return await RunCoreAsync(request, outputSink, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<ExternalProcessResult> RunCoreAsync(
+        ExternalProcessRequest request,
+        IExternalProcessOutputSink? outputSink,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -71,8 +89,14 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
             return CreateLaunchFailure(stopwatch.Elapsed, exception.Message);
         }
 
-        Task<string> standardOutputTask = process.StandardOutput.ReadToEndAsync();
-        Task<string> standardErrorTask = process.StandardError.ReadToEndAsync();
+        Task<string> standardOutputTask = CaptureStreamAsync(
+            process.StandardOutput,
+            ExternalProcessStream.StandardOutput,
+            outputSink);
+        Task<string> standardErrorTask = CaptureStreamAsync(
+            process.StandardError,
+            ExternalProcessStream.StandardError,
+            outputSink);
         Task standardInputTask = WriteStandardInputAsync(process, request);
         IExternalProcessTreeOwner treeOwner;
 
@@ -160,6 +184,39 @@ public sealed class SystemExternalProcessRunner : IExternalProcessRunner
             stopwatch.Elapsed,
             failureMessage: null,
             treeOwnershipMode);
+    }
+
+    private static async Task<string> CaptureStreamAsync(
+        StreamReader reader,
+        ExternalProcessStream stream,
+        IExternalProcessOutputSink? outputSink)
+    {
+        char[] buffer = new char[4096];
+        var captured = new StringBuilder();
+
+        while (true)
+        {
+            int characterCount = await reader
+                .ReadAsync(buffer.AsMemory())
+                .ConfigureAwait(false);
+            if (characterCount == 0)
+            {
+                break;
+            }
+
+            string text = new(buffer, 0, characterCount);
+            captured.Append(text);
+            if (outputSink is not null)
+            {
+                await outputSink
+                    .WriteAsync(
+                        new ExternalProcessOutputChunk(stream, text),
+                        CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        return captured.ToString();
     }
 
     private static ProcessStartInfo CreateStartInfo(ExternalProcessRequest request)

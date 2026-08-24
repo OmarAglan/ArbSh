@@ -244,12 +244,30 @@ namespace ArbSh.Core
                                         : ExternalProcessInputMode.Text,
                                     standardInputText: standardInput);
 
-                                ExternalProcessResult result = await externalProcessRunner
-                                    .RunAsync(request, cancellationToken)
-                                    .ConfigureAwait(false);
+                                ExternalProcessResult result;
+                                if (externalProcessRunner is IStreamingExternalProcessRunner streamingRunner)
+                                {
+                                    var processOutputSink = new PipelineProcessOutputSink(outputCollection);
+                                    try
+                                    {
+                                        result = await streamingRunner
+                                            .RunStreamingAsync(request, processOutputSink, cancellationToken)
+                                            .ConfigureAwait(false);
+                                    }
+                                    finally
+                                    {
+                                        processOutputSink.Flush();
+                                    }
+                                }
+                                else
+                                {
+                                    result = await externalProcessRunner
+                                        .RunAsync(request, cancellationToken)
+                                        .ConfigureAwait(false);
 
-                                AddProcessText(outputCollection, result.StandardOutput, isError: false);
-                                AddProcessText(outputCollection, result.StandardError, isError: true);
+                                    AddProcessText(outputCollection, result.StandardOutput, isError: false);
+                                    AddProcessText(outputCollection, result.StandardError, isError: true);
+                                }
 
                                 stageExitCodes[stageIndex] = result.TerminationReason switch
                                 {
@@ -310,47 +328,9 @@ namespace ArbSh.Core
                     }
                 } // End of pipeline stage setup loop for the current statement
 
-                // --- Wait for all tasks in the current statement's pipeline to complete ---
-                if (pipelineTasks.Any())
-                {
-                    CoreConsole.WriteLine($"DEBUG (Executor): Waiting for {pipelineTasks.Count} task(s) in the pipeline to complete...");
-                    try
-                    {
-                        // Wait for all tasks associated with the current statement's pipeline
-                        Task.WhenAll(pipelineTasks).Wait();
-                        ShellSessionContext.LastExitCode = stageExitCodes[^1] ?? 0;
-                        CoreConsole.WriteLine($"DEBUG (Executor): All pipeline tasks for the statement completed.");
-                    }
-                    catch (AggregateException ae)
-                    {
-                        // Log errors from faulted tasks
-                        CoreConsole.ForegroundColor = ConsoleColor.DarkRed;
-                        CoreConsole.WriteLine($"ERROR (Executor): One or more pipeline tasks failed:");
-                        foreach (var ex in ae.Flatten().InnerExceptions)
-                        {
-                            // Avoid logging the ParameterBindingException again if already logged in the task
-                            if (!(ex is ParameterBindingException))
-                            {
-                                CoreConsole.WriteLine($"  - {ex.GetType().Name}: {ex.Message}");
-                            }
-                        }
-                        CoreConsole.ResetColor();
-                        // Pipeline failed, don't process output. Fall through to cleanup.
-                        outputOfLastStage = null; // Prevent output processing
-                        ShellSessionContext.LastExitCode = stageExitCodes[^1] ?? 1;
-                    }
-                    catch (Exception ex) // Catch other potential waiting errors
-                    {
-                        CoreConsole.ForegroundColor = ConsoleColor.DarkRed;
-                        CoreConsole.WriteLine($"ERROR (Executor): Unexpected error waiting for pipeline tasks: {ex.Message}");
-                        CoreConsole.ResetColor();
-                        outputOfLastStage = null; // Prevent output processing
-                        ShellSessionContext.LastExitCode = stageExitCodes[^1] ?? 1;
-                    }
-                }
-
-                // --- Output Handling for the completed statement ---
-                // Process the output from the *last* stage's collection, if the pipeline didn't fail
+                // --- Live output handling ---
+                // Consume the last stage while its producer is still running so external
+                // stdout/stderr becomes visible immediately and pipelines retain backpressure.
                 if (outputOfLastStage != null)
                 {
                     ParsedCommand lastCommandConfig = statementCommands.Last(); // Get config (like redirection) from the original last command
@@ -591,6 +571,40 @@ namespace ArbSh.Core
                         CoreConsole.WriteLine($"DEBUG (Executor): No final output to process (pipeline might have failed or produced no output).");
                     }
                 }
+
+                // The consuming loop above naturally waits for the final stage to finish,
+                // but all tasks still need to be observed for failures and exit status.
+                if (pipelineTasks.Any())
+                {
+                    CoreConsole.WriteLine($"DEBUG (Executor): Waiting for {pipelineTasks.Count} task(s) in the pipeline to complete...");
+                    try
+                    {
+                        Task.WhenAll(pipelineTasks).Wait();
+                        ShellSessionContext.LastExitCode = stageExitCodes[^1] ?? 0;
+                        CoreConsole.WriteLine($"DEBUG (Executor): All pipeline tasks for the statement completed.");
+                    }
+                    catch (AggregateException ae)
+                    {
+                        CoreConsole.ForegroundColor = ConsoleColor.DarkRed;
+                        CoreConsole.WriteLine($"ERROR (Executor): One or more pipeline tasks failed:");
+                        foreach (var ex in ae.Flatten().InnerExceptions)
+                        {
+                            if (ex is not ParameterBindingException)
+                            {
+                                CoreConsole.WriteLine($"  - {ex.GetType().Name}: {ex.Message}");
+                            }
+                        }
+                        CoreConsole.ResetColor();
+                        ShellSessionContext.LastExitCode = stageExitCodes[^1] ?? 1;
+                    }
+                    catch (Exception ex)
+                    {
+                        CoreConsole.ForegroundColor = ConsoleColor.DarkRed;
+                        CoreConsole.WriteLine($"ERROR (Executor): Unexpected error waiting for pipeline tasks: {ex.Message}");
+                        CoreConsole.ResetColor();
+                        ShellSessionContext.LastExitCode = stageExitCodes[^1] ?? 1;
+                    }
+                }
                 CoreConsole.WriteLine($"DEBUG (Executor): --- Statement execution finished ---");
 
             } // End of loop for all statements
@@ -631,6 +645,116 @@ namespace ArbSh.Core
             while ((line = reader.ReadLine()) is not null)
             {
                 outputCollection.Add(new PipelineObject(line, isError));
+            }
+        }
+
+        private sealed class PipelineProcessOutputSink : IExternalProcessOutputSink
+        {
+            private readonly BlockingCollection<PipelineObject> _outputCollection;
+            private readonly StreamBuffer _standardOutput = new(isError: false);
+            private readonly StreamBuffer _standardError = new(isError: true);
+
+            public PipelineProcessOutputSink(BlockingCollection<PipelineObject> outputCollection)
+            {
+                _outputCollection = outputCollection;
+            }
+
+            public ValueTask WriteAsync(
+                ExternalProcessOutputChunk chunk,
+                CancellationToken cancellationToken = default)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                StreamBuffer buffer = chunk.Stream is ExternalProcessStream.StandardError
+                    ? _standardError
+                    : _standardOutput;
+                foreach (PipelineObject item in buffer.Append(chunk.Text))
+                {
+                    _outputCollection.Add(item, cancellationToken);
+                }
+
+                return ValueTask.CompletedTask;
+            }
+
+            public void Flush()
+            {
+                PipelineObject? standardOutput = _standardOutput.Flush();
+                if (standardOutput is not null)
+                {
+                    _outputCollection.Add(standardOutput);
+                }
+
+                PipelineObject? standardError = _standardError.Flush();
+                if (standardError is not null)
+                {
+                    _outputCollection.Add(standardError);
+                }
+            }
+
+            private sealed class StreamBuffer
+            {
+                private readonly bool _isError;
+                private readonly object _sync = new();
+                private readonly System.Text.StringBuilder _line = new();
+                private bool _skipLineFeed;
+
+                public StreamBuffer(bool isError)
+                {
+                    _isError = isError;
+                }
+
+                public IReadOnlyList<PipelineObject> Append(string text)
+                {
+                    var completedLines = new List<PipelineObject>();
+                    lock (_sync)
+                    {
+                        foreach (char character in text)
+                        {
+                            if (character == '\r')
+                            {
+                                completedLines.Add(CreateLine());
+                                _skipLineFeed = true;
+                            }
+                            else if (character == '\n')
+                            {
+                                if (_skipLineFeed)
+                                {
+                                    _skipLineFeed = false;
+                                }
+                                else
+                                {
+                                    completedLines.Add(CreateLine());
+                                }
+                            }
+                            else
+                            {
+                                _skipLineFeed = false;
+                                _line.Append(character);
+                            }
+                        }
+                    }
+
+                    return completedLines;
+                }
+
+                public PipelineObject? Flush()
+                {
+                    lock (_sync)
+                    {
+                        if (_line.Length == 0)
+                        {
+                            return null;
+                        }
+
+                        return CreateLine();
+                    }
+                }
+
+                private PipelineObject CreateLine()
+                {
+                    var item = new PipelineObject(_line.ToString(), _isError);
+                    _line.Clear();
+                    return item;
+                }
             }
         }
 

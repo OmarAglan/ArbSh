@@ -5,6 +5,7 @@
         x:Class="ArbSh.Terminal.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="أربش — الطرفية العربية"
+        Icon="/Assets/Brand/ArbShIcon.ico"
         Width="1200"
         Height="760"
         MinWidth="820"
@@ -60,17 +61,11 @@
                        FontSize="11"
                        HorizontalAlignment="Right" />
           </StackPanel>
-          <Border Width="38"
-                  Height="38"
-                  Background="#157A8A"
-                  CornerRadius="10">
-            <TextBlock Text="أ"
-                       Foreground="White"
-                       FontSize="22"
-                       FontWeight="Bold"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-          </Border>
+          <Image Width="40"
+                 Height="40"
+                 Source="/Assets/Brand/ArbShIcon.png"
+                 Stretch="Uniform"
+                 VerticalAlignment="Center" />
         </StackPanel>
       </Grid>
     </Border>
